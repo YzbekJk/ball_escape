@@ -2,26 +2,17 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;
   font-family:"Inter","Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent}
-#stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
-  padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom))}
-#title{margin:clamp(12px,5vh,56px) 0 0;font-size:clamp(22px,min(6.4vw,4vh),46px);font-weight:700;
-  line-height:1.18;text-align:center;max-width:16em;letter-spacing:-.01em;min-height:2.36em}
-#board{flex:1;width:100%;min-height:0;position:relative}
-#c{position:absolute;inset:0;width:100%;height:100%;display:block}
-#timer{font:400 clamp(26px,min(6vw,4.5vh),44px) ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  margin-bottom:clamp(8px,4vh,40px);letter-spacing:.04em;font-variant-numeric:tabular-nums;color:#fff}
-#timer.y{color:#f5d44a}#timer.o{color:#ff8a2a}#timer.r{color:#ff3b3b}#timer.g{color:#27ff3a}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
 
 #bar{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;display:flex;gap:8px;z-index:5}
 button{font:inherit;color:#fff;background:#14171f;border:1px solid #2a3040;border-radius:10px;
   padding:9px 12px;cursor:pointer}
 button:hover{background:#1d2230}button:active{transform:translateY(1px)}
-#bar button{width:42px;height:42px;padding:0;font-size:20px;border-radius:50%;opacity:.55}
+#bar button{width:42px;height:42px;padding:0;font-size:20px;border-radius:50%;opacity:.4}
 #bar button:hover{opacity:1}
 
 #panel{position:fixed;top:0;right:0;bottom:0;width:min(360px,100vw);background:rgba(10,12,18,.97);
-  border-left:1px solid #222838;padding:14px 16px 24px;overflow:auto;z-index:10;
-  backdrop-filter:blur(8px)}
+  border-left:1px solid #222838;padding:14px 16px 24px;overflow:auto;z-index:10;backdrop-filter:blur(8px)}
 #panel[hidden]{display:none}
 #panel header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:18px}
 #panel header button{width:34px;height:34px;padding:0}
@@ -29,9 +20,6 @@ button:hover{background:#1d2230}button:active{transform:translateY(1px)}
 .f label{display:flex;justify-content:space-between;font-size:13px;color:#aab3c8;margin-bottom:3px}
 .f label output{color:#fff;font-variant-numeric:tabular-nums}
 .f input[type=range]{width:100%;accent-color:#ff2bf0}
-.f input[type=text],.f input[type=number]{width:100%;background:#0d1017;color:#fff;border:1px solid #2a3040;
-  border-radius:8px;padding:8px 10px;font:inherit}
 .f.chk label{justify-content:flex-start;gap:8px;font-size:14px;color:#fff;cursor:pointer;margin:0}
 .row{display:flex;gap:8px;margin-top:10px}.row button{flex:1}
 .hint{font-size:12px;color:#6f7893;line-height:1.4}
-h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#6f7893;margin:18px 0 0;font-weight:600}

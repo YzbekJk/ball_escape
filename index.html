@@ -4,15 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>Ball Escape</title>
+<title>Growing Ball</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main id="stage">
-  <h1 id="title"></h1>
-  <div id="board"><canvas id="c"></canvas></div>
-  <div id="timer">80:00</div>
-</main>
+<canvas id="c"></canvas>
 
 <div id="bar">
   <button id="btnSound" title="Звук">🔇</button>
@@ -27,14 +23,12 @@
     <button id="btnPause">⏸ Пауза</button>
   </div>
   <div class="row">
-    <button id="btnRandom">🎲 Другой шарик</button>
     <button id="btnDefaults">Сбросить</button>
+    <button id="btnCopy">🔗 Копировать ссылку</button>
   </div>
-  <div class="row"><button id="btnCopy">🔗 Скопировать ссылку с настройками</button></div>
   <p class="hint">Все изменения попадают в адрес страницы — ссылкой можно поделиться, настройки сохранятся.</p>
 </aside>
 
-<script src="sim.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
