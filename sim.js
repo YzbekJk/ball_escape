@@ -20,15 +20,16 @@
 
   const DEFAULTS = {
     duration: 80,     // seconds until every layer is gone
-    layers: 36,       // number of concentric rings
+    layers: 28,       // number of concentric rings
     innerR: 0.43,     // radius of the central chamber (outer radius = 1)
-    gap0: 0.7,        // gap width at t=0, radians
-    gap1: 3.6,        // gap width just before a layer disappears, radians
-    erode: 2.2,       // >1 : layers stay closed longer, then open quickly
-    twist: 0.12,      // angular offset between neighbouring gaps (spiral)
-    spin: 0.9,        // gap rotation speed, rad/s
-    spinVar: 1.5,     // outer layers rotate (1+spinVar) times faster
-    ballR: 0.028,
+    gap0: 0.8,        // gap width at t=0, radians
+    gap1: 6.3,        // gap width at t=duration (set > gap0 to help the ball over time)
+    erode: 3,         // curve of that widening
+    twist: 0.08,      // angular offset between neighbouring gaps (spiral)
+    spin: 0.6,        // gap rotation speed, rad/s
+    spinVar: 0.5,     // outer layers rotate (1+spinVar) times faster
+    reverse: true,    // all remaining rings flip direction when a ring is passed
+    ballR: 0.012,
     ballSpeed: 0.6,   // units per second
     gravity: 0,
     bounce: 1,        // restitution
@@ -52,13 +53,14 @@
       this.escaped = false;
       this.escapeT = null;
       this.events = [];
-      this.phase = new Float64Array(N);
-      this.omega = new Float64Array(N);
-      this.death = new Float64Array(N);
+      this.th = new Float64Array(N);      // current gap angle of each ring
+      this.omega = new Float64Array(N);   // base angular speed of each ring
+      this.dead = new Uint8Array(N);      // 1 = ring is gone
+      this.dir = 1;                       // global rotation direction
+      this.passed = 0;
       for (let k = 0; k < N; k++) {
-        this.phase[k] = -Math.PI / 2 + k * p.twist;
+        this.th[k] = -Math.PI / 2 + k * p.twist;
         this.omega[k] = p.spin * (1 + p.spinVar * k / Math.max(1, N - 1));
-        this.death[k] = p.duration * (0.04 + 0.93 * (k + 1) / N);
       }
       const a = rng() * TAU, r = rng() * 0.12, va = rng() * TAU;
       this.b = {
@@ -68,10 +70,10 @@
       };
     }
 
-    alive(k) { return this.t < this.death[k]; }
-    theta(k, t) { return this.phase[k] + this.omega[k] * (t === undefined ? this.t : t); }
-    halfGap(k, t) {
-      const p = this.p, f = Math.min(1, t / this.death[k]);
+    alive(k) { return !this.dead[k]; }
+    theta(k) { return this.th[k]; }
+    halfGap() {
+      const p = this.p, f = Math.min(1, this.t / p.duration);
       return (p.gap0 + (p.gap1 - p.gap0) * Math.pow(f, p.erode)) / 2;
     }
 
@@ -79,6 +81,8 @@
       const p = this.p, b = this.b, N = this.N, dr = this.dr, br = p.ballR;
       this.t += dt;
       const t = this.t;
+      for (let k = 0; k < N; k++) if (!this.dead[k]) this.th[k] += this.dir * this.omega[k] * dt;
+      const hg = this.halfGap();
 
       b.vy += p.gravity * dt;
       b.px = b.x; b.py = b.y;
@@ -96,9 +100,9 @@
           if (k0 < 0) k0 = 0; if (k1 > N - 1) k1 = N - 1;
           let hit = false;
           for (let k = k0; k <= k1; k++) {
-            if (t >= this.death[k]) continue;
-            const diff = Math.abs(angDiff(Math.atan2(b.y, b.x), this.theta(k)));
-            if (diff < this.halfGap(k, t) - br / d) continue;      // passes through the gap
+            if (this.dead[k]) continue;
+            const diff = Math.abs(angDiff(Math.atan2(b.y, b.x), this.th[k]));
+            if (diff < hg - br / d) continue;      // passes through the gap
             const rIn = p.innerR + k * dr, rOut = rIn + dr;
             const inside = pd < (rIn + rOut) / 2;
             const nd = inside ? rIn - br : rOut + br;
@@ -118,6 +122,18 @@
           const s = Math.hypot(b.vx, b.vy);
           if (s > 1e-9) { b.vx *= p.ballSpeed / s; b.vy *= p.ballSpeed / s; }
         }
+      }
+
+      // a ring is removed once the ball has passed through it; the rest flip direction
+      d = Math.hypot(b.x, b.y);
+      let removed = 0;
+      for (let k = 0; k < N; k++) {
+        if (!this.dead[k] && d > p.innerR + (k + 1) * dr) { this.dead[k] = 1; removed++; }
+      }
+      if (removed) {
+        this.passed += removed;
+        if (p.reverse) this.dir = -this.dir;
+        this.events.push({ k: 0, power: 1, pop: true });
       }
 
       // after the escape the ball just bounces around inside the visible area

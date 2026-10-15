@@ -4,7 +4,7 @@
 
   // ---------- settings ----------
   const APP_DEFAULTS = Object.assign({}, DEFAULTS, {
-    seed: 28, speed: 1, trail: true, sound: true,
+    seed: 37, speed: 1, trail: true, sound: true,
     title: 'The ball has {n} seconds to escape'
   });
   // live = can change while running without restarting the simulation
@@ -16,15 +16,16 @@
     { k: 'seed', l: 'Номер шарика (seed)', type: 'number' },
     { h: 'Кольца' },
     { k: 'layers', l: 'Количество слоёв', min: 6, max: 80, step: 1 },
+    { k: 'reverse', l: 'Кольца меняют направление, когда шарик вылетел', type: 'check', live: 1 },
     { k: 'innerR', l: 'Радиус центральной камеры', min: 0.15, max: 0.8, step: 0.01 },
     { k: 'gap0', l: 'Щель в начале, рад', min: 0.1, max: 3, step: 0.05 },
-    { k: 'gap1', l: 'Щель перед исчезновением, рад', min: 0.5, max: 6.2, step: 0.1 },
-    { k: 'erode', l: 'Резкость распада', min: 0.5, max: 5, step: 0.1 },
+    { k: 'gap1', l: 'Щель к концу таймера, рад (помощь шарику)', min: 0.1, max: 6.3, step: 0.1 },
+    { k: 'erode', l: 'Как поздно расширяются щели', min: 0.5, max: 5, step: 0.1 },
     { k: 'twist', l: 'Закрутка спирали', min: -0.5, max: 0.5, step: 0.01 },
-    { k: 'spin', l: 'Скорость вращения', min: 0, max: 4, step: 0.05 },
+    { k: 'spin', l: 'Скорость вращения колец', min: 0, max: 4, step: 0.05 },
     { k: 'spinVar', l: 'Разброс вращения', min: 0, max: 4, step: 0.1 },
     { h: 'Шарик' },
-    { k: 'ballR', l: 'Размер шарика', min: 0.01, max: 0.08, step: 0.002 },
+    { k: 'ballR', l: 'Размер шарика', min: 0.004, max: 0.05, step: 0.001 },
     { k: 'ballSpeed', l: 'Скорость шарика', min: 0.1, max: 2.5, step: 0.05 },
     { k: 'gravity', l: 'Гравитация', min: 0, max: 2, step: 0.05, live: 1 },
     { k: 'bounce', l: 'Упругость', min: 0.3, max: 1.2, step: 0.01, live: 1 },
@@ -96,8 +97,8 @@
     ctx.lineCap = 'butt';
     ctx.lineWidth = dr * scale + 0.8;
     for (let k = 0; k < N; k++) {
-      if (t >= sim.death[k]) continue;
-      const h = sim.halfGap(k, t), th = sim.theta(k, t);
+      if (sim.dead[k]) continue;
+      const h = sim.halfGap(), th = sim.theta(k);
       const rm = (sim.p.innerR + (k + 0.5) * dr) * scale;
       ctx.strokeStyle = layerColor(k, N);
       ctx.beginPath();
