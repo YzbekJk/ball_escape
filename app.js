@@ -14,20 +14,51 @@
   addEventListener('pointerdown', () => { if (current && current.cfg.sound) initAudio(); }, { passive: true });
 
   // ---------- menu ----------
-  function buildMenu() {
-    const cards = $('cards'); cards.innerHTML = '';
-    Sims.list.forEach(sim => {
-      const b = document.createElement('button'); b.className = 'card';
-      const cv = document.createElement('canvas'); cv.width = 420; cv.height = 300;
-      if (sim.preview) { const c = cv.getContext('2d'); sim.preview(c, cv.width, cv.height); }
-      const t = document.createElement('div'); t.className = 't'; t.textContent = sim.title;
-      const d = document.createElement('div'); d.className = 'd'; d.textContent = sim.desc || '';
-      b.append(cv, t, d);
-      b.onclick = () => { location.hash = '#/' + sim.id; };
-      cards.appendChild(b);
-    });
-    const soon = document.createElement('div'); soon.className = 'card soon'; soon.textContent = 'Скоро здесь появятся новые симуляции';
-    cards.appendChild(soon);
+  // Every simulation may set kind: 'sim' (default) or 'game' — that decides the section it appears in.
+  const SECTIONS = {
+    sims:  { kind: 'sim',  title: 'Симуляции', icon: '🧪', desc: 'Смотрите, как шарик ведёт себя в разных ситуациях: настраивайте и делитесь ссылкой.', empty: 'Скоро здесь появятся новые симуляции' },
+    games: { kind: 'game', title: 'Игры', icon: '🎮', desc: 'Здесь будут игры, в которых вы управляете шариком сами.', empty: 'Скоро здесь появятся игры' }
+  };
+  const kindOf = sim => sim.kind === 'game' ? 'game' : 'sim';
+  const sectionOfKind = k => k === 'game' ? 'games' : 'sims';
+
+  function showMenuPage(section) {
+    closeSim();
+    view.hidden = true; menu.hidden = false; menu.scrollTop = 0;
+    const cards = $('cards'); cards.innerHTML = ''; cards.className = '';
+    const back = $('menuBack');
+    if (!section) {                                   // home: pick a section
+      document.title = 'Шарики'; $('menuTitle').textContent = 'Шарики'; $('menuSub').textContent = 'Что хотите открыть?';
+      back.hidden = true; cards.className = 'home';
+      Object.keys(SECTIONS).forEach(id => {
+        const sec = SECTIONS[id], count = Sims.list.filter(s => kindOf(s) === sec.kind).length;
+        const b = document.createElement('button'); b.className = 'card big' + (count ? '' : ' empty');
+        b.innerHTML = '<div class="ic"></div><div><div class="t"></div><div class="d"></div><span class="n"></span></div>';
+        b.querySelector('.ic').textContent = sec.icon; b.querySelector('.t').textContent = sec.title;
+        b.querySelector('.d').textContent = sec.desc; b.querySelector('.n').textContent = count ? count + ' шт.' : 'скоро';
+        b.onclick = () => { location.hash = '#/' + id; };
+        cards.appendChild(b);
+      });
+    } else {                                          // a section: list of its items
+      const sec = SECTIONS[section];
+      document.title = sec.title; $('menuTitle').textContent = sec.title; $('menuSub').textContent = 'Выберите, что открыть';
+      back.hidden = false;
+      const items = Sims.list.filter(s => kindOf(s) === sec.kind);
+      items.forEach(sim => {
+        const b = document.createElement('button'); b.className = 'card';
+        const cv = document.createElement('canvas'); cv.width = 420; cv.height = 300;
+        if (sim.preview) { const c = cv.getContext('2d'); sim.preview(c, cv.width, cv.height); }
+        const t = document.createElement('div'); t.className = 't'; t.textContent = sim.title;
+        const d = document.createElement('div'); d.className = 'd'; d.textContent = sim.desc || '';
+        b.append(cv, t, d);
+        b.onclick = () => { location.hash = '#/' + sim.id; };
+        cards.appendChild(b);
+      });
+      const soon = document.createElement('div'); soon.className = 'card soon'; soon.textContent = sec.empty;
+      if (!items.length) cards.appendChild(soon);
+      else { soon.textContent = 'Скоро здесь появится ещё что-то'; cards.appendChild(soon); }
+    }
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
   }
 
   // ---------- simulation view ----------
@@ -92,7 +123,6 @@
 
   function openSim(id) {
     const sim = Sims.get(id);
-    if (!sim) { location.hash = ''; return; }
     closeSim();
     menu.hidden = true; view.hidden = false; panel.hidden = true;
     view.classList.toggle('light', !!sim.light);
@@ -108,20 +138,16 @@
     if (!current) return;
     current.inst.destroy(); current = null; window.__sim = null;
   }
-  function showMenu() {
-    closeSim();
-    view.hidden = true; menu.hidden = false;
-    document.title = 'Симуляции с шариком';
-    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
-  }
-
   function route() {
-    const m = location.hash.match(/^#\/([\w-]+)/);
-    if (m) openSim(m[1]); else showMenu();
+    const m = location.hash.match(/^#\/([\w-]+)/), id = m && m[1];
+    if (id && SECTIONS[id]) showMenuPage(id);
+    else if (id && Sims.get(id)) openSim(id);
+    else showMenuPage(null);
   }
 
   // ---------- buttons ----------
-  $('btnBack').onclick = () => { location.hash = ''; if (!location.hash) route(); };
+  $('btnBack').onclick = () => { location.hash = '#/' + sectionOfKind(kindOf(current.sim)); };
+  $('menuBack').onclick = () => { location.hash = '#/'; };
   $('btnGear').onclick = () => { panel.hidden = !panel.hidden; initAudio(); };
   $('btnClose').onclick = () => { panel.hidden = true; };
   $('btnSound').onclick = () => { current.cfg.sound = !current.cfg.sound; if (current.cfg.sound) initAudio(); refresh(); writeURL(); };
@@ -145,5 +171,5 @@
   addEventListener('resize', () => { if (current) current.inst.resize(); });
   addEventListener('hashchange', route);
 
-  buildMenu(); route();
+  route();
 })();

@@ -7,7 +7,9 @@ html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;
 
 #menu{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 #menu .wrap{padding:max(28px,env(safe-area-inset-top)) 18px max(40px,env(safe-area-inset-bottom));max-width:760px;margin:0 auto}
-#menu h1{font-size:clamp(26px,6vw,38px);margin:12px 0 4px;letter-spacing:-.01em}
+#menu h1{font-size:clamp(26px,6vw,38px);margin:0;letter-spacing:-.01em}
+.top{display:flex;align-items:center;gap:12px;margin:12px 0 4px}
+#menuBack{width:42px;height:42px;padding:0;font-size:20px;border-radius:50%;flex:none}
 .sub{color:#8791ab;margin:0 0 22px}
 #cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
 .card{display:block;text-align:left;padding:0;overflow:hidden;border-radius:16px;background:#0d1017;border:1px solid #1f2535;color:#fff;cursor:pointer}
@@ -42,3 +44,12 @@ button:hover{background:#1d2230}button:active{transform:translateY(1px)}
 /* light simulations (white background) */
 #view.light #bar button{background:#fff;color:#111;border-color:#c9ced8;opacity:.75}
 #view.light #bar button:hover{opacity:1;background:#f1f3f7}
+
+/* home screen: two big sections */
+#cards.home{grid-template-columns:1fr;gap:16px}
+.card.big{display:flex;align-items:center;gap:18px;padding:22px 20px;min-height:120px}
+.card.big .ic{font-size:46px;line-height:1;flex:none}
+.card.big .t{padding:0 0 4px;font-size:22px}
+.card.big .d{padding:0}
+.card.big .n{display:inline-block;margin-top:8px;font-size:12px;color:#ff6bf3;border:1px solid #4a2a49;border-radius:999px;padding:2px 10px}
+.card.big.empty{opacity:.75}
