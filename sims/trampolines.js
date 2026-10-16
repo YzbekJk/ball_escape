@@ -8,7 +8,7 @@ Sims.register({
 
   defaults: {
     tramps: 3, maxLen: 0.35, trampBounce: 1.1, gravity: 1.6, ballR: 0.035, targetR: 0.05, minDist: 0.6,
-    wallBounce: 0.8, floor: false, trail: true, sound: true, music: true, vocalStart: 2.4, volume: 0.7
+    wallBounce: 0.8, wallDeath: true, floor: false, trail: true, sound: true, music: true, vocalStart: 2.4, volume: 0.7
   },
   schema: [
     { k: 'tramps', l: 'Сколько батутов дано', min: 1, max: 10, step: 1, live: 1 },
@@ -18,6 +18,7 @@ Sims.register({
     { k: 'ballR', l: 'Размер шарика', min: 0.02, max: 0.08, step: 0.005 },
     { k: 'targetR', l: 'Размер точки', min: 0.02, max: 0.12, step: 0.005 },
     { k: 'minDist', l: 'Минимальное расстояние шарик–точка', min: 0.1, max: 1.2, step: 0.05 },
+    { k: 'wallDeath', l: 'Коснулся стены — проигрыш', type: 'check', live: 1 },
     { k: 'wallBounce', l: 'Упругость стен', min: 0.3, max: 1.1, step: 0.01, live: 1 },
     { k: 'floor', l: 'Пол снизу (шарик не пропадает)', type: 'check', live: 1 },
     { k: 'trail', l: 'След шарика', type: 'check', live: 1 },
@@ -54,7 +55,7 @@ Sims.register({
       let tries = 0, bx, by, tx, ty;
       const minD = Math.min(cfg.minDist, Math.hypot(ww, hh) * 0.8);
       do {
-        bx = r + Math.random() * (ww - 2 * r); by = Math.max(140 / S, hh * 0.14) + Math.random() * (hh * 0.5 - Math.max(140 / S, hh * 0.14));
+        bx = r + 0.08 + Math.random() * (ww - 2 * r - 0.16); by = Math.max(140 / S, hh * 0.14) + Math.random() * (hh * 0.5 - Math.max(140 / S, hh * 0.14));
         tx = tr0 + Math.random() * (ww - 2 * tr0); ty = hh * (0.35 + Math.random() * 0.5);
         tries++;
       } while (Math.hypot(bx - tx, by - ty) < minD && tries < 500);
@@ -89,6 +90,9 @@ Sims.register({
       if (state !== 'run') return;
       const b = ball, r = cfg.ballR;
       b.vy += cfg.gravity * dt; b.x += b.vx * dt; b.y += b.vy * dt;
+      if (cfg.wallDeath && (b.x <= r || b.x >= ww - r || b.y <= r)) {
+        state = 'fail'; stateT = 0; attempts++; events.push({ fail: true }); burst(b.x, b.y, 25, 20); return;
+      }
       if (b.x < r) { b.x = r; if (b.vx < 0) { b.vx = -b.vx * cfg.wallBounce; events.push({ hit: 0.3 }); } }
       if (b.x > ww - r) { b.x = ww - r; if (b.vx > 0) { b.vx = -b.vx * cfg.wallBounce; events.push({ hit: 0.3 }); } }
       if (b.y < r) { b.y = r; if (b.vy < 0) { b.vy = -b.vy * cfg.wallBounce; events.push({ hit: 0.3 }); } }
