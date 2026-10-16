@@ -62,7 +62,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 30;
+  const APP_VERSION = 31;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 

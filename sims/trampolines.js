@@ -109,15 +109,17 @@ Sims.register({
     // ----- soundtrack: starts at the moment the vocals come in, then loops from there -----
     const song = new Audio('assets/soundtrack.m4a'); song.preload = 'auto'; song.loop = false;
     let songOn = false;
+    function seekPlay() {
+      const go = () => { try { song.currentTime = cfg.vocalStart; } catch (e) {} const pr = song.play(); if (pr && pr.catch) pr.catch(() => { songOn = false; }); };
+      if (song.readyState >= 1) go(); else { song.addEventListener('loadedmetadata', go, { once: true }); song.load(); }
+    }
     function musicTick() {
       if (!cfg.music || paused) { if (songOn) { song.pause(); songOn = false; } return; }
       song.volume = Math.max(0, Math.min(1, cfg.volume));
-      if (!songOn) {
-        songOn = true;
-        try { if (song.currentTime < cfg.vocalStart) song.currentTime = cfg.vocalStart; } catch (e) {}
-        const pr = song.play(); if (pr && pr.catch) pr.catch(() => { songOn = false; });   // needs a tap first
-      }
-      if (song.ended || (song.duration && song.currentTime > song.duration - 0.2)) { try { song.currentTime = cfg.vocalStart; } catch (e) {} song.play().catch(() => {}); }
+      if (!songOn) { songOn = true; seekPlay(); return; }
+      // never play anything before the first words; loop back to them at the end
+      if (!song.paused && song.currentTime < cfg.vocalStart - 0.25) { try { song.currentTime = cfg.vocalStart; } catch (e) {} }
+      if (song.ended || (song.duration && song.currentTime > song.duration - 0.2)) seekPlay();
     }
 
     // ----- input -----
