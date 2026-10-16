@@ -8,7 +8,7 @@ Sims.register({
 
   defaults: {
     tramps: 3, maxLen: 0.35, trampBounce: 1.1, gravity: 1.6, ballR: 0.035, targetR: 0.05, minDist: 0.6,
-    wallBounce: 0.8, floor: false, trail: true, sound: true
+    wallBounce: 0.8, floor: false, trail: true, sound: true, music: true, vocalStart: 2.4, volume: 0.7
   },
   schema: [
     { k: 'tramps', l: 'Сколько батутов дано', min: 1, max: 10, step: 1, live: 1 },
@@ -21,7 +21,10 @@ Sims.register({
     { k: 'wallBounce', l: 'Упругость стен', min: 0.3, max: 1.1, step: 0.01, live: 1 },
     { k: 'floor', l: 'Пол снизу (шарик не пропадает)', type: 'check', live: 1 },
     { k: 'trail', l: 'След шарика', type: 'check', live: 1 },
-    { k: 'sound', l: 'Звук', type: 'check', live: 1 }
+    { k: 'sound', l: 'Звуки отскоков', type: 'check', live: 1 },
+    { k: 'music', l: 'Саундтрек', type: 'check', live: 1 },
+    { k: 'vocalStart', l: 'С какой секунды трека начинается вокал', min: 0, max: 60, step: 0.1, live: 1 },
+    { k: 'volume', l: 'Громкость саундтрека', min: 0, max: 1, step: 0.05, live: 1 }
   ],
 
   preview(ctx, w, h) {
@@ -99,6 +102,20 @@ Sims.register({
       if (cfg.trail && ((simT * 240) | 0) % 2 === 0) { trail.push({ x: b.x, y: b.y }); if (trail.length > 40) trail.shift(); }
     }
 
+    // ----- soundtrack: starts at the moment the vocals come in, then loops from there -----
+    const song = new Audio('assets/soundtrack.m4a'); song.preload = 'auto'; song.loop = false;
+    let songOn = false;
+    function musicTick() {
+      if (!cfg.music || paused) { if (songOn) { song.pause(); songOn = false; } return; }
+      song.volume = Math.max(0, Math.min(1, cfg.volume));
+      if (!songOn) {
+        songOn = true;
+        try { if (song.currentTime < cfg.vocalStart) song.currentTime = cfg.vocalStart; } catch (e) {}
+        const pr = song.play(); if (pr && pr.catch) pr.catch(() => { songOn = false; });   // needs a tap first
+      }
+      if (song.ended || (song.duration && song.currentTime > song.duration - 0.2)) { try { song.currentTime = cfg.vocalStart; } catch (e) {} song.play().catch(() => {}); }
+    }
+
     // ----- input -----
     const pt = e => { const r = canvas.getBoundingClientRect(); return { px: e.clientX - r.left, py: e.clientY - r.top, x: (e.clientX - r.left) / S, y: (e.clientY - r.top) / S }; };
     const inRect = (p, b) => b && p.px >= b.x && p.px <= b.x + b.w && p.py >= b.y && p.py <= b.y + b.h;
@@ -111,7 +128,7 @@ Sims.register({
       return best;
     }
     function down(e) {
-      const p = pt(e);
+      const p = pt(e); musicTick();
       if (inRect(p, btnRun)) { if (state === 'plan') { state = 'run'; simT = 0; attempts += 0; } else if (state === 'run') { reset(); } return; }
       if (inRect(p, btnClear)) { if (state === 'plan') tr = []; return; }
       if (state !== 'plan') return;
@@ -209,6 +226,7 @@ Sims.register({
       if (!on) return;
       const real = Math.min(0.1, (ts - last) / 1000 || 0); last = ts;
       if (!paused) { acc += real; let n = 0; while (acc >= DT && n < 4000) { step(DT); acc -= DT; n++; } playEvents(); }
+      musicTick();
       draw(); raf = requestAnimationFrame(frame);
     }
 
@@ -217,7 +235,7 @@ Sims.register({
     return {
       restart, resize,
       setPaused(p) { paused = p; },
-      destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up); },
+      destroy() { on = false; song.pause(); song.removeAttribute('src'); song.load(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up); },
       debug: { step, get state() { return state; }, get level() { return level; }, get start() { return start; }, get target() { return target; }, get hh() { return hh; }, get ww() { return ww; }, get tr() { return tr; }, run() { state = 'run'; simT = 0; } }
     };
   }
