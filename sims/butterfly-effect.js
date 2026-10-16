@@ -7,7 +7,7 @@ Sims.register({
 
   defaults: {
     spikes: 24, spikeH: 0.085, gap: 0.75, gapAngle: 125, randomGap: true, randomStart: true, eps: 0.002, gravity: 1.0, speed: 1.1, ballR: 0.055,
-    bounce: 1, maxDead: 40, deadly: true, simSpeed: 1, title: false, sound: true, auto: true
+    bounce: 1.06, maxDead: 40, deadly: true, simSpeed: 1, title: false, sound: true, auto: true
   },
   schema: [
     { k: 'spikes', l: 'Количество шипов', min: 6, max: 60, step: 1, live: 1 },
@@ -21,7 +21,7 @@ Sims.register({
     { k: 'gravity', l: 'Гравитация', min: 0, max: 4, step: 0.1, live: 1 },
     { k: 'speed', l: 'Скорость шарика', min: 0.3, max: 3, step: 0.1 },
     { k: 'ballR', l: 'Размер шарика', min: 0.02, max: 0.1, step: 0.005 },
-    { k: 'bounce', l: 'Упругость', min: 0.5, max: 1.1, step: 0.01, live: 1 },
+    { k: 'bounce', l: 'Упругость', min: 0.5, max: 1.3, step: 0.01, live: 1 },
     { k: 'maxDead', l: 'Сколько серых шариков держать', min: 3, max: 120, step: 1, live: 1 },
     { k: 'simSpeed', l: 'Скорость времени ×', min: 0.25, max: 6, step: 0.25, live: 1 },
     { k: 'title', l: 'Заголовок сверху', type: 'check', live: 1 },
