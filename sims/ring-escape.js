@@ -8,7 +8,7 @@ Sims.register({
   defaults: {
     layers: 28, innerR: 0.43, gap0: 0.8, gap1: 6.3, help: 80, erode: 3,
     twist: 0.08, spin: 0.6, spinVar: 0.5, reverse: true,
-    ballR: 0.012, ballSpeed: 0.6, gravity: 0, bounce: 1,
+    ballR: 0.022, ballSpeed: 0.6, gravity: 0.7, bounce: 1,
     simSpeed: 1, trail: true, sound: true, auto: true
   },
   schema: [
