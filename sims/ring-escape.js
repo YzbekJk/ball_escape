@@ -107,10 +107,10 @@ Sims.register({
           if (s > 1e-9) { b.vx *= cfg.ballSpeed / s; b.vy *= cfg.ballSpeed / s; }
         }
       }
-      // a ring disappears when the ball has gone through it; the rest flip direction
+      // a ring disappears as soon as the ball pokes even slightly past its outer edge; the rest flip direction
       d = Math.hypot(b.x, b.y);
       let removed = 0;
-      for (let k = 0; k < N; k++) if (!dead[k] && d > innerR + (k + 1) * dr) { dead[k] = 1; removed++; }
+      for (let k = 0; k < N; k++) if (!dead[k] && d + cfg.ballR > innerR + (k + 1) * dr + 1e-4) { dead[k] = 1; removed++; }
       if (removed) { if (cfg.reverse) dir = -dir; events.push({ pop: true }); }
 
       if (escaped && bounds) {            // after the escape the ball bounces around the screen
