@@ -38,3 +38,7 @@ button:hover{background:#1d2230}button:active{transform:translateY(1px)}
 .f.chk label{justify-content:flex-start;gap:8px;font-size:14px;color:#fff;cursor:pointer;margin:0}
 .row{display:flex;gap:8px;margin-top:10px}.row button{flex:1}
 .hint{font-size:12px;color:#6f7893;line-height:1.4}
+
+/* light simulations (white background) */
+#view.light #bar button{background:#fff;color:#111;border-color:#c9ced8;opacity:.75}
+#view.light #bar button:hover{opacity:1;background:#f1f3f7}

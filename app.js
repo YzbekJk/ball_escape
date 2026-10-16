@@ -95,6 +95,7 @@
     if (!sim) { location.hash = ''; return; }
     closeSim();
     menu.hidden = true; view.hidden = false; panel.hidden = true;
+    view.classList.toggle('light', !!sim.light);
     $('btnPause').textContent = '⏸ Пауза';
     document.title = sim.title;
     const cfg = readCfg(sim);
