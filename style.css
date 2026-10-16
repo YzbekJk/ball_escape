@@ -63,8 +63,8 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 
 #critters{position:fixed;inset:0;pointer-events:none;z-index:5;overflow:hidden}
 #view:not([hidden]) ~ #critters,#menu[hidden] ~ #critters{display:none}
-.critter{position:absolute;left:0;top:0;border-radius:50%;object-fit:cover;pointer-events:auto;cursor:pointer;touch-action:manipulation;
-  user-select:none;-webkit-user-drag:none;box-shadow:0 4px 14px rgba(0,0,0,.45);will-change:transform}
+.critter{position:absolute;left:0;top:0;object-fit:contain;pointer-events:auto;cursor:pointer;touch-action:manipulation;
+  user-select:none;-webkit-user-drag:none;will-change:transform}
 .critter.pop{transition:opacity .18s;opacity:0}
 .fluff{position:absolute;width:9px;height:9px;margin:-4px;border-radius:50%;background:#b9b6c6;animation:fl .7s ease-out forwards}
 @keyframes fl{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}

@@ -27,11 +27,11 @@
   }
   function spawn() {
     const size = 70 + Math.random() * 60, fromLeft = Math.random() < 0.5;
-    const el = document.createElement('img'); el.src = 'assets/kotozayac.jpg'; el.className = 'critter'; el.alt = ''; el.draggable = false;
+    const el = document.createElement('img'); el.src = 'assets/kotozayac.png'; el.className = 'critter'; el.alt = ''; el.draggable = false;
     el.style.width = el.style.height = size + 'px';
     const c = {
       el, size, x: fromLeft ? -size : innerWidth, v: (fromLeft ? 1 : -1) * (50 + Math.random() * 70),
-      y0: 90 + Math.random() * (innerHeight - 220), ph: Math.random() * 6, rot: 0, dead: false
+      y0: innerHeight - size + 4, ph: Math.random() * 6, rot: 0, dead: false
     };
     el.addEventListener('pointerdown', e => {
       e.preventDefault(); e.stopPropagation(); if (c.dead) return; c.dead = true;
