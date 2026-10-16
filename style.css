@@ -59,3 +59,4 @@ button:hover{background:#1d2230}button:active{transform:translateY(1px)}
 .ov#ovTimer{font-variant-numeric:tabular-nums}
 #view.light .ov{color:#111;text-shadow:0 1px 6px rgba(255,255,255,.7)}
 input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #444;background:#1c1c22;color:inherit;font:inherit}
+.ver{text-align:center;color:#6a6a72;font-size:13px;margin:28px 0 16px}
