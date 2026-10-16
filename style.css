@@ -5,7 +5,8 @@ html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;
 #c{position:fixed;inset:0;width:100%;height:100%;display:block}
 [hidden]{display:none!important}
 
-#menu{min-height:100%;padding:max(28px,env(safe-area-inset-top)) 18px 40px;max-width:760px;margin:0 auto}
+#menu{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#menu .wrap{padding:max(28px,env(safe-area-inset-top)) 18px max(40px,env(safe-area-inset-bottom));max-width:760px;margin:0 auto}
 #menu h1{font-size:clamp(26px,6vw,38px);margin:12px 0 4px;letter-spacing:-.01em}
 .sub{color:#8791ab;margin:0 0 22px}
 #cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
