@@ -6,14 +6,16 @@ Sims.register({
   desc: 'Шарики стартуют из одной точки почти одинаково — разница в тысячных долях. Но касание шипа убивает шарик (остаётся серый), и только счастливчик находит щель в кольце.',
 
   defaults: {
-    spikes: 24, spikeH: 0.085, gap: 0.75, gapAngle: 125, eps: 0.002, gravity: 1.0, speed: 1.1, ballR: 0.04,
+    spikes: 24, spikeH: 0.085, gap: 0.75, gapAngle: 125, randomGap: true, randomStart: true, eps: 0.002, gravity: 1.0, speed: 1.1, ballR: 0.055,
     bounce: 1, maxDead: 40, deadly: true, simSpeed: 1, title: false, sound: true, auto: true
   },
   schema: [
     { k: 'spikes', l: 'Количество шипов', min: 6, max: 60, step: 1, live: 1 },
     { k: 'spikeH', l: 'Высота шипов', min: 0.03, max: 0.2, step: 0.005, live: 1 },
     { k: 'gap', l: 'Ширина щели, рад', min: 0.3, max: 2, step: 0.05, live: 1 },
-    { k: 'gapAngle', l: 'Где щель, градусы', min: 0, max: 359, step: 1, live: 1 },
+    { k: 'randomGap', l: 'Случайная щель в каждой игре', type: 'check', live: 1 },
+    { k: 'randomStart', l: 'Случайная траектория шара в каждой игре', type: 'check', live: 1 },
+    { k: 'gapAngle', l: 'Где щель, если не случайная, градусы', min: 0, max: 359, step: 1, live: 1 },
     { k: 'eps', l: 'Разброс старта между шариками (эффект бабочки)', min: 0, max: 0.1, step: 0.0005 },
     { k: 'deadly', l: 'Шипы убивают шарик', type: 'check', live: 1 },
     { k: 'gravity', l: 'Гравитация', min: 0, max: 4, step: 0.1, live: 1 },
@@ -49,21 +51,27 @@ Sims.register({
     const TAU = Math.PI * 2, WALL = 0.02;
     const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
     const hueOf = i => (i * 67 + 140) % 360;
-    const gapC = () => cfg.gapAngle * Math.PI / 180;
+    let gapA = 0, startX = -0.1, startY = -0.2, startA = -0.6;
+    const gapC = () => cfg.randomGap ? gapA : cfg.gapAngle * Math.PI / 180;
 
     let ball, idx, dead, parts, events, simT, state, stateT, shards, wins;
     let paused = false, acc = 0, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, S = 1;
 
     function spawn() {
       // every ball starts from the same place and direction, up to a tiny random difference
-      const e = cfg.eps, a = -0.6;
+      const e = cfg.eps, a = startA;
       ball = {
-        x: -0.1 + (Math.random() - 0.5) * e, y: -0.2 + (Math.random() - 0.5) * e,
+        x: startX + (Math.random() - 0.5) * e, y: startY + (Math.random() - 0.5) * e,
         vx: Math.cos(a) * cfg.speed + (Math.random() - 0.5) * e, vy: Math.sin(a) * cfg.speed + (Math.random() - 0.5) * e,
         i: idx, alive: true
       };
     }
     function restart() {
+      gapA = Math.random() * TAU;
+      if (cfg.randomStart) {
+        const r = Math.random() * 0.5, q = Math.random() * TAU;
+        startX = Math.cos(q) * r; startY = Math.sin(q) * r; startA = Math.random() * TAU;
+      } else { startX = -0.1; startY = -0.2; startA = -0.6; }
       idx = 0; dead = []; parts = []; events = []; simT = 0; state = 'play'; stateT = 0; shards = []; acc = 0; wins = 0;
       spawn();
     }
