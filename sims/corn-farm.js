@@ -39,9 +39,11 @@ Sims.register({
     const growCost = l => Math.round(8 * Math.pow(1.75, l));
     const valueOf = l => 1 + l;                                        // coins per cob
     const KEY = 'corn-farm-save';
+    const F = 2;                                   // offscreen is F times finer than the design grid: half-pixel details
 
     let coins, fieldLvl, growLvl, plots, slashes, bits, pops, t, resetArm;
     let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 260, off, g;
+    let mx = -99, my = -99, showCur = false, swing = 0;
     let btnField = null, btnGrow = null, btnReset = null, events = [], down = false;
 
     function save() { try { localStorage.setItem(KEY, JSON.stringify({ coins, fieldLvl, growLvl })); } catch (e) {} }
@@ -78,7 +80,7 @@ Sims.register({
       const pl = plots[r][c];
       if (pl.p < 1) { pl.shake = 0.25; return; }
       const v = valueOf(growLvl); coins += v; pl.p = 0; save();
-      slashes.push({ x: cx, y: cy - 10, t: 0 });
+      slashes.push({ x: cx, y: cy - 10, t: 0 }); swing = 0.22;
       for (let i = 0; i < 8; i++) bits.push({ x: cx, y: cy - 12, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, life: 0.7, col: i % 2 ? '#ffd23a' : '#3a9c2a' });
       pops.push({ x: cx, y: cy - 24, v, life: 1 });
       events.push('chop');
@@ -98,7 +100,7 @@ Sims.register({
     function lpt(e) { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) / u, y: (e.clientY - r.top) / u }; }
     const hit = (p, b) => b && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h;
     function onDown(e) {
-      const p = lpt(e); down = true;
+      const p = lpt(e); down = true; mx = p.x; my = p.y; showCur = true;
       if (hit(p, btnField)) { buy('field'); return; }
       if (hit(p, btnGrow)) { buy('grow'); return; }
       if (hit(p, btnReset)) {
@@ -108,11 +110,14 @@ Sims.register({
       const a = plotAt(p.x, p.y); if (a) harvest(a.r, a.c, a.cx, a.cy);
     }
     function onMove(e) {
-      if (!down || !cfg.swipe) return; const p = lpt(e);
+      const p = lpt(e); mx = p.x; my = p.y; showCur = e.pointerType !== 'touch' || down;
+      if (!down || !cfg.swipe) return;
       if (hit(p, btnField) || hit(p, btnGrow) || hit(p, btnReset)) return;
       const a = plotAt(p.x, p.y); if (a && plots[a.r][a.c].p >= 1) harvest(a.r, a.c, a.cx, a.cy);
     }
-    const onUp = () => { down = false; };
+    const onUp = e => { down = false; if (e && e.pointerType === 'touch') showCur = false; };
+    canvas.style.cursor = 'none';
+    canvas.addEventListener('pointerleave', () => { if (!down) showCur = false; });
     canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp);
 
@@ -140,29 +145,32 @@ Sims.register({
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const pl = plots[r][c]; pl.p = Math.min(1, pl.p + dt / gt); if (pl.shake > 0) pl.shake -= dt; }
       for (const s of slashes) s.t += dt; slashes = slashes.filter(s => s.t < 0.25);
       for (const b of bits) { b.x += b.vx * dt; b.y += b.vy * dt; b.vy += 120 * dt; b.life -= dt; } bits = bits.filter(b => b.life > 0);
+      if (swing > 0) swing -= dt;
       for (const p of pops) { p.y -= 18 * dt; p.life -= dt * 0.9; } pops = pops.filter(p => p.life > 0);
       if (resetArm > 0) resetArm -= dt;
     }
 
     // ---- drawing (everything on a small offscreen canvas, then scaled up without smoothing) ----
-    const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(Math.round(x), Math.round(y), w, h); };
+    const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(Math.round(x * F), Math.round(y * F), Math.max(1, Math.round(w * F)), Math.max(1, Math.round(h * F))); };
     function drawCorn(cx, by, p, phase) {
       // cx: centre x, by: bottom y, p: 0..1 growth
       const h = Math.round(7 + p * 34), ripe = p >= 1;
       const sway = cfg.wind ? Math.sin(t * 1.8 + phase) : 0;
       for (let i = 0; i < h; i++) {
         const k = i / 40, dx = Math.round(sway * k * 3);       // upper rows lean with the wind
-        R(cx - 1 + dx, by - i, 3, 1, i % 4 === 0 ? '#2f8a22' : '#3fae2e');
+        R(cx - 1 + dx, by - i, 3, 1, i % 4 === 0 ? '#2f8a22' : '#3fae2e'); R(cx - 1 + dx, by - i, 0.5, 1, '#23701a'); R(cx + 1.5 + dx, by - i, 0.5, 1, '#72e058'); if (i % 4 === 0) R(cx - 1 + dx, by - i, 3, 0.5, '#23701a');
       }
       // leaves, alternating sides
       for (let i = 4, s = 0; i < h - 3; i += 5, s++) {
         const dx = Math.round(sway * (i / 40) * 3), side = s % 2 ? 1 : -1, len = Math.min(8, 3 + (i >> 2));
-        for (let j = 1; j <= len; j++) R(cx + dx + (side > 0 ? 1 + j : -j - 1), by - i - (j >> 1) + 1, 1, 2, j > 2 ? '#56c93f' : '#3fae2e');
+        for (let j = 1; j <= len; j++) { const lx = cx + dx + (side > 0 ? 1 + j : -j - 1), ly = by - i - (j >> 1) + 1; R(lx, ly, 1, 2, j > 2 ? '#56c93f' : '#3fae2e'); R(lx, ly + 0.5, 1, 0.5, '#2f8a22'); R(lx, ly, 1, 0.5, '#7bec62'); }
       }
       if (p > 0.55) {                                           // cob
         const ch = Math.round(h * 0.55), dx = Math.round(sway * (ch / 40) * 3), col = ripe ? '#ffd23a' : '#9ccf3a';
         R(cx + 2 + dx, by - ch - 8, 6, 12, '#2f8a22');          // husk
         R(cx + 3 + dx, by - ch - 8, 4, 10, col);
+        for (let ky = 0; ky < 9; ky += 1) for (let kx = 0; kx < 4; kx += 1) if ((kx + ky) % 2 === 0) R(cx + 3 + dx + kx, by - ch - 8 + ky + 0.5, 0.5, 0.5, ripe ? '#d99a00' : '#6fa224');
+        R(cx + 6.5 + dx, by - ch - 8, 0.5, 10, ripe ? '#b57d00' : '#4f8018');
         if (ripe) { R(cx + 4 + dx, by - ch - 7, 1, 2, '#fff2a0'); R(cx + 3 + dx, by - ch - 4, 1, 1, '#e5a800'); R(cx + 5 + dx, by - ch - 2, 1, 1, '#e5a800'); R(cx + 6 + dx, by - ch - 6, 1, 1, '#e5a800'); }
         R(cx + 4 + dx, by - ch + 3, 3, 2, '#2f8a22');
       }
@@ -177,6 +185,15 @@ Sims.register({
       }
       const hx = s.x + Math.cos(a) * rad, hy = s.y + Math.sin(a) * rad;
       R(hx - 1, hy - 1, 3, 3, '#cfd8e3'); R(hx + (Math.cos(a) > 0 ? 2 : -3), hy + 1, 2, 2, '#8a5a2b');
+    }
+    function cursorSickle() {
+      // the pointer is a sickle: its hot spot is the middle of the blade; it swings when something is cut
+      const rot = swing > 0 ? -0.9 + (1 - swing / 0.22) * 1.7 : -0.25 + Math.sin(t * 3) * 0.04;
+      const cs = Math.cos(rot), sn = Math.sin(rot), pts = [];
+      const C = { x: 7, y: 7 };                                     // arc centre relative to the hot spot
+      for (let a = 3.14; a <= 4.75; a += 0.045) for (let rr = 5.5; rr <= 8; rr += 0.5) pts.push([C.x + Math.cos(a) * rr - 2.4, C.y + Math.sin(a) * rr - 2.4, rr > 7.4 ? '#f4f8fc' : rr > 6.4 ? '#c5d0dc' : '#8e9bab']);
+      for (let k = 0; k <= 13; k += 0.5) for (let w = 0; w < 2; w += 0.5) pts.push([C.x - 7.4 + w - 2.4, C.y + 0.6 + k - 2.4, w === 0 ? '#5e3b18' : k % 3 === 0 ? '#6b4320' : '#9a6a38']);
+      for (const q of pts) { const x = q[0], y = q[1]; R(mx + x * cs - y * sn, my + x * sn + y * cs, 1, 1, q[2]); }
     }
     function pbtn(x, y, w, h, enabled, maxed) {
       R(x, y, w, h, '#2a1a0c'); R(x + 1, y + 1, w - 2, h - 2, maxed ? '#4a4a4a' : enabled ? '#4fb83a' : '#7a5a34');
@@ -203,7 +220,8 @@ Sims.register({
         for (let c = 0; c < L.cols; c++) {
           const px = L.x0 + c * TW, py = L.y0 + r * TH;
           R(px, py + 2, TW, TH - 1, (r + c) % 2 ? '#7d4f28' : '#87552b');
-          R(px + 2, py + 5, TW - 4, 1, '#6a4020'); R(px + 2, py + 9, TW - 4, 1, '#6a4020');
+          R(px + 2, py + 5, TW - 4, 1, '#6a4020'); R(px + 2, py + 9, TW - 4, 1, '#6a4020'); R(px + 2, py + 6, TW - 4, 0.5, '#9a6a3a'); R(px + 2, py + 10, TW - 4, 0.5, '#9a6a3a');
+          for (let q = 0; q < 6; q++) R(px + 1 + ((q * 7 + r * 3 + c) % 21), py + 3 + ((q * 5 + c) % 9), 0.5, 0.5, q % 2 ? '#5a3818' : '#a47444');
         }
         for (let c = 0; c < L.cols; c++) {                       // corn after the tiles of the same row (back to front)
           const pl = plots[r][c], px = L.x0 + c * TW, by = L.y0 + r * TH + TH - 2 + (pl.shake > 0 ? (Math.floor(t * 40) % 2) : 0);
@@ -211,6 +229,7 @@ Sims.register({
         }
       }
       slashes.forEach(sickle);
+      if (showCur) cursorSickle();
       bits.forEach(b => R(b.x, b.y, 2, 2, b.col));
       // buttons
       const bw = Math.floor((LW - 12) / 2), bhh = 30, by = LH - bhh - 5;
@@ -238,10 +257,10 @@ Sims.register({
       ctx.globalAlpha = 1;
     }
     function draw() {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       scene();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(off, 0, 0, LW, LH, 0, 0, LW * u, LH * u);
+      ctx.drawImage(off, 0, 0, LW * F, LH * F, 0, 0, LW * u, LH * u);
       overlay();
     }
 
@@ -251,7 +270,7 @@ Sims.register({
       canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
       u = Math.max(2, Math.floor(Math.min(W / 125, H / 215)));      // size of one "pixel" in CSS pixels
       LW = Math.ceil(W / u); LH = Math.ceil(H / u);
-      off = document.createElement('canvas'); off.width = LW; off.height = LH; g = off.getContext('2d');
+      off = document.createElement('canvas'); off.width = LW * F; off.height = LH * F; g = off.getContext('2d');
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     function frame(ts) {
@@ -266,7 +285,7 @@ Sims.register({
     return {
       restart, resize,
       setPaused(p) { paused = p; },
-      destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); },
+      destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.style.cursor = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); },
       debug: { update, get coins() { return coins; }, set coins(v) { coins = v; }, get fieldLvl() { return fieldLvl; }, get growLvl() { return growLvl; }, buy, harvest, plots: () => plots, layout: layoutField }
     };
   }
