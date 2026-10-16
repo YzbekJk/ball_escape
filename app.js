@@ -64,6 +64,35 @@
   // ---------- simulation view ----------
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
+  // ---- common overlay (timer + text) available in every simulation, hidden by default ----
+  const EXTRA = { ovTimer: false, ovTimerY: 92, ovTimerSize: 9, ovText: false, ovTextStr: 'Текст', ovTextY: 8, ovTextSize: 7 };
+  const EXTRA_SCHEMA = [
+    { k: 'ovTimer', l: '⏱ Показать таймер', type: 'check', live: 1 },
+    { k: 'ovTimerY', l: 'Таймер: положение по вертикали, %', min: 3, max: 97, step: 1, live: 1 },
+    { k: 'ovTimerSize', l: 'Таймер: размер', min: 3, max: 25, step: 0.5, live: 1 },
+    { k: 'ovText', l: '🅣 Показать текст', type: 'check', live: 1 },
+    { k: 'ovTextStr', l: 'Текст', type: 'text', live: 1 },
+    { k: 'ovTextY', l: 'Текст: положение по вертикали, %', min: 3, max: 97, step: 1, live: 1 },
+    { k: 'ovTextSize', l: 'Текст: размер', min: 2, max: 20, step: 0.5, live: 1 }
+  ];
+  const ovTimer = $('ovTimer'), ovText = $('ovText');
+  let timerT = 0, timerLast = 0, timerRaf = 0;
+  function fmtTime(t) { const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); }
+  function updateOverlay(ts) {
+    timerRaf = requestAnimationFrame(updateOverlay);
+    if (!current) return;
+    const c = current.cfg, dt = Math.min(0.1, (ts - timerLast) / 1000 || 0); timerLast = ts;
+    if (!current.paused) timerT += dt * (c.simSpeed || 1);
+    ovTimer.hidden = !c.ovTimer; ovText.hidden = !c.ovText;
+    if (c.ovTimer) {
+      ovTimer.textContent = fmtTime(timerT); ovTimer.style.top = c.ovTimerY + '%'; ovTimer.style.fontSize = c.ovTimerSize + 'vmin';
+    }
+    if (c.ovText) {
+      ovText.textContent = c.ovTextStr; ovText.style.top = c.ovTextY + '%'; ovText.style.fontSize = c.ovTextSize + 'vmin';
+    }
+  }
+  timerRaf = requestAnimationFrame(updateOverlay);
+
   function readCfg(sim) {
     const cfg = Object.assign({}, sim.defaults), q = new URLSearchParams(location.search);
     for (const k in sim.defaults) {
@@ -88,12 +117,14 @@
     const { sim, cfg } = current, inputs = current.inputs = {};
     fields.innerHTML = '';
     $('panelTitle').textContent = sim.title;
-    sim.schema.forEach(f => {
+    sim.schema.concat(EXTRA_SCHEMA).forEach(f => {
       const box = document.createElement('div'); box.className = 'f' + (f.type === 'check' ? ' chk' : '');
       const lab = document.createElement('label'); let inp, out;
       if (f.type === 'check') {
         inp = document.createElement('input'); inp.type = 'checkbox';
         lab.append(inp, document.createTextNode(f.l));
+      } else if (f.type === 'text') {
+        lab.textContent = f.l; inp = document.createElement('input'); inp.type = 'text'; inp.className = 'txt';
       } else {
         lab.textContent = f.l; out = document.createElement('output'); lab.appendChild(out);
         inp = document.createElement('input'); inp.type = 'range';
@@ -102,7 +133,7 @@
       box.appendChild(lab); if (f.type !== 'check') box.appendChild(inp);
       fields.appendChild(box); inputs[f.k] = { inp, out, f };
       inp.addEventListener('input', () => {
-        const v = f.type === 'check' ? inp.checked : parseFloat(inp.value);
+        const v = f.type === 'check' ? inp.checked : f.type === 'text' ? inp.value : parseFloat(inp.value);
         if (typeof v === 'number' && !isFinite(v)) return;
         cfg[f.k] = v; if (f.k === 'sound' && v) initAudio();
         refresh(); writeURL();
@@ -124,6 +155,8 @@
   function openSim(id) {
     const sim = Sims.get(id);
     closeSim();
+    for (const k in EXTRA) if (!(k in sim.defaults)) sim.defaults[k] = EXTRA[k];
+    timerT = 0;
     menu.hidden = true; view.hidden = false; panel.hidden = true;
     view.classList.toggle('light', !!sim.light);
     $('btnPause').textContent = '⏸ Пауза';
@@ -131,6 +164,7 @@
     const cfg = readCfg(sim);
     current = { sim, cfg, paused: false };
     current.inst = sim.create(canvas, cfg, { audio: () => actx });
+    const origRestart = current.inst.restart; current.inst.restart = function () { timerT = 0; return origRestart.apply(this, arguments); };
     buildPanel();
     window.__sim = current;
   }

@@ -53,3 +53,9 @@ button:hover{background:#1d2230}button:active{transform:translateY(1px)}
 .card.big .d{padding:0}
 .card.big .n{display:inline-block;margin-top:8px;font-size:12px;color:#ff6bf3;border:1px solid #4a2a49;border-radius:999px;padding:2px 10px}
 .card.big.empty{opacity:.75}
+
+.ov{position:fixed;left:0;right:0;transform:translateY(-50%);text-align:center;color:#fff;font-weight:800;pointer-events:none;z-index:2;
+  font-family:Inter,"Helvetica Neue",Arial,sans-serif;text-shadow:0 1px 6px rgba(0,0,0,.6);padding:0 12px;word-break:break-word}
+.ov#ovTimer{font-variant-numeric:tabular-nums}
+#view.light .ov{color:#111;text-shadow:0 1px 6px rgba(255,255,255,.7)}
+input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #444;background:#1c1c22;color:inherit;font:inherit}
