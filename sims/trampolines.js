@@ -8,7 +8,7 @@ Sims.register({
 
   defaults: {
     tramps: 3, maxLen: 0.35, trampBounce: 1.1, gravity: 1.6, ballR: 0.035, targetR: 0.05, minDist: 0.6,
-    wallBounce: 0.8, wallDeath: true, floor: false, trail: true, sound: true, music: true, vocalStart: 2.4, volume: 0.7
+    wallBounce: 0.8, wallDeath: true, floor: false, trail: true, sound: true, music: true, vocalStart: 8, volume: 0.7
   },
   schema: [
     { k: 'tramps', l: 'Сколько батутов дано', min: 1, max: 10, step: 1, live: 1 },
