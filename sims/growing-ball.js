@@ -6,7 +6,7 @@ Sims.register({
 
   // lengths are in units of the ring radius
   defaults: {
-    grow: 0.008, startR: 0.03, speed: 0.9, gravity: 1.0, bounce: 1.0,
+    grow: 0.008, startR: 0.08, speed: 0.9, gravity: 0.7, bounce: 1.0,
     simSpeed: 1, hue: 310, trail: true, sound: true, auto: true
   },
   schema: [
