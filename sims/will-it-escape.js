@@ -7,7 +7,7 @@ Sims.register({
 
   defaults: {
     rings: 7, chip: 0.25, gravity: 1.2, speed: 0.7, ballR: 0.022, bounce: 1,
-    simSpeed: 1, label: true, debris: true, sound: true, auto: true
+    simSpeed: 1, label: false, debris: true, sound: true, auto: true
   },
   schema: [
     { k: 'rings', l: 'Количество колец', min: 2, max: 14, step: 1 },

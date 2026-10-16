@@ -7,7 +7,7 @@ Sims.register({
 
   defaults: {
     spikes: 24, spikeH: 0.085, gap: 0.75, gapAngle: 125, eps: 0.002, gravity: 1.0, speed: 1.1, ballR: 0.04,
-    bounce: 1, maxDead: 40, deadly: true, simSpeed: 1, title: true, sound: true, auto: true
+    bounce: 1, maxDead: 40, deadly: true, simSpeed: 1, title: false, sound: true, auto: true
   },
   schema: [
     { k: 'spikes', l: 'Количество шипов', min: 6, max: 60, step: 1, live: 1 },
