@@ -6,7 +6,7 @@ Sims.register({
   desc: 'Шарики по очереди пытаются вылететь через щель в кольце. У каждого всего 4 секунды: не успел — застыл на месте, и теперь от него отскакивают остальные.',
 
   defaults: {
-    limit: 4, gap: 0.9, randomGap: true, gapAngle: 211, maxFrozen: 30, gravity: 1.2, speed: 1.6, ballR: 0.06, bounce: 1,
+    limit: 4, gap: 0.9, randomGap: true, gapAngle: 211, maxFrozen: 30, restartOnEscape: true, gravity: 1.2, speed: 1.6, ballR: 0.06, bounce: 1,
     simSpeed: 1, caption: true, digit: true, stars: true, sound: true
   },
   schema: [
@@ -15,6 +15,7 @@ Sims.register({
     { k: 'randomGap', l: 'Случайная щель (новая для каждого шарика)', type: 'check', live: 1 },
     { k: 'gapAngle', l: 'Где щель, если не случайная, градусы', min: 0, max: 359, step: 1, live: 1 },
     { k: 'maxFrozen', l: 'Сколько застывших шариков держать (старые пропадают)', min: 3, max: 120, step: 1, live: 1 },
+    { k: 'restartOnEscape', l: 'Если шарик вышел за круг — игра начинается заново', type: 'check', live: 1 },
     { k: 'gravity', l: 'Гравитация', min: 0, max: 6, step: 0.1, live: 1 },
     { k: 'speed', l: 'Скорость шарика', min: 0.3, max: 4, step: 0.1 },
     { k: 'ballR', l: 'Размер шарика', min: 0.02, max: 0.15, step: 0.005 },
@@ -101,6 +102,7 @@ Sims.register({
           b.out = true; wins++;
           dots.push({ x: b.x, y: b.y, vx: b.vx * 0.8 + (Math.random() - 0.5) * 0.4, vy: b.vy * 0.8 + (Math.random() - 0.5) * 0.4, i: b.i }); if (dots.length > 30) dots.shift();
           events.push({ win: b.i });
+          if (cfg.restartOnEscape) { restart(); wins = 1; return; }
         }
       }
       for (const d of dots) {                 // escaped balls drift away from the gap and slow down
