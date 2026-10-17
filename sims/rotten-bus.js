@@ -314,7 +314,7 @@ Sims.register({
     const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(Math.round(x * F), Math.round(y * F), Math.max(1, Math.round(w * F)), Math.max(1, Math.round(h * F))); };
     function person(cx, fy, o) {
       // cx centre x, fy feet y (already minus jump height). o.face: 1 right, -1 left
-      const f = o.face, st = o.st || 'idle', bob = st === 'walk' ? Math.round(Math.sin(t * 14 + (o.ph || 0))) : Math.round(Math.sin(t * 7 + (o.ph || 0)) * 0.9);
+      const f = o.face, st = o.st || 'idle', bob = st === 'walk' ? Math.round(Math.sin(t * 9 + (o.ph || 0))) : Math.round(Math.sin(t * 4 + (o.ph || 0)) * 0.8);
       const flash = o.flash > 0 && Math.floor(t * 30) % 2 === 0, sk = flash ? '#fff' : '#f0c9a0', top = flash ? '#fff' : o.top, pants = flash ? '#fff' : o.pants;
       if (st === 'dead') {                                         // lying on the floor
         R(cx - 14, fy - 7, 12, 7, top); R(cx - 2, fy - 7, 8, 6, pants); R(cx + 6, fy - 5, 6, 4, '#222'); R(cx - 20, fy - 8, 8, 8, sk); R(cx - 20, fy - 9, 8, 3, o.hair); return;
@@ -322,7 +322,7 @@ Sims.register({
       const lean = st === 'hurt' ? -f * 2 : st === 'wind' ? -f * 1 : 0, hy = fy - 38 + bob * 0.5;
       const w = o.wide ? 18 : 14;
       // legs
-      const l1 = st === 'walk' ? Math.round(Math.sin(t * 14 + (o.ph || 0)) * 3) : Math.round(Math.sin(t * 5 + (o.ph || 0)) * 1.5);
+      const l1 = st === 'walk' ? Math.round(Math.sin(t * 9 + (o.ph || 0)) * 2) : 0;       // legs stand still unless the character really moves
       R(cx - 5 + l1, fy - 14, 4, 14, pants); R(cx + 1 - l1, fy - 14, 4, 14, pants); R(cx - 6 + l1, fy - 2, 5, 2, '#1a1a22'); R(cx + 1 - l1, fy - 2, 5, 2, '#1a1a22');
       if (st === 'kick') R(cx + f * 2, fy - 14, 4 * 1, 4, pants), R(cx + f * 4, fy - 14, 14 * f > 0 ? 14 : 14, 4, pants), R(cx + f * 16, fy - 15, 4, 6, '#1a1a22');
       // torso
