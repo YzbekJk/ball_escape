@@ -76,11 +76,11 @@ Sims.register({
       }
     };
     const ENEMIES = [
-      { id: 'conductor', name: 'КОНДУКТОР', hp: 130, speed: 42, cd: [0.35, 0.9], combo: 0.5, guard: 0.35,
+      { id: 'conductor', name: 'КОНДУКТОР', hp: 130, speed: 36, cd: [1.2, 2.1], combo: 0.12, guard: 0.15, wm: 1.4, dm: 0.8,
         atks: [{ n: 'punch', wind: 0.4, act: 0.16, reach: 22, dmg: 10, low: false, say: 'Билет!' }, { n: 'lunge', wind: 0.6, act: 0.3, reach: 14, dmg: 14, low: true, dash: 64, say: 'Штраф!' }, { n: 'kickLow', wind: 0.5, act: 0.2, reach: 24, dmg: 11, low: true, say: 'Выходим!' }, { n: 'slap', wind: 0.5, act: 0.2, reach: 26, dmg: 13, low: false, high: true, say: 'Контроль!' }] },
-      { id: 'babka', name: 'БАБКА', hp: 170, speed: 26, cd: [0.45, 1.1], heal: 1, combo: 0.4, guard: 0.3,
+      { id: 'babka', name: 'БАБКА', hp: 170, speed: 28, cd: [0.9, 1.7], heal: 1, combo: 0.28, guard: 0.25, wm: 1.2, dm: 1,
         atks: [{ n: 'poke', wind: 0.42, act: 0.2, reach: 36, dmg: 11, low: false, say: 'Уступи!' }, { n: 'sweep', wind: 0.6, act: 0.25, reach: 38, dmg: 14, low: true, say: 'Давление!' }, { n: 'bag', wind: 0.48, act: 0.2, reach: 30, dmg: 13, low: false, say: 'Сумкой!' }, { n: 'umbrella', wind: 0.55, act: 0.22, reach: 38, dmg: 13, low: false, high: true, say: 'Зонтом!' }] },
-      { id: 'mother', name: 'Я ЖЕ МАТЬ', hp: 260, speed: 34, cd: [0.3, 0.8], kid: true, combo: 0.6, guard: 0.3,
+      { id: 'mother', name: 'Я ЖЕ МАТЬ', hp: 260, speed: 38, cd: [0.7, 1.35], kid: true, combo: 0.45, guard: 0.32, wm: 1.05, dm: 1.2,
         atks: [{ n: 'bag', wind: 0.4, act: 0.2, reach: 30, dmg: 14, low: false, say: 'Я же мать!' }, { n: 'shout', wind: 0.65, act: 0.3, reach: 70, dmg: 12, low: true, say: 'Я МАТЬ!!!' }, { n: 'slap', wind: 0.35, act: 0.15, reach: 22, dmg: 11, low: false, say: 'Не трогай!' }, { n: 'swing', wind: 0.5, act: 0.2, reach: 34, dmg: 15, low: false, high: true, say: 'По голове!' }] }
     ];
 
@@ -119,7 +119,7 @@ Sims.register({
       if (nx) { openDialog(nx); } else beginFight();
     }
     function beginFight() {
-      mode = 'fight'; en.st = 'idle'; en.cd = 1; en.t = 0; banner = ENEMIES[stage].id === 'mother' ? 'БОСС: Я ЖЕ МАТЬ!' : 'БОЙ!'; bannerT = 1.4; events.push('bell');
+      mode = 'fight'; en.st = 'idle'; en.cd = 1.6; en.t = 0; banner = ENEMIES[stage].id === 'mother' ? 'БОСС: Я ЖЕ МАТЬ!' : 'БОЙ!'; bannerT = 1.4; events.push('bell');
       pl.x = Math.round(LW * 0.25); en.x = Math.round(LW * 0.75); en.hp = en.max;
     }
     function endFight() {
@@ -207,28 +207,28 @@ Sims.register({
         }
         else if (en.cd <= 0) { en.atk = en.next; en.next = null; en.st = 'wind'; en.t = 0; en.hit = false; en.combo = 0; en.hold = Math.random() < 0.3 ? rnd(0.12, 0.35) : 0; pl.parried = false; events.push('warn'); say(en.atk.say); }
       } else if (en.st === 'heal') { en.hp = Math.min(en.max, en.hp + 14 * dt); if (en.t > 2.2) { en.st = 'idle'; en.cd = 0.5; } }
-      else if (en.st === 'wind') { if (en.t >= en.atk.wind * 1.15 * (en.combo ? 0.65 : 1) / (enraged ? 1.2 : 1) + en.hold) { en.st = 'act'; en.t = 0; en.hit = false; en.vx = en.face * (en.atk.dash ? 0 : 70); en.dd = en.face; pl.parried = false; } }
+      else if (en.st === 'wind') { if (en.t >= en.atk.wind * (E.wm || 1) * (en.combo ? 0.65 : 1) / (enraged ? 1.2 : 1) + en.hold) { en.st = 'act'; en.t = 0; en.hit = false; en.vx = en.face * (en.atk.dash ? 0 : 70); en.dd = en.face; pl.parried = false; } }
       else if (en.st === 'act') {
         if (en.atk && en.atk.dash) en.x += en.dd * (en.atk.dash / en.atk.act) * dt;
         if (en.atk && !en.hit) {
           const dash = !!en.atk.dash, dx = dash ? Math.abs(pl.x - en.x) : (pl.x - en.x) * en.face;   // lunge: hits at the moment he runs through the hero
           if (dash ? dx < 8 : (dx > -6 && dx < en.atk.reach)) {
             if (en.atk.high && pl.ducking) { en.hit = true; floatText(pl.x, ground() - 52, 'увернулся', '#ffd98a'); events.push('block'); }
-            else if (en.atk.high || (en.atk.low ? pl.h < 7 : pl.h < 22)) { en.hit = true; hurtPlayer(en.atk.dmg * pw, en.atk.low, 6, en.atk.high); if (dash) floatText(pl.x, ground() - 64, 'в спину!', '#ffb02e'); }
+            else if (en.atk.high || (en.atk.low ? pl.h < 7 : pl.h < 22)) { en.hit = true; hurtPlayer(en.atk.dmg * pw * (E.dm || 1), en.atk.low, 6, en.atk.high); if (dash) floatText(pl.x, ground() - 64, 'в спину!', '#ffb02e'); }
           }
         }
         if (en.st === 'act' && en.atk && en.t > en.atk.act) {
           if (!pl.st.startsWith('dead') && en.combo < 2 && Math.random() < (E.combo || 0) * (enraged ? 1.4 : 1) && Math.abs(pl.x - en.x) < 40) { en.atk = E.atks[Math.floor(Math.random() * E.atks.length)]; en.combo++; en.st = 'wind'; en.t = 0; en.hit = false; en.hold = 0; events.push('warn'); say(en.atk.say, 0.6); }
           else { en.st = 'rec'; en.t = 0; }
         }
-      } else if (en.st === 'rec') { if (en.t > 0.25) { en.st = 'idle'; en.cd = rnd(E.cd[0], E.cd[1]) / (enraged ? 1.4 : 1); } }
+      } else if (en.st === 'rec') { if (en.t > 0.45) { en.st = 'idle'; en.cd = rnd(E.cd[0], E.cd[1]) / (enraged ? 1.25 : 1); } }
       en.x = Math.max(14, Math.min(LW - 12, en.x));
       if (!dashing && Math.abs(en.x - pl.x) < 10) { const s = Math.sign(en.x - pl.x) || 1; en.x += s * 40 * dt; pl.x -= s * 20 * dt; }
       // boss: the kid kicks the seat -> a shockwave runs along the floor
       if (E.kid) {
         if (kidWarn > 0) { kidWarn -= dt; if (kidWarn <= 0) { waves.push({ x: LW - 8, v: -78 }); events.push('kick'); shake = 0.25; } }
         else { kidT -= dt; if (kidT <= 0) { kidWarn = 1.0; kidT = enraged ? rnd(2.2, 3) : rnd(3.5, 5); if (enraged && Math.random() < 0.5) setTimeout(() => { if (mode === 'fight') waves.push({ x: LW - 8, v: -95 }); }, 450); say('Малыш пинает кресло!', 1.2); events.push('warn2'); } }
-        for (const w of waves) { w.x += w.v * dt; if (!w.hit && Math.abs(w.x - pl.x) < 7 && pl.h < 7) { w.hit = true; hurtPlayer(9 * pw, true, 8); } }
+        for (const w of waves) { w.x += w.v * dt; if (!w.hit && Math.abs(w.x - pl.x) < 7 && pl.h < 7) { w.hit = true; hurtPlayer(9 * pw * (E.dm || 1), true, 8); } }
         waves = waves.filter(w => w.x > -10);
       }
     }
