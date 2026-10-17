@@ -6,13 +6,16 @@ Sims.register({
   title: 'Кукурузная ферма',
   desc: 'Пиксельная ферма: на крошечном поле растёт большая кукуруза. Собирайте урожай серпом (тап или проведите пальцем), копите монеты и прокачивайте размер поля или рост кукурузы.',
 
-  defaults: { baseTime: 7, speed: 1, swipe: true, wind: true, sound: true },
+  defaults: { baseTime: 7, speed: 1, swipe: true, wind: true, sound: true, music: true, musicStart: 6, volume: 0.7 },
   schema: [
     { k: 'baseTime', l: 'Сколько секунд растёт кукуруза (без прокачки)', min: 2, max: 40, step: 1, live: 1 },
     { k: 'speed', l: 'Скорость роста ×', min: 0.25, max: 10, step: 0.25, live: 1 },
     { k: 'swipe', l: 'Собирать, проводя пальцем', type: 'check', live: 1 },
     { k: 'wind', l: 'Ветер качает кукурузу', type: 'check', live: 1 },
-    { k: 'sound', l: 'Звук', type: 'check', live: 1 }
+    { k: 'sound', l: 'Звуки', type: 'check', live: 1 },
+    { k: 'music', l: 'Саундтрек', type: 'check', live: 1 },
+    { k: 'musicStart', l: 'С какой секунды трека начинать', min: 0, max: 60, step: 0.5, live: 1 },
+    { k: 'volume', l: 'Громкость саундтрека', min: 0, max: 1, step: 0.05, live: 1 }
   ],
 
   preview(ctx, w, h) {
@@ -96,11 +99,26 @@ Sims.register({
       save(); events.push('buy');
     }
 
+    // ---- soundtrack: starts at cfg.musicStart and loops from there ----
+    const song = new Audio('assets/corn-track.m4a'); song.preload = 'auto';
+    let songOn = false;
+    function seekPlay() {
+      const go = () => { try { song.currentTime = cfg.musicStart; } catch (e) {} const pr = song.play(); if (pr && pr.catch) pr.catch(() => { songOn = false; }); };
+      if (song.readyState >= 1) go(); else { song.addEventListener('loadedmetadata', go, { once: true }); song.load(); }
+    }
+    function musicTick() {
+      if (!cfg.music || paused) { if (songOn) { song.pause(); songOn = false; } return; }
+      song.volume = Math.max(0, Math.min(1, cfg.volume));
+      if (!songOn) { songOn = true; seekPlay(); return; }
+      if (!song.paused && song.currentTime < cfg.musicStart - 0.25) { try { song.currentTime = cfg.musicStart; } catch (e) {} }
+      if (song.ended || (song.duration && song.currentTime > song.duration - 0.2)) seekPlay();
+    }
+
     // ---- input ----
     function lpt(e) { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) / u, y: (e.clientY - r.top) / u }; }
     const hit = (p, b) => b && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h;
     function onDown(e) {
-      const p = lpt(e); down = true; mx = p.x; my = p.y; showCur = true;
+      musicTick(); const p = lpt(e); down = true; mx = p.x; my = p.y; showCur = true;
       if (hit(p, btnField)) { buy('field'); return; }
       if (hit(p, btnGrow)) { buy('grow'); return; }
       if (hit(p, btnReset)) {
@@ -277,6 +295,7 @@ Sims.register({
       if (!on) return;
       const dt = Math.min(0.1, (ts - last) / 1000 || 0); last = ts;
       if (!paused) { update(dt); playEvents(); }
+      musicTick();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       draw(); raf = requestAnimationFrame(frame);
     }
@@ -285,7 +304,7 @@ Sims.register({
     return {
       restart, resize,
       setPaused(p) { paused = p; },
-      destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.style.cursor = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); },
+      destroy() { on = false; song.pause(); song.removeAttribute('src'); song.load(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.style.cursor = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); },
       debug: { update, get coins() { return coins; }, set coins(v) { coins = v; }, get fieldLvl() { return fieldLvl; }, get growLvl() { return growLvl; }, buy, harvest, plots: () => plots, layout: layoutField }
     };
   }
