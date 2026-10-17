@@ -173,11 +173,11 @@ Sims.register({
       
       teacher(G.cx, G.floorY + 14);
       // students' desks
-      const nx = Math.round(LW * 0.25), yx = Math.round(LW * 0.72), dy = G.deskY;
+      const nx = Math.round(LW / 2 - 24), yx = Math.round(LW / 2 + 24), dy = G.deskY;   // neighbours sit close together on any screen width
       R(0, dy, LW, 22, '#8a5a30'); R(0, dy, LW, 2, '#a8743f'); R(0, dy + 20, LW, 2, '#5e3b1b');
       head(nx, dy - 26, { shirt: '#3a8f5a', hair: '#7a4a20', look: 0 });
       const copyingNow = copying && phase !== 'caught';
-      head(yx, dy - 26 + (copyingNow ? 2 : 0), { shirt: '#c0392b', hair: '#1c1c22', look: copyingNow ? -2 : (danger() ? 0 : 0), worry: warn() });
+      head(yx, dy - 26 + (copyingNow ? 2 : 0), { shirt: '#c0392b', hair: '#1c1c22', look: copyingNow ? -3 : 0, worry: warn() });
       // paper of the neighbour, and your notebook
       R(nx - 12, dy + 3, 24, 14, '#fff'); R(nx - 12, dy + 3, 24, 1, '#ddd');
       for (let i = 0; i < 4; i++) R(nx - 10, dy + 6 + i * 3, 14 + (i % 2) * 5, 0.5, '#3a5fcf');
@@ -186,7 +186,8 @@ Sims.register({
       const filled = Math.round(pct / 100 * 20);
       for (let i = 0; i < 4; i++) R(yx - 10, dy + 6 + i * 3, Math.max(0, Math.min(20, filled - i * 4)) * 1, 0.5, '#2a2a8a');
       if (copyingNow) {                                           // eyes dotted line to the neighbour's sheet + pencil jiggle
-        for (let i = 0; i < 6; i++) R(yx - 5 - i * 5.5, dy - 12 + i * 2.6, 1, 1, 'rgba(255,255,255,.8)');
+        { const x0 = yx - 6, y0 = dy - 17, x1 = nx + 8, y1 = dy + 8, n = Math.max(4, Math.round(Math.hypot(x1 - x0, y1 - y0) / 4));
+          for (let i = 0; i <= n; i++) R(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), 1, 1, 'rgba(255,255,255,.85)'); }
         R(yx + 6 + Math.round(Math.sin(t * 25) * 1.5), dy + 11, 4, 2, '#ffd23a');
       }
       // progress bar
