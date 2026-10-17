@@ -1,12 +1,12 @@
 /* Игра «Гнилая маршрутка» (пиксель-арт файтинг): диалоги и три боя — кондуктор, бабка и босс «Я же мать».
-   Красный «!» над врагом — готовится удар, который можно заблокировать; синий «!» — удар по ногам, через него надо прыгнуть. */
+   Красный «!» — блок (нажмите блок в последний момент — удар отразится); синий «!» — удар по ногам, через него надо прыгнуть. */
 Sims.register({
   id: 'rotten-bus',
   kind: 'game',
   title: 'Гнилая маршрутка',
   desc: 'Пиксельный файтинг. Сначала поболтайте с кондуктором о билете, затем бой. Потом бабка, которая требует уступить место, и босс — «Я же мать!», чей ребёнок пинает ваше кресло.',
 
-  defaults: { playerHp: 100, enemyPower: 1, skipDialogs: false, sound: true, music: true, musicStart: 9, volume: 0.7 },
+  defaults: { playerHp: 100, enemyPower: 1.5, skipDialogs: false, sound: true, music: true, musicStart: 9, volume: 0.7 },
   schema: [
     { k: 'playerHp', l: 'Ваше здоровье', min: 40, max: 300, step: 10 },
     { k: 'enemyPower', l: 'Сила врагов ×', min: 0.3, max: 3, step: 0.1, live: 1 },
@@ -73,12 +73,12 @@ Sims.register({
       }
     };
     const ENEMIES = [
-      { id: 'conductor', name: 'КОНДУКТОР', hp: 90, speed: 30, cd: [0.7, 1.5],
-        atks: [{ n: 'punch', wind: 0.5, act: 0.18, reach: 22, dmg: 8, low: false, say: 'Билет!' }, { n: 'lunge', wind: 0.7, act: 0.3, reach: 14, dmg: 12, low: false, dash: 46, say: 'Штраф!' }] },
-      { id: 'babka', name: 'БАБКА', hp: 110, speed: 18, cd: [0.9, 1.8], heal: 2,
-        atks: [{ n: 'poke', wind: 0.55, act: 0.2, reach: 34, dmg: 9, low: false, say: 'Уступи!' }, { n: 'sweep', wind: 0.8, act: 0.25, reach: 36, dmg: 11, low: true, say: 'Давление!' }] },
-      { id: 'mother', name: 'Я ЖЕ МАТЬ', hp: 170, speed: 24, cd: [0.6, 1.3], kid: true,
-        atks: [{ n: 'bag', wind: 0.5, act: 0.2, reach: 28, dmg: 12, low: false, say: 'Я же мать!' }, { n: 'shout', wind: 0.85, act: 0.3, reach: 70, dmg: 10, low: true, say: 'Я МАТЬ!!!' }] }
+      { id: 'conductor', name: 'КОНДУКТОР', hp: 130, speed: 42, cd: [0.35, 0.9], combo: 0.5, guard: 0.35,
+        atks: [{ n: 'punch', wind: 0.4, act: 0.16, reach: 22, dmg: 10, low: false, say: 'Билет!' }, { n: 'lunge', wind: 0.55, act: 0.28, reach: 14, dmg: 15, low: false, dash: 50, say: 'Штраф!' }, { n: 'kickLow', wind: 0.5, act: 0.2, reach: 24, dmg: 11, low: true, say: 'Выходим!' }] },
+      { id: 'babka', name: 'БАБКА', hp: 170, speed: 26, cd: [0.45, 1.1], heal: 1, combo: 0.4, guard: 0.3,
+        atks: [{ n: 'poke', wind: 0.42, act: 0.2, reach: 36, dmg: 11, low: false, say: 'Уступи!' }, { n: 'sweep', wind: 0.6, act: 0.25, reach: 38, dmg: 14, low: true, say: 'Давление!' }, { n: 'bag', wind: 0.48, act: 0.2, reach: 30, dmg: 13, low: false, say: 'Сумкой!' }] },
+      { id: 'mother', name: 'Я ЖЕ МАТЬ', hp: 260, speed: 34, cd: [0.3, 0.8], kid: true, combo: 0.6, guard: 0.3,
+        atks: [{ n: 'bag', wind: 0.4, act: 0.2, reach: 30, dmg: 14, low: false, say: 'Я же мать!' }, { n: 'shout', wind: 0.65, act: 0.3, reach: 70, dmg: 12, low: true, say: 'Я МАТЬ!!!' }, { n: 'slap', wind: 0.35, act: 0.15, reach: 22, dmg: 11, low: false, say: 'Не трогай!' }] }
     ];
 
     // ================= state =================
@@ -86,14 +86,14 @@ Sims.register({
     let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, btns = [], choiceRects = [];
     const rnd = (a, b) => a + Math.random() * (b - a);
 
-    function newPlayer() { return { x: 28, h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
+    function newPlayer() { return { parryT: 0, wasBlock: false, x: 28, h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
     function startStage(i) {
       stage = i; const E = ENEMIES[i];
       en = { def: E, x: 0, h: 0, hp: E.hp, max: E.hp, face: -1, st: 'idle', t: 0, atk: null, cd: 1, flash: 0, healsLeft: E.heal || 0, healT: 0, dashed: false, hit: false, dead: false };
-      en.x = LW - 30; waves = []; kidT = rnd(4, 6); kidWarn = 0;
+      en.x = LW - 30; waves = []; kidT = rnd(3, 4.5); kidWarn = 0;
       if (!pl) pl = newPlayer(); else { pl.hp = Math.min(pl.max, pl.hp + 35); pl.x = 28; pl.h = 0; pl.vy = 0; pl.st = 'idle'; pl.cd = 0; }
       openDialog(DIALOGS[E.id].start);
-      mode = 'dialog'; hint = i === 0;
+      mode = 'dialog'; hint = i <= 1;
     }
     function restart() {
       pl = null; parts = []; floats = []; shake = 0; t = 0; events = []; held = {}; keys = {}; banner = ''; bannerT = 0; afterQ = null;
@@ -126,18 +126,23 @@ Sims.register({
     const ground = () => Math.round(LH * 0.8);
     function floatText(x, y, s, col) { floats.push({ x, y, s, col, life: 0.9 }); }
     function sparks(x, y, col, n) { for (let i = 0; i < n; i++) parts.push({ x, y, vx: rnd(-50, 50), vy: rnd(-70, -10), life: 0.5, col }); }
-    function hurtEnemy(dmg) {
+    function hurtEnemy(dmg, noStun) {
+      if (en.st === 'guard') { dmg = Math.max(1, Math.round(dmg * 0.2)); en.hp = Math.max(0, en.hp - dmg); sparks(en.x - 4, ground() - 22, '#9fd8ff', 5); floatText(en.x, ground() - 52, 'блок', '#9fd8ff'); events.push('block'); return; }
       en.hp = Math.max(0, en.hp - dmg); en.flash = 0.15; sparks(en.x - en.face * -6, ground() - 22, '#ffe14d', 6); floatText(en.x, ground() - 52, '-' + dmg, '#ffe14d'); events.push('hit'); shake = 0.1;
       if (en.hp <= 0) { en.dead = true; en.st = 'dead'; en.t = 0; events.push('ko'); mode = 'ko'; t0ko = 0; return; }
-      const armor = en.def.id === 'mother' && en.st === 'act';
+      const armor = (en.def.id === 'mother' && en.st === 'act') && !noStun;
       if (!armor && en.st !== 'hurt') { en.st = 'hurt'; en.t = 0; en.atk = null; en.x += -en.face * -3 * -1; }
       else if (en.st === 'heal') { en.st = 'hurt'; en.t = 0; }
     }
     let t0ko = 0;
     function hurtPlayer(dmg, low, kb) {
       if (pl.st === 'dead') return;
-      const front = true;
-      if (pl.blocking && !low && pl.h < 1) { dmg = Math.max(1, Math.round(dmg * 0.2)); sparks(pl.x + 8, ground() - 22, '#9fd8ff', 6); floatText(pl.x, ground() - 52, 'блок', '#9fd8ff'); events.push('block'); pl.x -= 3; }
+      if (pl.parryT > 0 && !low && pl.h < 1 && en.atk && !pl.parried) {      // blocked at the last moment: reflect the attack
+        pl.parried = true; floatText(pl.x, ground() - 60, 'ОТРАЖЕНО!', '#6ff7ff'); sparks(pl.x + 10, ground() - 24, '#6ff7ff', 14); events.push('parry'); shake = 0.2;
+        const rd = Math.round(10 + en.max * 0.07); hurtEnemy(rd, true); if (!en.dead) { en.st = 'hurt'; en.t = -0.7; en.atk = null; en.x += en.face * -8; }
+        banner = 'ОТРАЖЕНИЕ!'; bannerT = 0.6; return;
+      }
+      if (pl.blocking && !low && pl.h < 1) { dmg = Math.max(1, Math.round(dmg * 0.35)); sparks(pl.x + 8, ground() - 22, '#9fd8ff', 6); floatText(pl.x, ground() - 52, 'блок', '#9fd8ff'); events.push('block'); pl.x -= 3; }
       else { pl.flash = 0.2; pl.st = 'hurt'; pl.stT = 0; pl.x -= kb || 5; sparks(pl.x, ground() - 22, '#ff5a5a', 7); floatText(pl.x, ground() - 52, '-' + Math.round(dmg), '#ff6a6a'); events.push('ouch'); shake = 0.2; }
       pl.hp = Math.max(0, pl.hp - dmg);
       if (pl.hp <= 0) { pl.st = 'dead'; mode = 'over'; events.push('over'); }
@@ -152,6 +157,7 @@ Sims.register({
     function updateFight(dt) {
       // player
       pl.blocking = (held.block || keys.block) && pl.h <= 0 && (pl.st === 'idle' || pl.st === 'walk' || pl.st === 'block');
+      if (pl.blocking && !pl.wasBlock) pl.parryT = 0.28; pl.wasBlock = pl.blocking; if (pl.parryT > 0) pl.parryT -= dt;
       if (pl.cd > 0) pl.cd -= dt; if (pl.flash > 0) pl.flash -= dt;
       pl.stT += dt;
       let dirx = 0; if (held.left || keys.left) dirx -= 1; if (held.right || keys.right) dirx += 1;
@@ -172,30 +178,36 @@ Sims.register({
       const E = en.def, pw = cfg.enemyPower, enraged = en.hp < en.max * 0.5;
       if (en.flash > 0) en.flash -= dt;
       en.t += dt; en.face = pl.x < en.x ? -1 : 1;
-      if (en.st === 'hurt') { if (en.t > 0.28) { en.st = 'idle'; en.cd = rnd(0.3, 0.8); } }
+      if (en.st === 'hurt') { if (en.t > 0.22) { en.st = 'idle'; en.cd = rnd(0.15, 0.5); } }
+      else if (en.st === 'guard') { if (en.t > 0.55) { en.st = 'idle'; en.cd = 0.15; } }
       else if (en.st === 'idle') {
         en.cd -= dt;
+        if (pl.st === 'punch' || pl.st === 'kick') { if (!en.guardRoll) { en.guardRoll = true; if (Math.random() < (E.guard || 0) && Math.abs(pl.x - en.x) < 34) { en.st = 'guard'; en.t = 0; } } } else en.guardRoll = false;
+        if (en.st === 'guard') return;
         const dx = Math.abs(pl.x - en.x), want = en.next ? en.next.reach - 4 : 20;
         if (!en.next) en.next = E.atks[Math.floor(Math.random() * E.atks.length)];
         if (E.heal && en.healsLeft > 0 && en.hp < en.max * 0.6 && Math.random() < dt * 0.4 && dx > 40) { en.st = 'heal'; en.t = 0; en.healsLeft--; say('Ой, сердце…'); }
         else if (dx > want) en.x += Math.sign(pl.x - en.x) * E.speed * (enraged ? 1.3 : 1) * dt;
-        else if (en.cd <= 0) { en.atk = en.next; en.next = null; en.st = 'wind'; en.t = 0; en.hit = false; events.push('warn'); say(en.atk.say); }
+        else if (en.cd <= 0) { en.atk = en.next; en.next = null; en.st = 'wind'; en.t = 0; en.hit = false; en.combo = 0; en.hold = Math.random() < 0.3 ? rnd(0.12, 0.35) : 0; pl.parried = false; events.push('warn'); say(en.atk.say); }
       } else if (en.st === 'heal') { en.hp = Math.min(en.max, en.hp + 14 * dt); if (en.t > 2.2) { en.st = 'idle'; en.cd = 0.5; } }
-      else if (en.st === 'wind') { if (en.t >= en.atk.wind / (enraged ? 1.25 : 1)) { en.st = 'act'; en.t = 0; en.hit = false; } }
+      else if (en.st === 'wind') { if (en.t >= en.atk.wind * (en.combo ? 0.65 : 1) / (enraged ? 1.25 : 1) + en.hold) { en.st = 'act'; en.t = 0; en.hit = false; pl.parried = false; } }
       else if (en.st === 'act') {
-        if (en.atk.dash) en.x += en.face * (en.atk.dash / en.atk.act) * dt;
-        if (!en.hit) {
+        if (en.atk && en.atk.dash) en.x += en.face * (en.atk.dash / en.atk.act) * dt;
+        if (en.atk && !en.hit) {
           const dx = (pl.x - en.x) * en.face;
           if (dx > -6 && dx < en.atk.reach && (en.atk.low ? pl.h < 7 : pl.h < 22)) { en.hit = true; hurtPlayer(en.atk.dmg * pw, en.atk.low, 6); }
         }
-        if (en.t > en.atk.act) { en.st = 'rec'; en.t = 0; }
-      } else if (en.st === 'rec') { if (en.t > 0.35) { en.st = 'idle'; en.cd = rnd(E.cd[0], E.cd[1]) / (enraged ? 1.4 : 1); } }
+        if (en.st === 'act' && en.atk && en.t > en.atk.act) {
+          if (!pl.st.startsWith('dead') && en.combo < 2 && Math.random() < (E.combo || 0) * (enraged ? 1.4 : 1) && Math.abs(pl.x - en.x) < 40) { en.atk = E.atks[Math.floor(Math.random() * E.atks.length)]; en.combo++; en.st = 'wind'; en.t = 0; en.hit = false; en.hold = 0; events.push('warn'); say(en.atk.say, 0.6); }
+          else { en.st = 'rec'; en.t = 0; }
+        }
+      } else if (en.st === 'rec') { if (en.t > 0.25) { en.st = 'idle'; en.cd = rnd(E.cd[0], E.cd[1]) / (enraged ? 1.4 : 1); } }
       en.x = Math.max(14, Math.min(LW - 12, en.x));
       if (Math.abs(en.x - pl.x) < 10) { const s = Math.sign(en.x - pl.x) || 1; en.x += s * 40 * dt; pl.x -= s * 20 * dt; }
       // boss: the kid kicks the seat -> a shockwave runs along the floor
       if (E.kid) {
         if (kidWarn > 0) { kidWarn -= dt; if (kidWarn <= 0) { waves.push({ x: LW - 8, v: -78 }); events.push('kick'); shake = 0.25; } }
-        else { kidT -= dt; if (kidT <= 0) { kidWarn = 1.0; kidT = enraged ? rnd(3, 4) : rnd(5, 6.5); say('Малыш пинает кресло!', 1.2); events.push('warn2'); } }
+        else { kidT -= dt; if (kidT <= 0) { kidWarn = 1.0; kidT = enraged ? rnd(2.2, 3) : rnd(3.5, 5); if (enraged && Math.random() < 0.5) setTimeout(() => { if (mode === 'fight') waves.push({ x: LW - 8, v: -95 }); }, 450); say('Малыш пинает кресло!', 1.2); events.push('warn2'); } }
         for (const w of waves) { w.x += w.v * dt; if (!w.hit && Math.abs(w.x - pl.x) < 7 && pl.h < 7) { w.hit = true; hurtPlayer(9 * pw, true, 8); } }
         waves = waves.filter(w => w.x > -10);
       }
@@ -267,6 +279,7 @@ Sims.register({
         else if (e === 'hit') blip(180, 0.1, 'square', 0.09, 0, 70);
         else if (e === 'ouch') blip(140, 0.18, 'sawtooth', 0.09, 0, 60);
         else if (e === 'block') blip(500, 0.05, 'square', 0.05);
+        else if (e === 'parry') { blip(1200, 0.12, 'square', 0.07, 0, 2400); blip(1800, 0.2, 'triangle', 0.06, 0.05); }
         else if (e === 'warn') blip(880, 0.07, 'square', 0.05);
         else if (e === 'warn2') { blip(220, 0.1, 'square', 0.06); blip(220, 0.1, 'square', 0.06, 0.15); }
         else if (e === 'kick') blip(90, 0.25, 'triangle', 0.14, 0, 40);
@@ -408,7 +421,7 @@ Sims.register({
       ctx.textAlign = 'center';
       if (sayT > 0 && mode === 'fight') { ctx.font = '800 ' + mono(Math.max(12, u * 4.5)); const tx = Math.max(60, Math.min(W - 60, (stage === 2 && sayTxt.startsWith('Малыш') ? W / 2 : en.x * u))); ctx.fillStyle = sayTxt.startsWith('Малыш') ? '#6fb4ff' : '#fff'; ctx.strokeText(sayTxt, tx, (ground() - 76) * u); ctx.fillText(sayTxt, tx, (ground() - 76) * u); }
       if (bannerT > 0) { ctx.font = '800 ' + mono(Math.min(40, u * 9)); ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#3a2600'; ctx.lineWidth = 5; ctx.strokeText(banner, W / 2, 70 * u); ctx.fillText(banner, W / 2, 70 * u); }
-      if (hint && mode === 'fight' && bannerT <= 0) { ctx.font = '700 ' + mono(Math.max(10, u * 3)); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('красный ! — блок · синий ! — прыжок', W / 2, 58 * u); }
+      if (hint && mode === 'fight' && bannerT <= 0) { ctx.font = '700 ' + mono(Math.max(10, u * 3)); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('красный ! — блок (в последний миг = ОТРАЖЕНИЕ) · синий ! — прыжок', W / 2, 58 * u); }
       // bottom panel
       const top = H - ctrlH; ctx.fillStyle = '#14141c'; ctx.fillRect(0, top, W, ctrlH); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, top, W, 3);
       if (mode === 'fight' || mode === 'ko') {
