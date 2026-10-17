@@ -37,9 +37,11 @@ Sims.register({
   create(canvas, cfg, ctl) {
     const ctx = canvas.getContext('2d');
     canvas.style.touchAction = 'none';
-    const FIELDS = [[1, 1], [2, 1], [2, 2], [3, 2], [3, 3], [4, 3], [4, 4], [5, 4], [5, 5]];   // [cols, rows]
-    const FIELD_COST = [12, 35, 90, 220, 500, 1100, 2400, 5000];
-    const MAX_GROW = 12, TW = 24, TH = 14;
+    // no upper limits: the field grows 1×1 → 2×1 → 2×2 → 3×2 … forever and the camera zooms out to keep it all in view
+    const FIELD_COST0 = [12, 35, 90, 220, 500, 1100, 2400, 5000];
+    const fieldCost = n => n < FIELD_COST0.length ? FIELD_COST0[n] : Math.round(5000 * Math.pow(2.1, n - 7));
+    const fieldDims = n => [1 + Math.ceil(n / 2), 1 + Math.floor(n / 2)];                       // [cols, rows]
+    const TW = 24, TH = 14;
     const growCost = l => Math.round(8 * Math.pow(1.75, l));
     const valueOf = l => 1 + l;                                        // coins per cob
     const KEY = 'corn-farm-save';
@@ -52,7 +54,7 @@ Sims.register({
 
     function save() { try { localStorage.setItem(KEY, JSON.stringify({ coins, earned, fieldLvl, growLvl })); } catch (e) {} }
     function load() {
-      try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) { coins = s.coins | 0; earned = s.earned == null ? coins : s.earned | 0; fieldLvl = Math.min(FIELDS.length - 1, s.fieldLvl | 0); growLvl = Math.min(MAX_GROW, s.growLvl | 0); return; } } catch (e) {}
+      try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) { coins = +s.coins || 0; earned = s.earned == null ? coins : (+s.earned || 0); fieldLvl = Math.max(0, +s.fieldLvl || 0); growLvl = Math.max(0, +s.growLvl || 0); return; } } catch (e) {}
       coins = 0; earned = 0; fieldLvl = 0; growLvl = 0;
     }
     let sendT = 0;
@@ -60,24 +62,37 @@ Sims.register({
       if (cfg.speed !== 1 || cfg.baseTime !== 7 || !ctl.submitScore) return;
       clearTimeout(sendT); sendT = setTimeout(flushScore, 20000);
     }
-    function flushScore() { clearTimeout(sendT); sendT = 0; if (earned > 0 && cfg.speed === 1 && cfg.baseTime === 7 && ctl.submitScore) ctl.submitScore(earned); }
+    function flushScore() { clearTimeout(sendT); sendT = 0; if (earned > 0 && cfg.speed === 1 && cfg.baseTime === 7 && ctl.submitScore) ctl.submitScore(Math.min(earned, 1e9)); }
     function replant() {
-      plots = []; for (let r = 0; r < 5; r++) { plots.push([]); for (let c = 0; c < 5; c++) plots[r].push({ p: 0, shake: 0 }); }
+      plots = []; ensurePlots();
       slashes = []; bits = []; pops = []; t = 0; resetArm = 0;
     }
-    function restart() { load(); replant(); }
+    function ensurePlots() {
+      const [cols, rows] = dims();
+      for (let r = 0; r < rows; r++) { if (!plots[r]) plots[r] = []; for (let c = plots[r].length; c < cols; c++) plots[r].push({ p: 0, shake: 0 }); }
+    }
+    function restart() { load(); replant(); zCur = zTarget(); }
 
-    const growTime = () => cfg.baseTime * Math.pow(0.85, growLvl) / cfg.speed;
-    const dims = () => FIELDS[fieldLvl];
+    const growTime = () => Math.max(0.15, cfg.baseTime * Math.pow(0.85, growLvl) / cfg.speed);
+    const dims = () => fieldDims(fieldLvl);
 
     // ---- layout (logical pixels) ----
     function layoutField() {
       const [cols, rows] = dims(), fw = cols * TW, fh = rows * TH;
       const cy = Math.round(LH * 0.46);
-      return { x0: Math.round((LW - fw) / 2), y0: Math.round(cy - fh / 2), cols, rows };
+      return { x0: Math.round((LW - fw) / 2), y0: Math.round(cy - fh / 2), cols, rows, cy };
     }
-    function plotAt(lx, ly) {
-      const L = layoutField();
+    // camera: zoom out around the field centre so a growing field always fits between the HUD and the buttons
+    let zCur = 1;
+    function zTarget() {
+      const L = layoutField(), fw = L.cols * TW, fh = L.rows * TH, by = LH - 35;
+      const z = Math.min(1, (LW - 8) / (fw + 6), (L.cy - 26) / (fh / 2 + 34), (by - 8 - L.cy) / (fh / 2 + 4));
+      return Math.max(0.04, z);
+    }
+    const toWorld = (lx, ly) => { const cx = LW / 2, cy = Math.round(LH * 0.46); return [(lx - cx) / zCur + cx, (ly - cy) / zCur + cy]; };
+    const toScreen = (x, y) => { const cx = LW / 2, cy = Math.round(LH * 0.46); return [(x - cx) * zCur + cx, (y - cy) * zCur + cy]; };
+    function plotAt(sx, sy) {
+      const L = layoutField(), w = toWorld(sx, sy), lx = w[0], ly = w[1];
       // corn grows up from the tile bottom: test the tile column and a tall box above the tile
       for (let r = L.rows - 1; r >= 0; r--) for (let c = 0; c < L.cols; c++) {
         const px = L.x0 + c * TW, py = L.y0 + r * TH;
@@ -97,10 +112,10 @@ Sims.register({
     }
     function buy(kind) {
       if (kind === 'field') {
-        if (fieldLvl >= FIELDS.length - 1) return; const c = FIELD_COST[fieldLvl];
-        if (coins < c) { events.push('no'); return; } coins -= c; fieldLvl++;
+        const c = fieldCost(fieldLvl);
+        if (coins < c) { events.push('no'); return; } coins -= c; fieldLvl++; ensurePlots();
       } else {
-        if (growLvl >= MAX_GROW) return; const c = growCost(growLvl);
+        const c = growCost(growLvl);
         if (coins < c) { events.push('no'); return; } coins -= c; growLvl++;
       }
       save(); events.push('buy');
@@ -168,6 +183,7 @@ Sims.register({
       t += dt;
       const [cols, rows] = dims(), gt = growTime();
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const pl = plots[r][c]; pl.p = Math.min(1, pl.p + dt / gt); if (pl.shake > 0) pl.shake -= dt; }
+      { const zt = zTarget(); zCur += (zt - zCur) * Math.min(1, dt * 5); if (Math.abs(zt - zCur) < 0.0005) zCur = zt; }
       for (const s of slashes) s.t += dt; slashes = slashes.filter(s => s.t < 0.25);
       for (const b of bits) { b.x += b.vx * dt; b.y += b.vy * dt; b.vy += 120 * dt; b.life -= dt; } bits = bits.filter(b => b.life > 0);
       if (swing > 0) swing -= dt;
@@ -201,6 +217,10 @@ Sims.register({
       }
       if (p > 0.8) { const dx = Math.round(sway * 3 * (h / 40)); R(cx - 3 + dx, by - h - 1, 7, 1, '#d8b04a'); R(cx + dx, by - h - 4, 1, 4, '#d8b04a'); R(cx - 2 + dx, by - h - 3, 1, 2, '#d8b04a'); R(cx + 2 + dx, by - h - 3, 1, 2, '#d8b04a'); }
       if (ripe) { const tw = (Math.sin(t * 5 + phase * 3) + 1) / 2; if (tw > 0.85) R(cx + 5, by - h + 6, 1, 1, '#fff'); }
+    }
+    function drawCornLite(cx, by, p) {                                  // simplified corn for a zoomed-out huge field
+      const h = Math.round(7 + p * 34);
+      R(cx - 1, by - h, 3, h, '#3fae2e'); R(cx + 3, by - h * 0.7, 3, h * 0.35, p >= 1 ? '#ffd23a' : '#9ccf3a');
     }
     function sickle(s) {
       const k = s.t / 0.25, a0 = -2.4, a = a0 + k * 3.2, rad = 11;
@@ -238,8 +258,10 @@ Sims.register({
       R(0, LH * 0.38, LW, 6, '#4aa13a'); for (let x = 0; x < LW; x += 18) R(x, LH * 0.38 - 4, 12, 4, '#4aa13a');
       R(0, Math.round(LH * 0.38 + 6), LW, LH, '#5fb24a');
       for (let i = 0; i < 40; i++) { const x = (i * 53) % LW, y = LH * 0.4 + ((i * 37) % (LH * 0.6)); R(x, y, 1, 2, '#4ea23c'); R(x + 3, y + 1, 1, 1, '#76c95f'); }
-      // field
+      // field (world layer: zoomed around the field centre)
       const L = layoutField();
+      { const cx = LW / 2, cy = L.cy; g.setTransform(zCur, 0, 0, zCur, F * (cx - cx * zCur), F * (cy - cy * zCur)); }
+      const lite = zCur < 0.45;   // R() already multiplies by F, so the world transform only scales by zCur
       R(L.x0 - 3, L.y0 - 3 + 2, L.cols * TW + 6, L.rows * TH + 5, '#5a3818');
       for (let r = 0; r < L.rows; r++) {
         for (let c = 0; c < L.cols; c++) {
@@ -250,17 +272,17 @@ Sims.register({
         }
         for (let c = 0; c < L.cols; c++) {                       // corn after the tiles of the same row (back to front)
           const pl = plots[r][c], px = L.x0 + c * TW, by = L.y0 + r * TH + TH - 2 + (pl.shake > 0 ? (Math.floor(t * 40) % 2) : 0);
-          drawCorn(px + TW / 2 - 1 + (pl.shake > 0 ? (Math.floor(t * 40) % 2 ? 1 : -1) : 0), by, pl.p, r * 1.7 + c * 0.9);
+          (lite ? drawCornLite : drawCorn)(px + TW / 2 - 1 + (pl.shake > 0 ? (Math.floor(t * 40) % 2 ? 1 : -1) : 0), by, pl.p, r * 1.7 + c * 0.9);
         }
       }
       slashes.forEach(sickle);
-      if (showCur) cursorSickle();
       bits.forEach(b => R(b.x, b.y, 2, 2, b.col));
+      g.setTransform(1, 0, 0, 1, 0, 0);                              // back to the screen layer
+      if (showCur) cursorSickle();
       // buttons
       const bw = Math.floor((LW - 12) / 2), bhh = 30, by = LH - bhh - 5;
-      const fMax = fieldLvl >= FIELDS.length - 1, gMax = growLvl >= MAX_GROW;
-      btnField = pbtn(4, by, bw, bhh, !fMax && coins >= FIELD_COST[fieldLvl], fMax);
-      btnGrow = pbtn(LW - 4 - bw, by, bw, bhh, !gMax && coins >= growCost(growLvl), gMax);
+      btnField = pbtn(4, by, bw, bhh, coins >= fieldCost(fieldLvl), false);
+      btnGrow = pbtn(LW - 4 - bw, by, bw, bhh, coins >= growCost(growLvl), false);
       btnReset = { x: LW / 2 - 12, y: by - 14, w: 24, h: 10 };
       R(LW / 2 - 12, by - 14, 24, 10, resetArm > 0 ? '#c0392b' : 'rgba(0,0,0,.35)');
       R(LW / 2 - 22, 5, 44, 15, 'rgba(0,0,0,.35)'); R(LW / 2 - 19, 8, 6, 6, '#ffd23a'); R(LW / 2 - 18, 9, 4, 4, '#e5a800');
@@ -269,16 +291,16 @@ Sims.register({
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.imageSmoothingEnabled = false;
       const fs = Math.max(10, u * 4.2), font = '700 ' + fs + 'px "Courier New", ui-monospace, monospace';
       ctx.font = font; ctx.fillStyle = '#fff';
-      ctx.textAlign = 'left'; ctx.fillText(String(coins), (LW / 2 - 11) * u, 12.5 * u);
+      ctx.textAlign = 'left'; ctx.fillText(coins >= 1e7 ? coins.toExponential(2).replace('e+', 'e') : String(coins), (LW / 2 - 11) * u, 12.5 * u);
       ctx.textAlign = 'center'; ctx.font = '700 ' + Math.max(8, u * 3) + 'px "Courier New", monospace';
       ctx.fillText(resetArm > 0 ? 'точно?' : 'сброс', (LW / 2) * u, (LH - 35 - 14 + 5.2) * u);
-      const L = btnField, G = btnGrow, fMax = fieldLvl >= FIELDS.length - 1, gMax = growLvl >= MAX_GROW, sm = Math.max(8, u * 3.3);
+      const L = btnField, G = btnGrow, sm = Math.max(8, u * 3.3);
       const lines = (b, a1, a2, a3) => { ctx.fillStyle = '#fff'; ctx.font = '700 ' + sm + 'px "Courier New", monospace'; ctx.fillText(a1, (b.x + b.w / 2) * u, (b.y + 7) * u); ctx.font = '700 ' + sm * 0.9 + 'px "Courier New", monospace'; ctx.fillText(a2, (b.y > 0 ? (b.x + b.w / 2) : 0) * u, (b.y + 15) * u); ctx.fillText(a3, (b.x + b.w / 2) * u, (b.y + 23) * u); };
-      const fd = dims(), nx = FIELDS[Math.min(fieldLvl + 1, FIELDS.length - 1)];
-      lines(L, 'ПОЛЕ', fd[0] + '×' + fd[1] + (fMax ? '' : ' → ' + nx[0] + '×' + nx[1]), fMax ? 'МАКС' : '● ' + FIELD_COST[fieldLvl]);
-      lines(G, 'РОСТ', 'ур. ' + growLvl + ' · +' + valueOf(growLvl) + '/шт', gMax ? 'МАКС' : '● ' + growCost(growLvl));
+      const fd = dims(), nx = fieldDims(fieldLvl + 1), fmt = n => n >= 1e6 ? n.toExponential(2).replace('e+', 'e') : String(n);
+      lines(L, 'ПОЛЕ', fd[0] + '×' + fd[1] + ' → ' + nx[0] + '×' + nx[1], '● ' + fmt(fieldCost(fieldLvl)));
+      lines(G, 'РОСТ', 'ур. ' + growLvl + ' · +' + valueOf(growLvl) + '/шт', '● ' + fmt(growCost(growLvl)));
       ctx.font = '700 ' + fs + 'px "Courier New", monospace';
-      for (const p of pops) { ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = '#fff6a0'; ctx.strokeStyle = '#6a4a00'; ctx.lineWidth = 3; ctx.strokeText('+' + p.v, p.x * u, p.y * u); ctx.fillText('+' + p.v, p.x * u, p.y * u); }
+      for (const p of pops) { const q = toScreen(p.x, p.y); ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = '#fff6a0'; ctx.strokeStyle = '#6a4a00'; ctx.lineWidth = 3; ctx.strokeText('+' + p.v, q[0] * u, q[1] * u); ctx.fillText('+' + p.v, q[0] * u, q[1] * u); }
       ctx.globalAlpha = 1;
     }
     function draw() {
