@@ -1,12 +1,13 @@
 /* Игра «Гнилая маршрутка» (пиксель-арт файтинг): диалоги и три боя — кондуктор, бабка и босс «Я же мать».
-   Красный «!» — блок (нажмите блок в последний момент — удар отразится); синий «!» — удар по ногам, через него надо прыгнуть. */
+   Красный «!» — блок (нажмите блок в последний момент — удар отразится); синий «!» — удар по ногам, через него надо прыгнуть;
+   жёлтый «!» — удар в голову, от него надо пригнуться (Q). Если спамить ударами, враг начинает блокировать и контратакует. */
 Sims.register({
   id: 'rotten-bus',
   kind: 'game',
   hit: true, ownSpace: true,
   lb: { label: 'Кто быстрее прошёл все бои (время только в боях, с попытками)', better: 'low', fair: ['playerHp', 'enemyPower'], fmt: v => Math.floor(v / 60) + ':' + ('0' + (v % 60).toFixed(1)).slice(-4) },
   title: 'Гнилая маршрутка',
-  desc: 'Пиксельный файтинг. Сначала поболтайте с кондуктором о билете, затем бой. Потом бабка, которая требует уступить место, и босс — «Я же мать!», чей ребёнок пинает ваше кресло. Компьютер: A/D — ходить, Пробел — прыжок, E — щит, ЛКМ — удар рукой, ПКМ — удар ногой.',
+  desc: 'Пиксельный файтинг. Сначала поболтайте с кондуктором о билете, затем бой. Потом бабка, которая требует уступить место, и босс — «Я же мать!», чей ребёнок пинает ваше кресло. Компьютер: A/D — ходить, Пробел — прыжок, E — щит, Q — пригнуться, ЛКМ — удар рукой, ПКМ — удар ногой. Атаки бывают трёх видов: красный «!» — блок, синий — прыжок, жёлтый (в голову) — пригнуться. Спамить ударами нельзя: враг начнёт блокировать и контратаковать.',
 
   defaults: { playerHp: 100, enemyPower: 1.5, skipDialogs: false, sound: true, music: true, musicStart: 9, volume: 0.7 },
   schema: [
@@ -76,11 +77,11 @@ Sims.register({
     };
     const ENEMIES = [
       { id: 'conductor', name: 'КОНДУКТОР', hp: 130, speed: 42, cd: [0.35, 0.9], combo: 0.5, guard: 0.35,
-        atks: [{ n: 'punch', wind: 0.4, act: 0.16, reach: 22, dmg: 10, low: false, say: 'Билет!' }, { n: 'lunge', wind: 0.55, act: 0.28, reach: 14, dmg: 15, low: false, dash: 50, say: 'Штраф!' }, { n: 'kickLow', wind: 0.5, act: 0.2, reach: 24, dmg: 11, low: true, say: 'Выходим!' }] },
+        atks: [{ n: 'punch', wind: 0.4, act: 0.16, reach: 22, dmg: 10, low: false, say: 'Билет!' }, { n: 'lunge', wind: 0.55, act: 0.28, reach: 14, dmg: 15, low: false, dash: 50, say: 'Штраф!' }, { n: 'kickLow', wind: 0.5, act: 0.2, reach: 24, dmg: 11, low: true, say: 'Выходим!' }, { n: 'slap', wind: 0.5, act: 0.2, reach: 26, dmg: 13, low: false, high: true, say: 'Контроль!' }] },
       { id: 'babka', name: 'БАБКА', hp: 170, speed: 26, cd: [0.45, 1.1], heal: 1, combo: 0.4, guard: 0.3,
-        atks: [{ n: 'poke', wind: 0.42, act: 0.2, reach: 36, dmg: 11, low: false, say: 'Уступи!' }, { n: 'sweep', wind: 0.6, act: 0.25, reach: 38, dmg: 14, low: true, say: 'Давление!' }, { n: 'bag', wind: 0.48, act: 0.2, reach: 30, dmg: 13, low: false, say: 'Сумкой!' }] },
+        atks: [{ n: 'poke', wind: 0.42, act: 0.2, reach: 36, dmg: 11, low: false, say: 'Уступи!' }, { n: 'sweep', wind: 0.6, act: 0.25, reach: 38, dmg: 14, low: true, say: 'Давление!' }, { n: 'bag', wind: 0.48, act: 0.2, reach: 30, dmg: 13, low: false, say: 'Сумкой!' }, { n: 'umbrella', wind: 0.55, act: 0.22, reach: 38, dmg: 13, low: false, high: true, say: 'Зонтом!' }] },
       { id: 'mother', name: 'Я ЖЕ МАТЬ', hp: 260, speed: 34, cd: [0.3, 0.8], kid: true, combo: 0.6, guard: 0.3,
-        atks: [{ n: 'bag', wind: 0.4, act: 0.2, reach: 30, dmg: 14, low: false, say: 'Я же мать!' }, { n: 'shout', wind: 0.65, act: 0.3, reach: 70, dmg: 12, low: true, say: 'Я МАТЬ!!!' }, { n: 'slap', wind: 0.35, act: 0.15, reach: 22, dmg: 11, low: false, say: 'Не трогай!' }] }
+        atks: [{ n: 'bag', wind: 0.4, act: 0.2, reach: 30, dmg: 14, low: false, say: 'Я же мать!' }, { n: 'shout', wind: 0.65, act: 0.3, reach: 70, dmg: 12, low: true, say: 'Я МАТЬ!!!' }, { n: 'slap', wind: 0.35, act: 0.15, reach: 22, dmg: 11, low: false, say: 'Не трогай!' }, { n: 'swing', wind: 0.5, act: 0.2, reach: 34, dmg: 15, low: false, high: true, say: 'По голове!' }] }
     ];
 
     // ================= state =================
@@ -88,7 +89,7 @@ Sims.register({
     let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, btns = [], choiceRects = [];
     const rnd = (a, b) => a + Math.random() * (b - a);
 
-    function newPlayer() { return { parryT: 0, blockCd: 0, wasBlock: false, x: Math.round(LW * 0.25), h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
+    function newPlayer() { return { heat: 0, ducking: false, parryT: 0, blockCd: 0, wasBlock: false, x: Math.round(LW * 0.25), h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
     function startStage(i) {
       stage = i; const E = ENEMIES[i];
       en = { def: E, x: 0, h: 0, hp: E.hp, max: E.hp, face: -1, st: 'idle', t: 0, atk: null, cd: 1, flash: 0, healsLeft: E.heal || 0, healT: 0, dashed: false, hit: false, dead: false };
@@ -129,38 +130,43 @@ Sims.register({
     const ground = () => Math.round(LH * 0.8);
     function floatText(x, y, s, col) { floats.push({ x, y, s, col, life: 0.9 }); }
     function sparks(x, y, col, n) { for (let i = 0; i < n; i++) parts.push({ x, y, vx: rnd(-50, 50), vy: rnd(-70, -10), life: 0.5, col }); }
+    function guardChance() { return Math.min(0.92, (en.def.guard || 0) + Math.max(0, pl.heat - 1.5) * 0.2); }
     function hurtEnemy(dmg, noStun) {
+      if (!noStun && pl.heat >= 1.5 && (en.st === 'idle' || en.st === 'rec' || en.st === 'hurt') && Math.random() < guardChance()) { en.st = 'guard'; en.t = 0; en.atk = null; if (pl.heat >= 2.5) say('Не так быстро!', 0.8); }   // anti-spam: the more often you hit, the more often the enemy blocks
       if (en.st === 'guard') { dmg = Math.max(1, Math.round(dmg * 0.2)); en.hp = Math.max(0, en.hp - dmg); sparks(en.x - 4, ground() - 22, '#9fd8ff', 5); floatText(en.x, ground() - 52, 'блок', '#9fd8ff'); events.push('block'); return; }
       en.hp = Math.max(0, en.hp - dmg); en.flash = 0.15; sparks(en.x - en.face * -6, ground() - 22, '#ffe14d', 6); floatText(en.x, ground() - 52, '-' + dmg, '#ffe14d'); events.push('hit'); shake = 0.1;
       if (en.hp <= 0) { en.dead = true; en.st = 'dead'; en.t = 0; events.push('ko'); mode = 'ko'; t0ko = 0; return; }
-      const armor = (en.def.id === 'mother' && en.st === 'act') && !noStun;
+      const armor = (en.st === 'act' || en.st === 'wind') && !noStun;   // spamming hits does not interrupt the enemy's attacks
       if (!armor && en.st !== 'hurt') { en.st = 'hurt'; en.t = 0; en.atk = null; en.vx = -en.face * -1 * 70; }
       else if (en.st === 'heal') { en.st = 'hurt'; en.t = 0; }
     }
     let t0ko = 0;
-    function hurtPlayer(dmg, low, kb) {
+    function hurtPlayer(dmg, low, kb, high) {
       if (pl.st === 'dead') return;
-      if (pl.parryT > 0 && !low && pl.h < 1 && en.atk && !pl.parried) {      // blocked at the last moment: reflect the attack
+      if (pl.parryT > 0 && !low && !high && pl.h < 1 && en.atk && !pl.parried) {      // blocked at the last moment: reflect the attack
         pl.parried = true; floatText(pl.x, ground() - 60, 'ОТРАЖЕНО!', '#6ff7ff'); sparks(pl.x + 10, ground() - 24, '#6ff7ff', 14); events.push('parry'); shake = 0.2;
         const rd = Math.round(10 + en.max * 0.07); hurtEnemy(rd, true); if (!en.dead) { en.st = 'hurt'; en.t = -0.7; en.atk = null; en.x += en.face * -8; }
         banner = 'ОТРАЖЕНИЕ!'; bannerT = 0.6; return;
       }
-      if (pl.blocking && !low && pl.h < 1) { dmg = Math.max(1, Math.round(dmg * 0.35)); sparks(pl.x + 8, ground() - 22, '#9fd8ff', 6); floatText(pl.x, ground() - 52, 'блок', '#9fd8ff'); events.push('block'); pl.vx = -40; }
+      if (pl.blocking && !low && !high && pl.h < 1) { dmg = Math.max(1, Math.round(dmg * 0.35)); sparks(pl.x + 8, ground() - 22, '#9fd8ff', 6); floatText(pl.x, ground() - 52, 'блок', '#9fd8ff'); events.push('block'); pl.vx = -40; }
       else { pl.flash = 0.2; pl.st = 'hurt'; pl.stT = 0; pl.vx = -(kb || 5) * 16; sparks(pl.x, ground() - 22, '#ff5a5a', 7); floatText(pl.x, ground() - 52, '-' + Math.round(dmg), '#ff6a6a'); events.push('ouch'); shake = 0.2; }
       pl.hp = Math.max(0, pl.hp - dmg);
       if (pl.hp <= 0) { pl.st = 'dead'; mode = 'over'; events.push('over'); }
     }
     function playerAttack(kind) {
-      if (mode !== 'fight' || pl.cd > 0 || pl.st === 'hurt' || pl.st === 'dead' || pl.blocking) return;
+      if (mode !== 'fight' || pl.cd > 0 || pl.st === 'hurt' || pl.st === 'dead' || pl.blocking || pl.ducking) return;
+      pl.heat = Math.min(5, pl.heat + (kind === 'punch' ? 1 : 1.4));
       const k = kind === 'punch' ? { dur: 0.22, cd: 0.28, reach: 24, dmg: 8 } : { dur: 0.4, cd: 0.6, reach: 30, dmg: 15 };
       pl.vx = kind === 'punch' ? 55 : 80; pl.st = kind; pl.stT = 0; pl.atk = k; pl.hitDone = false; pl.cd = k.cd; events.push('swing');
     }
-    function playerJump() { if (mode === 'fight' && pl.h <= 0 && pl.st !== 'hurt' && pl.st !== 'dead') { pl.vy = 150; events.push('jump'); } }
+    function playerJump() { if (mode === 'fight' && !pl.ducking && pl.h <= 0 && pl.st !== 'hurt' && pl.st !== 'dead') { pl.vy = 150; events.push('jump'); } }
 
     function updateFight(dt) {
       // player
       if (pl.blockCd > 0) pl.blockCd -= dt;
-      pl.blocking = (held.block || keys.block) && pl.blockCd <= 0 && pl.h <= 0 && (pl.st === 'idle' || pl.st === 'walk' || pl.st === 'block');
+      if (pl.heat > 0) pl.heat = Math.max(0, pl.heat - 0.7 * dt);
+      pl.ducking = !!(held.duck || keys.duck) && pl.h <= 0 && pl.vy <= 0 && (pl.st === 'idle' || pl.st === 'walk' || pl.st === 'block');
+      pl.blocking = (held.block || keys.block) && !pl.ducking && pl.blockCd <= 0 && pl.h <= 0 && (pl.st === 'idle' || pl.st === 'walk' || pl.st === 'block');
       if (pl.blocking && !pl.wasBlock) pl.parryT = 0.28; if (!pl.blocking && pl.wasBlock) pl.blockCd = 1; pl.wasBlock = pl.blocking; if (pl.parryT > 0) pl.parryT -= dt;
       if (pl.cd > 0) pl.cd -= dt; if (pl.flash > 0) pl.flash -= dt;
       pl.stT += dt;
@@ -173,8 +179,8 @@ Sims.register({
         }
         if (pl.stT > pl.atk.dur) pl.st = 'idle';
       } else if (pl.st !== 'dead') {
-        pl.st = pl.blocking ? 'block' : (dirx ? 'walk' : 'idle');
-        if (!pl.blocking) pl.x += dirx * 48 * dt;
+        pl.st = pl.blocking ? 'block' : (dirx && !pl.ducking ? 'walk' : 'idle');
+        if (!pl.blocking && !pl.ducking) pl.x += dirx * 48 * dt;
       }
       pl.x = Math.max(10, Math.min(LW - 14, pl.x));
       if (pl.h > 0 || pl.vy > 0) { pl.vy -= 520 * dt; pl.h += pl.vy * dt; if (pl.h <= 0) { pl.h = 0; pl.vy = 0; } }
@@ -184,10 +190,10 @@ Sims.register({
       en.t += dt; en.face = pl.x < en.x ? -1 : 1; en.moving = false;
       en.x += (en.vx || 0) * dt; en.vx = (en.vx || 0) * Math.max(0, 1 - 7 * dt); pl.x += (pl.vx || 0) * dt; pl.vx = (pl.vx || 0) * Math.max(0, 1 - 7 * dt);
       if (en.st === 'hurt') { if (en.t > 0.22) { en.st = 'idle'; en.cd = rnd(0.15, 0.5); } }
-      else if (en.st === 'guard') { if (en.t > 0.55) { en.st = 'idle'; en.cd = 0.15; } }
+      else if (en.st === 'guard') { if (en.t > 0.55) { en.st = 'idle'; en.cd = pl.heat >= 2 ? 0 : 0.15; } }   // counterattack right after a guard if the player was spamming
       else if (en.st === 'idle') {
         en.cd -= dt;
-        if (pl.st === 'punch' || pl.st === 'kick') { if (!en.guardRoll) { en.guardRoll = true; if (Math.random() < (E.guard || 0) && Math.abs(pl.x - en.x) < 34) { en.st = 'guard'; en.t = 0; } } } else en.guardRoll = false;
+        if (pl.st === 'punch' || pl.st === 'kick') { if (!en.guardRoll) { en.guardRoll = true; if (Math.random() < Math.min(0.92, (E.guard || 0) + Math.max(0, pl.heat - 1.5) * 0.2) && Math.abs(pl.x - en.x) < 34) { en.st = 'guard'; en.t = 0; if (pl.heat >= 2.5) say('Не так быстро!', 0.8); } } } else en.guardRoll = false;
         if (en.st === 'guard') return;
         const dx = Math.abs(pl.x - en.x), want = en.next ? en.next.reach - 4 : 20;
         if (!en.next) en.next = E.atks[Math.floor(Math.random() * E.atks.length)];
@@ -205,7 +211,10 @@ Sims.register({
         if (en.atk && en.atk.dash) en.x += en.face * (en.atk.dash / en.atk.act) * dt;
         if (en.atk && !en.hit) {
           const dx = (pl.x - en.x) * en.face;
-          if (dx > -6 && dx < en.atk.reach && (en.atk.low ? pl.h < 7 : pl.h < 22)) { en.hit = true; hurtPlayer(en.atk.dmg * pw, en.atk.low, 6); }
+          if (dx > -6 && dx < en.atk.reach) {
+            if (en.atk.high && pl.ducking) { en.hit = true; floatText(pl.x, ground() - 52, 'увернулся', '#ffd98a'); events.push('block'); }
+            else if (en.atk.high || (en.atk.low ? pl.h < 7 : pl.h < 22)) { en.hit = true; hurtPlayer(en.atk.dmg * pw, en.atk.low, 6, en.atk.high); }
+          }
         }
         if (en.st === 'act' && en.atk && en.t > en.atk.act) {
           if (!pl.st.startsWith('dead') && en.combo < 2 && Math.random() < (E.combo || 0) * (enraged ? 1.4 : 1) && Math.abs(pl.x - en.x) < 40) { en.atk = E.atks[Math.floor(Math.random() * E.atks.length)]; en.combo++; en.st = 'wind'; en.t = 0; en.hit = false; en.hold = 0; events.push('warn'); say(en.atk.say, 0.6); }
@@ -238,12 +247,13 @@ Sims.register({
     // ================= input =================
     function layoutBtns() {
       const top = H - ctrlH, pad = 8, halfW = (W - pad * 3) / 2, rowH = (ctrlH - pad * 3) / 2;
-      const bw = (halfW - pad) / 2;
+      const bw = (halfW - pad) / 2, tw = (W - pad * 4) / 3;
       btns = [
-        { id: 'jump', label: '⤒ ПРЫЖОК', x: pad, y: top + pad, w: halfW, h: rowH, tap: true },
+        { id: 'jump', label: '⤒ ПРЫЖОК', x: pad, y: top + pad, w: tw, h: rowH, tap: true },
+        { id: 'duck', label: '⤓ УКЛОН', x: pad * 2 + tw, y: top + pad, w: tw, h: rowH },
         { id: 'left', label: '◀', x: pad, y: top + pad * 2 + rowH, w: bw, h: rowH },
         { id: 'right', label: '▶', x: pad * 2 + bw, y: top + pad * 2 + rowH, w: bw, h: rowH },
-        { id: 'block', label: '🛡 БЛОК', x: pad * 2 + halfW, y: top + pad, w: halfW, h: rowH },
+        { id: 'block', label: '🛡 БЛОК', x: pad * 3 + tw * 2, y: top + pad, w: tw, h: rowH },
         { id: 'punch', label: '👊', x: pad * 2 + halfW, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true },
         { id: 'kick', label: '🦵', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
       ];
@@ -269,7 +279,7 @@ Sims.register({
     function retry() { const s = stage; pl.hp = pl.max; pl.st = 'idle'; pl.h = 0; startStage(s); }
     function onKey(e) {
       if (e.target && e.target.tagName === 'INPUT') return; const k = e.key, down = e.type === 'keydown';
-      const map = { ArrowLeft: 'left', ArrowRight: 'right', c: 'block', C: 'block' }, codeMap = { KeyA: 'left', KeyD: 'right', KeyE: 'block' };
+      const map = { ArrowLeft: 'left', ArrowRight: 'right', c: 'block', C: 'block' }, codeMap = { KeyA: 'left', KeyD: 'right', KeyE: 'block', KeyQ: 'duck' };
       const m = codeMap[e.code] || map[k];
       if (m) { keys[m] = down; e.preventDefault(); return; }
       if (!down) return;
@@ -328,7 +338,7 @@ Sims.register({
       if (st === 'dead') {                                         // lying on the floor
         R(cx - 14, fy - 7, 12, 7, top); R(cx - 2, fy - 7, 8, 6, pants); R(cx + 6, fy - 5, 6, 4, '#222'); R(cx - 20, fy - 8, 8, 8, sk); R(cx - 20, fy - 9, 8, 3, o.hair); return;
       }
-      const lean = st === 'hurt' ? -f * 2 : st === 'wind' ? -f * 1 : 0, hy = fy - 38 + bob * 0.5;
+      const lean = st === 'hurt' ? -f * 2 : st === 'wind' ? -f * 1 : 0, hy = fy - (st === 'duck' ? 25 : 38) + bob * 0.5;
       const w = o.wide ? 18 : 14;
       // legs
       const l1 = st === 'walk' ? Math.round(Math.sin(t * 9 + (o.ph || 0)) * 2) : 0;       // legs stand still unless the character really moves
@@ -350,7 +360,7 @@ Sims.register({
       else R(cx - 1 + lean + f, hy + 8, 3, 1, '#8a4a3a');
       // arms & weapons
       if (st === 'block') { R(cx + f * 2 - 3, hy + 3, 8, 6, top); R(cx + f * 2 - 3, hy + 9, 8, 3, sk); R(cx + f * 4, hy + 2, 3, 12, '#9fd8ff'); }
-      else if (st === 'punch' || (st === 'act' && o.arm === 'punch')) { const len = 14; R(cx + (f > 0 ? 4 : -4 - len), hy + 14, len, 4, top); R(cx + (f > 0 ? 4 + len : -4 - len - 4), hy + 13, 4, 6, sk); }
+      else if (st === 'punch' || (st === 'act' && o.arm === 'punch')) { const len = 14, ay = o.high ? hy + 1 : hy + 14; R(cx + (f > 0 ? 4 : -4 - len), ay, len, 4, top); R(cx + (f > 0 ? 4 + len : -4 - len - 4), ay - 1, 4, 6, sk); }
       else if (st === 'wind') { R(cx - f * 8 - 2, hy + 6, 4, 14, top); R(cx - f * 8 - 2, hy + 4, 4, 3, sk); }
       else {                                                       // fighting stance: back arm down, front fist up and bobbing
         const sw = Math.round(Math.sin(t * 8 + (o.ph || 0)) * 1.5);
@@ -388,7 +398,7 @@ Sims.register({
       if (stage === 2) R(LW - 14, gy - 36, 14, 22, '#7a3a5a'), R(LW - 4, gy - 38, 4, 24, '#5e2c46'), R(LW - 14, gy - 16, 14, 6, '#5e2c46');
       else R(LW - 14, gy - 36, 14, 22, '#3a4f78'), R(LW - 4, gy - 38, 4, 24, '#2c3c5e'), R(LW - 14, gy - 16, 14, 6, '#2c3c5e');
       // characters
-      const pP = Object.assign({ face: 1, st: pl.st, flash: pl.flash, ph: 0, prop: (cx, hy, f, st) => { R(cx - f * 8 - 4, hy + 11, 4, 12, '#c0392b'); } }, PLAYER);
+      const pP = Object.assign({ face: 1, st: pl.ducking ? 'duck' : pl.st, flash: pl.flash, ph: 0, prop: (cx, hy, f, st) => { R(cx - f * 8 - 4, hy + 11, 4, 12, '#c0392b'); } }, PLAYER);
       const eoP = enemyStyle();
       // waves
       for (const w of waves) { for (let k = 0; k < 4; k++) R(w.x + k * 2, gy - 2 - k, 2, 2 + k, 'rgba(255,230,120,' + (0.9 - k * 0.15) + ')'); R(w.x - 2, gy - 6, 5, 6, '#ffd23a'); }
@@ -401,7 +411,7 @@ Sims.register({
       if (mode !== 'ko' || en.hp > 0 || true) person(en.x, gy - en.h, eoP);
       person(pl.x, gy - pl.h, pP);
       // telegraph
-      if (mode === 'fight' && en.st === 'wind') { const low = en.atk.low; R(en.x - 1, gy - 62, 3, 9, low ? '#3a8cff' : '#ff3b3b'); R(en.x - 1, gy - 51, 3, 3, low ? '#3a8cff' : '#ff3b3b'); }
+      if (mode === 'fight' && en.st === 'wind') { const low = en.atk.low, tc = en.atk.high ? '#ffc21a' : low ? '#3a8cff' : '#ff3b3b'; R(en.x - 1, gy - 62, 3, 9, tc); R(en.x - 1, gy - 51, 3, 3, tc); }
       if (stage === 2 && kidWarn > 0) { R(LW - 8, gy - 62, 3, 9, '#3a8cff'); R(LW - 8, gy - 51, 3, 3, '#3a8cff'); }
       for (const p of parts) R(p.x, p.y, 2, 2, p.col);
       // HUD bars
@@ -412,12 +422,12 @@ Sims.register({
     function enemyStyle() {
       const base = en.def.id === 'conductor' ? CONDUCTOR : en.def.id === 'babka' ? BABKA : MOTHER, E = en.def.id;
       const o = Object.assign({}, base, { face: en.face, st: en.st === 'act' ? 'act' : en.st === 'wind' ? 'wind' : en.st === 'hurt' ? 'hurt' : en.st === 'dead' ? 'dead' : en.st === 'heal' ? 'idle' : (Math.abs(0) || en.st === 'idle' ? 'walk' : 'idle'), flash: en.flash, ph: 1.3 + (en.def.id === 'babka' ? 0.8 : 0) });
-            o.arm = 'punch';
+            o.arm = 'punch'; o.high = !!(en.atk && en.atk.high);
       o.prop = (cx, hy, f, st) => {
-        const act = st === 'act', wind = st === 'wind';
-        if (E === 'conductor') { R(cx - f * 8 - 1, hy + 14, 5, 4, '#c0c4cc'); if (act) R(cx + f * 18, hy + 12, 7, 5, '#c0c4cc'); R(cx - 5, hy + 12, 10, 3, '#8a5a2b'); }
-        else if (E === 'babka') { const len = act ? en.atk.reach : wind ? 12 : 16; if (en.atk && en.atk.low && (act || wind)) R(cx + f * 4 - (f > 0 ? 0 : len), gy2() - 3, len, 2, '#6b4423'); else R(cx + f * 12 - 1, hy + (act ? 14 : 8), 2, act ? 1 : 22, '#6b4423'), act && R(cx + f * 6 - (f > 0 ? 0 : len - 6), hy + 14, len, 2, '#6b4423'); R(cx - f * 9 - 3, hy + 20, 7, 8, '#caa84a'); }
-        else { R(cx - f * 9 - 3, hy + 22, 9, 8, '#b8396a'); if (act) R(cx + f * 6 - (f > 0 ? 0 : en.atk.reach), hy + 14, en.atk.reach, 8, '#b8396a'); }
+        const act = st === 'act', wind = st === 'wind', hh = (act && en.atk && en.atk.high) ? -12 : 0;
+        if (E === 'conductor') { R(cx - f * 8 - 1, hy + 14, 5, 4, '#c0c4cc'); if (act) R(cx + f * 18, hy + 12 + hh, 7, 5, '#c0c4cc'); R(cx - 5, hy + 12, 10, 3, '#8a5a2b'); }
+        else if (E === 'babka') { const len = act ? en.atk.reach : wind ? 12 : 16; if (en.atk && en.atk.low && (act || wind)) R(cx + f * 4 - (f > 0 ? 0 : len), gy2() - 3, len, 2, '#6b4423'); else R(cx + f * 12 - 1, hy + (act ? 14 + hh : 8), 2, act ? 1 : 22, '#6b4423'), act && R(cx + f * 6 - (f > 0 ? 0 : len - 6), hy + 14 + hh, len, 2, '#6b4423'); R(cx - f * 9 - 3, hy + 20, 7, 8, '#caa84a'); }
+        else { R(cx - f * 9 - 3, hy + 22, 9, 8, '#b8396a'); if (act) R(cx + f * 6 - (f > 0 ? 0 : en.atk.reach), hy + 14 + hh, en.atk.reach, 8, '#b8396a'); }
       };
       return o;
     }
@@ -440,9 +450,9 @@ Sims.register({
       ctx.textAlign = 'center';
       if (sayT > 0 && mode === 'fight') { ctx.font = '800 ' + mono(Math.max(12, u * 4.5)); const tx = Math.max(60, Math.min(W - 60, (stage === 2 && sayTxt.startsWith('Малыш') ? W / 2 : en.x * u))); ctx.fillStyle = sayTxt.startsWith('Малыш') ? '#6fb4ff' : '#fff'; ctx.strokeText(sayTxt, tx, (ground() - 76) * u); ctx.fillText(sayTxt, tx, (ground() - 76) * u); }
       if (bannerT > 0) { ctx.font = '800 ' + mono(Math.min(40, u * 9)); ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#3a2600'; ctx.lineWidth = 5; ctx.strokeText(banner, W / 2, 70 * u); ctx.fillText(banner, W / 2, 70 * u); }
-      if (hint && mode === 'fight' && bannerT <= 0) { ctx.font = '700 ' + mono(Math.max(10, u * 3)); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('красный ! — блок (в последний миг = ОТРАЖЕНИЕ) · синий ! — прыжок', W / 2, 58 * u); }
+      if (hint && mode === 'fight' && bannerT <= 0) { ctx.font = '700 ' + mono(Math.max(10, u * 3)); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('красный ! — блок · синий ! — прыжок · жёлтый ! — пригнуться', W / 2, 58 * u); }
       // bottom panel
-      const kbd = matchMedia('(pointer:fine)').matches, KEYHINT = { jump: 'Пробел', block: 'E', left: 'A', right: 'D', punch: 'ЛКМ', kick: 'ПКМ' };
+      const kbd = matchMedia('(pointer:fine)').matches, KEYHINT = { jump: 'Пробел', duck: 'Q', block: 'E', left: 'A', right: 'D', punch: 'ЛКМ', kick: 'ПКМ' };
       const top = H - ctrlH; ctx.fillStyle = '#14141c'; ctx.fillRect(0, top, W, ctrlH); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, top, W, 3);
       if (mode === 'fight' || mode === 'ko') {
         for (const b of btns) {
@@ -500,7 +510,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); song.pause(); song.removeAttribute('src'); song.load(); },
-      debug: { update, advance, attack: playerAttack, jump: playerJump, get mode() { return mode; }, get stage() { return stage; }, get pl() { return pl; }, get en() { return en; }, get nodeId() { return nodeId; }, set heldBlock(v) { held.block = v ? 1 : 0; } }
+      debug: { update, advance, attack: playerAttack, jump: playerJump, get mode() { return mode; }, get stage() { return stage; }, get pl() { return pl; }, get en() { return en; }, get nodeId() { return nodeId; }, set heldBlock(v) { held.block = v ? 1 : 0; }, set heldDuck(v) { held.duck = v ? 1 : 0; } }
     };
   }
 });
