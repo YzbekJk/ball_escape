@@ -87,7 +87,7 @@ Sims.register({
     let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, btns = [], choiceRects = [];
     const rnd = (a, b) => a + Math.random() * (b - a);
 
-    function newPlayer() { return { parryT: 0, wasBlock: false, x: 28, h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
+    function newPlayer() { return { parryT: 0, blockCd: 0, wasBlock: false, x: 28, h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
     function startStage(i) {
       stage = i; const E = ENEMIES[i];
       en = { def: E, x: 0, h: 0, hp: E.hp, max: E.hp, face: -1, st: 'idle', t: 0, atk: null, cd: 1, flash: 0, healsLeft: E.heal || 0, healT: 0, dashed: false, hit: false, dead: false };
@@ -157,8 +157,9 @@ Sims.register({
 
     function updateFight(dt) {
       // player
-      pl.blocking = (held.block || keys.block) && pl.h <= 0 && (pl.st === 'idle' || pl.st === 'walk' || pl.st === 'block');
-      if (pl.blocking && !pl.wasBlock) pl.parryT = 0.28; pl.wasBlock = pl.blocking; if (pl.parryT > 0) pl.parryT -= dt;
+      if (pl.blockCd > 0) pl.blockCd -= dt;
+      pl.blocking = (held.block || keys.block) && pl.blockCd <= 0 && pl.h <= 0 && (pl.st === 'idle' || pl.st === 'walk' || pl.st === 'block');
+      if (pl.blocking && !pl.wasBlock) pl.parryT = 0.28; if (!pl.blocking && pl.wasBlock) pl.blockCd = 1; pl.wasBlock = pl.blocking; if (pl.parryT > 0) pl.parryT -= dt;
       if (pl.cd > 0) pl.cd -= dt; if (pl.flash > 0) pl.flash -= dt;
       pl.stT += dt;
       let dirx = 0; if (held.left || keys.left) dirx -= 1; if (held.right || keys.right) dirx += 1;
