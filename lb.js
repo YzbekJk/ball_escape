@@ -1,13 +1,13 @@
 /* Аккаунты (ник + пароль) и лидерборды поверх Supabase RPC (см. supabase/schema.sql). */
 (function () {
   const CFG = window.SUPABASE_CFG || {}, enabled = !!(CFG.url && CFG.key);
-  const LS = { token: 'lb_token', nick: 'lb_nick', pend: 'lb_pending' };
+  const LS = { token: 'lb_token', nick: 'lb_nick', pend: 'lb_pending', creator: 'lb_creator' };
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} }
   };
-  let token = store.get(LS.token), nick = store.get(LS.nick);
+  let token = store.get(LS.token), nick = store.get(LS.nick), creator = store.get(LS.creator) === '1';
   const listeners = [];
 
   async function rpc(fn, args) {
@@ -44,13 +44,19 @@
   const notify = () => listeners.forEach(f => f());
 
   // ---------- account ----------
-  function setSession(t, n) { token = t; nick = n; store.set(LS.token, t); store.set(LS.nick, n); notify(); flushPending(); }
-  function logout() { token = nick = null; store.del(LS.token); store.del(LS.nick); notify(); }
+  function setSession(t, n, c) { token = t; nick = n; creator = !!c; store.set(LS.token, t); store.set(LS.nick, n); store.set(LS.creator, c ? '1' : '0'); notify(); flushPending(); }
+  function logout() { token = nick = null; creator = false; store.del(LS.token); store.del(LS.nick); store.del(LS.creator); notify(); }
+  // красная галочка «Создатель»: выдаётся на сервере (players.is_creator), подпись видна при наведении или нажатии
+  function creatorBadge() {
+    const b = el('span', 'lbCreator', '✓'); b.dataset.tip = 'Создатель'; b.title = 'Создатель'; b.tabIndex = 0;
+    b.addEventListener('click', e => { e.stopPropagation(); b.classList.toggle('tip'); setTimeout(() => b.classList.remove('tip'), 2500); });
+    return b;
+  }
 
   function openAccount() {
     if (!enabled) { const b = openModal('Аккаунт'); b.appendChild(el('p', 'lbMsg', 'Аккаунты и лидерборды ещё не подключены к серверу. Владельцу сайта нужно вписать ключи Supabase в supabase-config.js.')); return; }
     if (token) {
-      const b = openModal('Аккаунт'); b.appendChild(el('p', 'lbMsg', 'Вы вошли как ' + nick));
+      const b = openModal('Аккаунт'); const who = el('p', 'lbMsg', 'Вы вошли как ' + nick + ' '); if (creator) who.appendChild(creatorBadge()); b.appendChild(who);
       const out = el('button', 'lbBtn', 'Выйти'); out.onclick = () => { logout(); closeModal(); toast('Вы вышли из аккаунта'); }; b.appendChild(out); return;
     }
     const b = openModal('Вход в аккаунт'); let mode = 'login';
@@ -65,7 +71,7 @@
       const res = await rpc(mode === 'login' ? 'lb_login' : 'lb_register', { p_nick: inN.value, p_pass: inP.value });
       go.disabled = false;
       if (res.error) { err.textContent = res.error; return; }
-      setSession(res.token, res.nick); closeModal(); toast('Привет, ' + res.nick + '!');
+      setSession(res.token, res.nick, res.creator); closeModal(); toast('Привет, ' + res.nick + '!');
     }
     go.onclick = submit; inP.onkeydown = inN.onkeydown = e => { if (e.key === 'Enter') submit(); e.stopPropagation(); }; inP.onkeyup = inN.onkeyup = e => e.stopPropagation();
     b.append(tabs, inN, inP, go, err, el('p', 'lbHint', 'Пароль хранится в зашифрованном виде. Не используйте пароль от важных аккаунтов.'));
@@ -104,7 +110,8 @@
     if (!res.rows.length) list.appendChild(el('p', 'lbMsg', 'Пока никого нет. Будьте первым!'));
     res.rows.forEach(r => {
       const row = el('div', 'lbRow' + (nick && r.nick.toLowerCase() === nick.toLowerCase() ? ' me' : ''));
-      row.append(el('span', 'rk', r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank + '.'), el('span', 'nm', r.nick), el('span', 'sc', fmt(Number(r.best))));
+      const nm = el('span', 'nm', r.nick); if (r.creator) nm.appendChild(creatorBadge());
+      row.append(el('span', 'rk', r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank + '.'), nm, el('span', 'sc', fmt(Number(r.best))));
       list.appendChild(row);
     });
     if (res.me && !res.rows.some(r => nick && r.nick.toLowerCase() === nick.toLowerCase())) b.appendChild(el('p', 'lbMe', 'Ваше место: ' + res.me.rank + ' — ' + fmt(Number(res.me.best))));
@@ -113,8 +120,8 @@
 
   window.LB = {
     enabled, openAccount, openBoard, submit, toast,
-    get nick() { return nick; }, get loggedIn() { return !!token; },
+    get nick() { return nick; }, get creator() { return creator; }, get loggedIn() { return !!token; }, creatorBadge,
     onChange(f) { listeners.push(f); }
   };
-  if (token && enabled) rpc('lb_whoami', { p_token: token }).then(r => { if (r && r.error === 'bad token') logout(); });
+  if (token && enabled) rpc('lb_whoami', { p_token: token }).then(r => { if (r && r.error === 'bad token') logout(); else if (r && r.nick) { creator = !!r.creator; store.set(LS.creator, creator ? '1' : '0'); notify(); } });
 })();

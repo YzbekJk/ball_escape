@@ -9,8 +9,10 @@ create table if not exists public.players (
   nick_lc    text generated always as (lower(nick)) stored unique,
   pass_hash  text not null,
   token      text not null unique,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  is_creator boolean not null default false      -- красная галочка «Создатель»; выдаётся только вручную через SQL
 );
+alter table public.players add column if not exists is_creator boolean not null default false;
 
 create table if not exists public.games (
   game   text primary key,
@@ -59,13 +61,13 @@ declare r players%rowtype;
 begin
   select * into r from players where nick_lc = lower(btrim(p_nick));
   if not found or r.pass_hash <> crypt(coalesce(p_pass, ''), r.pass_hash) then return json_build_object('error', 'Неверный ник или пароль'); end if;
-  return json_build_object('token', r.token, 'nick', r.nick);   -- токен постоянный: можно играть с нескольких устройств
+  return json_build_object('token', r.token, 'nick', r.nick, 'creator', r.is_creator);   -- токен постоянный: можно играть с нескольких устройств
 end $fn$;
 
 -- ---------- проверка токена ----------
 create or replace function public.lb_whoami(p_token text) returns json
 language sql security definer set search_path = public, extensions as $fn$
-  select coalesce((select json_build_object('nick', nick) from players where token = p_token), json_build_object('error', 'bad token'));
+  select coalesce((select json_build_object('nick', nick, 'creator', is_creator) from players where token = p_token), json_build_object('error', 'bad token'));
 $fn$;
 
 -- ---------- отправка результата (сохраняется только лучший) ----------
@@ -97,11 +99,11 @@ begin
   if not found then return json_build_object('error', 'Неизвестная игра'); end if;
   p_limit := least(greatest(coalesce(p_limit, 20), 1), 100);
   with ranked as (
-    select p.id, p.nick, s.best,
+    select p.id, p.nick, p.is_creator, s.best,
            rank() over (order by case when g.better = 'high' then -s.best else s.best end, s.updated_at) as rnk
     from scores s join players p on p.id = s.player_id where s.game = p_game
   )
-  select coalesce(json_agg(json_build_object('rank', rnk, 'nick', nick, 'best', best) order by rnk), '[]'::json) into rows
+  select coalesce(json_agg(json_build_object('rank', rnk, 'nick', nick, 'best', best, 'creator', is_creator) order by rnk), '[]'::json) into rows
   from (select * from ranked order by rnk limit p_limit) t;
   select id into pid from players where token = p_token;
   if pid is not null then

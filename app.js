@@ -63,7 +63,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 62;
+  const APP_VERSION = 63;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
@@ -180,7 +180,7 @@
     LB.submit(sim.id, v, sim.lb.better);
   }
   const accBtn = $('accBtn');
-  function refreshAcc() { accBtn.textContent = LB.loggedIn ? '👤 ' + LB.nick : '👤 Войти'; }
+  function refreshAcc() { accBtn.textContent = LB.loggedIn ? '👤 ' + LB.nick : '👤 Войти'; if (LB.loggedIn && LB.creator) { accBtn.append(' '); accBtn.append(LB.creatorBadge()); } }
   accBtn.onclick = () => LB.openAccount(); LB.onChange(refreshAcc); refreshAcc();
 
   function closeSim() {

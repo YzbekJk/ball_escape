@@ -100,3 +100,8 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 .lbRow.me{background:#2a3a1f;outline:1px solid #6bd04a}.lbRow .rk{width:34px;text-align:center}.lbRow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbRow .sc{font-weight:700;color:#ffd98a}
 .lbToast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:60;background:#1c2240;border:1px solid #4a5bc0;color:#fff;padding:10px 16px;border-radius:12px;font:14px system-ui,sans-serif;max-width:90vw;text-align:center;transition:.25s}
 .lbToast.on{opacity:1;transform:translate(-50%,0)}
+
+.lbCreator{display:inline-flex;align-items:center;justify-content:center;width:1.15em;height:1.15em;margin-left:.35em;border-radius:50%;background:#e5252a;color:#fff;font:700 .8em/1 system-ui,sans-serif;vertical-align:middle;position:relative;cursor:help;box-shadow:0 0 6px rgba(229,37,42,.6)}
+.lbCreator::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);padding:4px 9px;border-radius:8px;background:#1c2240;border:1px solid #e5252a;color:#fff;font:600 12px system-ui,sans-serif;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;z-index:70}
+.lbCreator:hover::after,.lbCreator:focus::after,.lbCreator.tip::after{opacity:1}
+.lbRow .nm{overflow:visible;text-overflow:clip}
