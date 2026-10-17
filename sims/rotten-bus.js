@@ -439,12 +439,14 @@ Sims.register({
       if (bannerT > 0) { ctx.font = '800 ' + mono(Math.min(40, u * 9)); ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#3a2600'; ctx.lineWidth = 5; ctx.strokeText(banner, W / 2, 70 * u); ctx.fillText(banner, W / 2, 70 * u); }
       if (hint && mode === 'fight' && bannerT <= 0) { ctx.font = '700 ' + mono(Math.max(10, u * 3)); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('красный ! — блок (в последний миг = ОТРАЖЕНИЕ) · синий ! — прыжок', W / 2, 58 * u); }
       // bottom panel
+      const kbd = matchMedia('(pointer:fine)').matches, KEYHINT = { jump: 'Пробел', block: 'E', left: 'A', right: 'D', punch: 'ЛКМ', kick: 'ПКМ' };
       const top = H - ctrlH; ctx.fillStyle = '#14141c'; ctx.fillRect(0, top, W, ctrlH); ctx.fillStyle = '#2a2a38'; ctx.fillRect(0, top, W, 3);
       if (mode === 'fight' || mode === 'ko') {
         for (const b of btns) {
           const pressed = held[b.id] > 0 || keys[b.id]; ctx.fillStyle = pressed ? '#4a5aa0' : '#22264a'; ctx.strokeStyle = '#5a68b0'; ctx.lineWidth = 2;
           ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(b.x, b.y, b.w, b.h, 12); else ctx.rect(b.x, b.y, b.w, b.h); ctx.fill(); ctx.stroke();
-          ctx.fillStyle = '#eef'; ctx.font = '700 ' + (b.w > W * 0.3 ? mono(fs) : (b.label.length < 3 ? '700 ' + b.h * 0.42 + 'px system-ui' : mono(fs))).replace(/^700 /, ''); ctx.font = (b.w > W * 0.3 ? '700 ' + mono(fs) : '700 ' + Math.round(b.h * 0.42) + 'px system-ui, sans-serif'); ctx.textAlign = 'center'; ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1);
+          ctx.fillStyle = '#eef'; ctx.font = '700 ' + (b.w > W * 0.3 ? mono(fs) : (b.label.length < 3 ? '700 ' + b.h * 0.42 + 'px system-ui' : mono(fs))).replace(/^700 /, ''); ctx.font = (b.w > W * 0.3 ? '700 ' + mono(fs) : '700 ' + Math.round(b.h * 0.42) + 'px system-ui, sans-serif'); ctx.textAlign = 'center'; ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + (kbd ? -5 : 1));
+          if (kbd) { ctx.font = '700 ' + Math.max(10, Math.min(13, Math.round(b.h * 0.2))) + 'px system-ui, sans-serif'; ctx.fillStyle = '#ffd98a'; ctx.fillText('(' + KEYHINT[b.id] + ')', b.x + b.w / 2, b.y + b.h - 11); }
         }
       } else if (mode === 'dialog' || mode === 'afterdlg') {
         const cur = mode === 'dialog' ? node : afterQ[0]; if (!cur) return;
