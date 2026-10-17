@@ -5,11 +5,13 @@ Sims.register({
   title: 'Лопай котозайцев',
   desc: 'Котозайцы летят вверх — тапай, чтобы лопнуть. Каждый лопнутый даёт +1 очко. Можно включить лимит упущенных.',
 
-  defaults: { rate: 1.2, speed: 1, size: 1, maxMissed: 0, sound: true },
+  lb: { label: 'Очки за раунд', better: 'high', fair: ['rate', 'speed', 'size', 'maxMissed', 'timeLimit'], fmt: v => v + ' оч.' },
+  defaults: { rate: 1.2, speed: 1, size: 1, maxMissed: 0, timeLimit: 60, sound: true },
   schema: [
     { k: 'rate', l: 'Сколько котозайцев в секунду', min: 0.3, max: 5, step: 0.1, live: 1 },
     { k: 'speed', l: 'Скорость полёта ×', min: 0.3, max: 3, step: 0.1, live: 1 },
     { k: 'size', l: 'Размер ×', min: 0.5, max: 2, step: 0.1, live: 1 },
+    { k: 'timeLimit', l: 'Длина раунда, сек (0 — без конца)', min: 0, max: 300, step: 5 },
     { k: 'maxMissed', l: 'Игра кончается после стольких упущенных (0 — без конца)', min: 0, max: 30, step: 1 },
     { k: 'sound', l: 'Звук «поп»', type: 'check', live: 1 }
   ],
@@ -30,10 +32,11 @@ Sims.register({
     canvas.style.touchAction = 'none';
     const img = new Image(); img.src = 'assets/balloon-cat.png?v=1';
     let W = 0, H = 0, dpr = 1, raf = 0, alive = true, paused = false, last = 0;
-    let balls, parts, floats, score, missed, over, spawnAcc, best = 0, t;
+    let balls, parts, floats, score, missed, over, spawnAcc, best = 0, t, left;
     try { best = +localStorage.getItem('popBest') || 0; } catch (e) {}
 
-    function restart() { balls = []; parts = []; floats = []; score = 0; missed = 0; over = false; spawnAcc = 0.5; t = 0; }
+    function restart() { balls = []; parts = []; floats = []; score = 0; missed = 0; over = false; spawnAcc = 0.5; t = 0; left = cfg.timeLimit; }
+    function finish() { over = true; overAt = performance.now(); if (cfg.timeLimit > 0 && ctl.submitScore) ctl.submitScore(score); }
 
     function blip(f0, f1, dur, vol, type) {
       if (!cfg.sound) return;
@@ -75,6 +78,7 @@ Sims.register({
 
     function update(dt) {
       t += dt;
+      if (!over && cfg.timeLimit > 0) { left -= dt; if (left <= 0) { left = 0; finish(); } }
       if (!over) {
         spawnAcc += dt * cfg.rate;
         while (spawnAcc >= 1) { spawnAcc -= 1; spawn(); }
@@ -83,7 +87,7 @@ Sims.register({
         const b = balls[i]; b.y -= b.vy * dt; b.x = b.bx + Math.sin(t * b.fr + b.ph) * b.sw;
         if (b.y < -b.r * 1.6) {
           balls.splice(i, 1);
-          if (!over) { missed++; if (cfg.maxMissed > 0 && missed >= cfg.maxMissed) { over = true; overAt = performance.now(); } }
+          if (!over) { missed++; if (cfg.maxMissed > 0 && missed >= cfg.maxMissed) finish(); }
         }
       }
       parts.forEach(p => { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt; });
@@ -115,10 +119,10 @@ Sims.register({
       ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold 26px system-ui,sans-serif';
       ctx.fillText('Очки: ' + score, 16, 74);
       ctx.font = '14px system-ui,sans-serif'; ctx.fillStyle = '#b8b8d0';
-      ctx.fillText('Рекорд: ' + best + (cfg.maxMissed > 0 ? '   Упущено: ' + missed + '/' + cfg.maxMissed : ''), 16, 96);
+      ctx.fillText('Рекорд: ' + best + (cfg.timeLimit > 0 ? '   Время: ' + Math.ceil(left) + ' с' : '') + (cfg.maxMissed > 0 ? '   Упущено: ' + missed + '/' + cfg.maxMissed : ''), 16, 96);
       if (over) {
         ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(0, 0, W, H);
-        ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = 'bold 34px system-ui,sans-serif'; ctx.fillText('Игра окончена', W / 2, H / 2 - 20);
+        ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = 'bold 34px system-ui,sans-serif'; ctx.fillText(cfg.timeLimit > 0 && left <= 0 ? 'Время вышло!' : 'Игра окончена', W / 2, H / 2 - 20);
         ctx.font = '22px system-ui,sans-serif'; ctx.fillText('Очки: ' + score + ' · Рекорд: ' + best, W / 2, H / 2 + 16);
         ctx.font = '15px system-ui,sans-serif'; ctx.fillStyle = '#b8b8d0'; ctx.fillText('Тапни, чтобы начать заново', W / 2, H / 2 + 48);
       }

@@ -83,3 +83,20 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 .online i{width:9px;height:9px;border-radius:50%;background:#3ddc84;box-shadow:0 0 8px #3ddc84;animation:onl 1.6s ease-in-out infinite}
 .online b{color:#fff}
 @keyframes onl{50%{opacity:.35}}
+
+/* ---- accounts & leaderboards ---- */
+.accBtn{margin-left:auto;font-size:14px;padding:8px 12px;border-radius:999px;white-space:nowrap}
+#btnLB[hidden]{display:none}
+.lbModal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
+.lbBox{width:100%;max-width:420px;max-height:88vh;overflow:auto;background:#10131c;border:1px solid #2a3150;border-radius:16px;padding:16px;color:#e8ebf5;font-family:system-ui,sans-serif}
+.lbHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:18px}
+.lbX{width:34px;height:34px;padding:0;border-radius:50%}
+.lbBox input{width:100%;box-sizing:border-box;margin:6px 0;padding:12px;border-radius:10px;border:1px solid #2a3150;background:#0a0d14;color:#fff;font-size:16px}
+.lbBtn{width:100%;margin-top:10px;padding:12px;border-radius:10px;font-size:16px;background:#2b3a8a;border:1px solid #4a5bc0;color:#fff}
+.lbTabs{display:flex;gap:6px;margin-bottom:8px}.lbTabs button{flex:1;padding:10px;border-radius:10px}.lbTabs .on{background:#2b3a8a;border-color:#4a5bc0}
+.lbErr{color:#ff7b7b;min-height:1.2em;margin:6px 0 0;font-size:14px}.lbMsg{color:#aab;margin:10px 0}.lbSub{color:#8a93b5;margin:0 0 8px;font-size:14px}
+.lbHint{color:#6a7090;font-size:12px;margin:10px 0 0}.lbMe{margin:10px 0 0;color:#ffd98a}
+.lbRow{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;font-size:16px}.lbRow:nth-child(odd){background:#151a28}
+.lbRow.me{background:#2a3a1f;outline:1px solid #6bd04a}.lbRow .rk{width:34px;text-align:center}.lbRow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbRow .sc{font-weight:700;color:#ffd98a}
+.lbToast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);opacity:0;pointer-events:none;z-index:60;background:#1c2240;border:1px solid #4a5bc0;color:#fff;padding:10px 16px;border-radius:12px;font:14px system-ui,sans-serif;max-width:90vw;text-align:center;transition:.25s}
+.lbToast.on{opacity:1;transform:translate(-50%,0)}

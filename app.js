@@ -63,7 +63,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 56;
+  const APP_VERSION = 57;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
@@ -166,11 +166,23 @@
     document.title = sim.title;
     const cfg = readCfg(sim);
     current = { sim, cfg, paused: false };
-    current.inst = sim.create(canvas, cfg, { audio: () => actx });
+    current.inst = sim.create(canvas, cfg, { audio: () => actx, submitScore: v => submitScore(sim, cfg, v) });
+    $('btnLB').hidden = !sim.lb; $('btnLB').onclick = () => LB.openBoard(sim);
     const origRestart = current.inst.restart; current.inst.restart = function () { timerT = 0; return origRestart.apply(this, arguments); };
     buildPanel();
     window.__sim = current;
   }
+  // ---- accounts / leaderboards ----
+  function submitScore(sim, cfg, v) {
+    if (!sim.lb || !window.LB) return;
+    const fair = sim.lb.fair || [];
+    if (fair.some(k => cfg[k] !== sim.defaults[k])) { LB.toast('Рекорд не засчитан: изменены настройки сложности'); return; }
+    LB.submit(sim.id, v, sim.lb.better);
+  }
+  const accBtn = $('accBtn');
+  function refreshAcc() { accBtn.textContent = LB.loggedIn ? '👤 ' + LB.nick : '👤 Войти'; }
+  accBtn.onclick = () => LB.openAccount(); LB.onChange(refreshAcc); refreshAcc();
+
   function closeSim() {
     if (!current) return;
     current.inst.destroy(); current = null; window.__sim = null;

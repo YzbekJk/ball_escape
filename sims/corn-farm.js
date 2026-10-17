@@ -3,6 +3,7 @@
 Sims.register({
   id: 'corn-farm',
   kind: 'game',
+  lb: { label: 'Всего заработано монет за всё время', better: 'high', fair: ['baseTime', 'speed'], fmt: v => v.toLocaleString('ru') + ' 🪙' },
   title: 'Кукурузная ферма',
   desc: 'Пиксельная ферма: на крошечном поле растёт большая кукуруза. Собирайте урожай серпом (тап или проведите пальцем), копите монеты и прокачивайте размер поля или рост кукурузы.',
 
@@ -44,16 +45,22 @@ Sims.register({
     const KEY = 'corn-farm-save';
     const F = 2;                                   // offscreen is F times finer than the design grid: half-pixel details
 
-    let coins, fieldLvl, growLvl, plots, slashes, bits, pops, t, resetArm;
+    let coins, earned, fieldLvl, growLvl, plots, slashes, bits, pops, t, resetArm;
     let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 260, off, g;
     let mx = -99, my = -99, showCur = false, swing = 0;
     let btnField = null, btnGrow = null, btnReset = null, events = [], down = false;
 
-    function save() { try { localStorage.setItem(KEY, JSON.stringify({ coins, fieldLvl, growLvl })); } catch (e) {} }
+    function save() { try { localStorage.setItem(KEY, JSON.stringify({ coins, earned, fieldLvl, growLvl })); } catch (e) {} }
     function load() {
-      try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) { coins = s.coins | 0; fieldLvl = Math.min(FIELDS.length - 1, s.fieldLvl | 0); growLvl = Math.min(MAX_GROW, s.growLvl | 0); return; } } catch (e) {}
-      coins = 0; fieldLvl = 0; growLvl = 0;
+      try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) { coins = s.coins | 0; earned = s.earned == null ? coins : s.earned | 0; fieldLvl = Math.min(FIELDS.length - 1, s.fieldLvl | 0); growLvl = Math.min(MAX_GROW, s.growLvl | 0); return; } } catch (e) {}
+      coins = 0; earned = 0; fieldLvl = 0; growLvl = 0;
     }
+    let sendT = 0;
+    function queueSend() {
+      if (cfg.speed !== 1 || cfg.baseTime !== 7 || !ctl.submitScore) return;
+      clearTimeout(sendT); sendT = setTimeout(flushScore, 20000);
+    }
+    function flushScore() { clearTimeout(sendT); sendT = 0; if (earned > 0 && cfg.speed === 1 && cfg.baseTime === 7 && ctl.submitScore) ctl.submitScore(earned); }
     function replant() {
       plots = []; for (let r = 0; r < 5; r++) { plots.push([]); for (let c = 0; c < 5; c++) plots[r].push({ p: 0, shake: 0 }); }
       slashes = []; bits = []; pops = []; t = 0; resetArm = 0;
@@ -82,7 +89,7 @@ Sims.register({
     function harvest(r, c, cx, cy) {
       const pl = plots[r][c];
       if (pl.p < 1) { pl.shake = 0.25; return; }
-      const v = valueOf(growLvl); coins += v; pl.p = 0; save();
+      const v = valueOf(growLvl); coins += v; earned += v; pl.p = 0; save(); queueSend();
       slashes.push({ x: cx, y: cy - 10, t: 0 }); swing = 0.22;
       for (let i = 0; i < 8; i++) bits.push({ x: cx, y: cy - 12, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, life: 0.7, col: i % 2 ? '#ffd23a' : '#3a9c2a' });
       pops.push({ x: cx, y: cy - 24, v, life: 1 });
@@ -304,7 +311,7 @@ Sims.register({
     return {
       restart, resize,
       setPaused(p) { paused = p; },
-      destroy() { on = false; song.pause(); song.removeAttribute('src'); song.load(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.style.cursor = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); },
+      destroy() { if (sendT) flushScore(); on = false; song.pause(); song.removeAttribute('src'); song.load(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.style.cursor = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); },
       debug: { update, get coins() { return coins; }, set coins(v) { coins = v; }, get fieldLvl() { return fieldLvl; }, get growLvl() { return growLvl; }, buy, harvest, plots: () => plots, layout: layoutField }
     };
   }

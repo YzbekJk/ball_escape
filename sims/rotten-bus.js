@@ -4,6 +4,7 @@ Sims.register({
   id: 'rotten-bus',
   kind: 'game',
   hit: true, ownSpace: true,
+  lb: { label: 'Кто быстрее прошёл все бои (время только в боях, с попытками)', better: 'low', fair: ['playerHp', 'enemyPower'], fmt: v => Math.floor(v / 60) + ':' + ('0' + (v % 60).toFixed(1)).slice(-4) },
   title: 'Гнилая маршрутка',
   desc: 'Пиксельный файтинг. Сначала поболтайте с кондуктором о билете, затем бой. Потом бабка, которая требует уступить место, и босс — «Я же мать!», чей ребёнок пинает ваше кресло. Компьютер: A/D — ходить, Пробел — прыжок, E — щит, ЛКМ — удар рукой, ПКМ — удар ногой.',
 
@@ -96,8 +97,9 @@ Sims.register({
       mode = 'dialog'; hint = i <= 1;
       openDialog(DIALOGS[E.id].start);
     }
+    let runT = 0;
     function restart() {
-      pl = null; parts = []; floats = []; shake = 0; t = 0; events = []; held = {}; keys = {}; banner = ''; bannerT = 0; afterQ = null;
+      runT = 0; pl = null; parts = []; floats = []; shake = 0; t = 0; events = []; held = {}; keys = {}; banner = ''; bannerT = 0; afterQ = null;
       startStage(0);
     }
     function openDialog(id) {
@@ -107,7 +109,7 @@ Sims.register({
     function advance(choiceIdx) {
       if (mode === 'afterdlg') {
         afterQ.shift(); typed = 0;
-        if (!afterQ.length) { if (stage + 1 < ENEMIES.length) startStage(stage + 1); else { mode = 'end'; events.push('win'); } }
+        if (!afterQ.length) { if (stage + 1 < ENEMIES.length) startStage(stage + 1); else { mode = 'end'; events.push('win'); if (ctl.submitScore) ctl.submitScore(Math.round(runT * 10) / 10); } }
         return;
       }
       if (typed < node.t.length) { typed = node.t.length; return; }
@@ -226,6 +228,7 @@ Sims.register({
     function update(dt) {
       t += dt; if (shake > 0) shake -= dt; if (sayT > 0) sayT -= dt; if (bannerT > 0) bannerT -= dt;
       if (mode === 'dialog' || mode === 'afterdlg') { const cur = mode === 'dialog' ? node : afterQ[0]; if (cur && typed < cur.t.length) typed = Math.min(cur.t.length, typed + dt * 45); }
+      if (mode === 'fight' || mode === 'ko') runT += dt;
       if (mode === 'fight') updateFight(dt);
       if (mode === 'ko') { t0ko += dt; en.t += dt; if (t0ko > 1.6) endFight(); }
       for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 220 * dt; p.life -= dt; } parts = parts.filter(p => p.life > 0);

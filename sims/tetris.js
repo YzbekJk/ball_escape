@@ -3,6 +3,7 @@
 Sims.register({
   id: 'tetris',
   kind: 'game', ownSpace: true,
+  lb: { label: 'Очки за партию', better: 'high', fair: ['startLevel', 'speed'], fmt: v => v.toLocaleString('ru') + ' оч.' },
   title: 'Тетрис',
   desc: 'Классический тетрис: складывайте фигуры в линии. Кнопки на экране или клавиши: A/D — влево/вправо, S — вниз, E — повернуть, Пробел — сбросить фигуру вниз (также стрелки, Enter).',
 
@@ -66,7 +67,7 @@ Sims.register({
     }
     function spawn() {
       cur = mk(next); next = take(); dropT = 0; lockT = 0; lockMoves = 0;
-      if (!fits(cur.m, cur.x, cur.y)) { over = true; events.push('over'); }
+      if (!fits(cur.m, cur.x, cur.y)) { gameOver(); }
     }
     const grounded = () => !fits(cur.m, cur.x, cur.y + 1);
     function move(dx) {
@@ -92,7 +93,7 @@ Sims.register({
     }
     function lock() {
       for (let r = 0; r < cur.m.length; r++) for (let c = 0; c < cur.m[r].length; c++) if (cur.m[r][c]) {
-        const gy = cur.y + r, gx = cur.x + c; if (gy < 0) { over = true; events.push('over'); return; } grid[gy][gx] = cur.t;
+        const gy = cur.y + r, gx = cur.x + c; if (gy < 0) { gameOver(); return; } grid[gy][gx] = cur.t;
       }
       events.push('lock');
       const full = []; for (let r = 0; r < ROWS; r++) if (grid[r].every(Boolean)) full.push(r);
@@ -176,6 +177,7 @@ Sims.register({
         if (h.t >= need) { h.t = 0; h.n++; act(h.id); }
       }
     }
+    function gameOver() { over = true; events.push('over'); if (ctl.submitScore) ctl.submitScore(score); }
     function onKey(e) {
       if (e.target && e.target.tagName === 'INPUT') return;
       const c = e.code, k = c === 'KeyA' ? 'ArrowLeft' : c === 'KeyD' ? 'ArrowRight' : c === 'KeyS' ? 'ArrowDown' : c === 'KeyE' ? 'ArrowUp' : c === 'Space' ? 'Enter' : e.key; let used = true;
