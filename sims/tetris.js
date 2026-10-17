@@ -2,9 +2,9 @@
    Управление: кнопки на экране (с удержанием) или клавиши ← → ↓, ↑ — поворот, Enter — мгновенно вниз. */
 Sims.register({
   id: 'tetris',
-  kind: 'game',
+  kind: 'game', ownSpace: true,
   title: 'Тетрис',
-  desc: 'Классический тетрис: складывайте фигуры в линии. Кнопки на экране или клавиши: ← → ↓, ↑ поворот, Enter — сбросить фигуру вниз.',
+  desc: 'Классический тетрис: складывайте фигуры в линии. Кнопки на экране или клавиши: A/D — влево/вправо, S — вниз, E — повернуть, Пробел — сбросить фигуру вниз (также стрелки, Enter).',
 
   defaults: { startLevel: 1, speed: 1, ghost: true, sound: true, music: true, musicStart: 3, volume: 0.7 },
   schema: [
@@ -178,8 +178,8 @@ Sims.register({
     }
     function onKey(e) {
       if (e.target && e.target.tagName === 'INPUT') return;
-      const k = e.key; let used = true;
-      if (over && (k === 'Enter')) { restart(); return; }
+      const c = e.code, k = c === 'KeyA' ? 'ArrowLeft' : c === 'KeyD' ? 'ArrowRight' : c === 'KeyS' ? 'ArrowDown' : c === 'KeyE' ? 'ArrowUp' : c === 'Space' ? 'Enter' : e.key; let used = true;
+      if (over && (k === 'Enter')) { if (!e.repeat) restart(); e.preventDefault(); return; }
       if (k === 'ArrowLeft') move(-1); else if (k === 'ArrowRight') move(1); else if (k === 'ArrowDown') soft();
       else if (k === 'ArrowUp' || k === 'x' || k === 'X') rotate(); else if (k === 'Enter') hard(); else used = false;
       if (used) { e.preventDefault(); musicTick(); }
