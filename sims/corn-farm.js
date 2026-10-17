@@ -6,7 +6,7 @@ Sims.register({
   title: 'Кукурузная ферма',
   desc: 'Пиксельная ферма: на крошечном поле растёт большая кукуруза. Собирайте урожай серпом (тап или проведите пальцем), копите монеты и прокачивайте размер поля или рост кукурузы.',
 
-  defaults: { baseTime: 7, speed: 1, swipe: true, wind: true, sound: true, music: true, musicStart: 6, volume: 0.7 },
+  defaults: { baseTime: 7, speed: 1, swipe: true, wind: true, sound: true, music: true, musicStart: 6.5, volume: 0.7 },
   schema: [
     { k: 'baseTime', l: 'Сколько секунд растёт кукуруза (без прокачки)', min: 2, max: 40, step: 1, live: 1 },
     { k: 'speed', l: 'Скорость роста ×', min: 0.25, max: 10, step: 0.25, live: 1 },
