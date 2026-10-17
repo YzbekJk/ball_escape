@@ -77,3 +77,9 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 .credit{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0 28px;color:#9a9aa6;font-size:14px}
 .credit img{width:32px;height:32px;object-fit:contain;border-radius:50%}
 .credit img[src$=png]{border-radius:0}
+
+.online{display:flex;align-items:center;justify-content:center;gap:8px;width:max-content;margin:24px auto 0;padding:8px 16px;border:1px solid #1f3a2a;border-radius:999px;background:#0d1a13;color:#bfe9cd;font-size:14px}
+.online[hidden]{display:none}
+.online i{width:9px;height:9px;border-radius:50%;background:#3ddc84;box-shadow:0 0 8px #3ddc84;animation:onl 1.6s ease-in-out infinite}
+.online b{color:#fff}
+@keyframes onl{50%{opacity:.35}}
