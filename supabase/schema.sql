@@ -42,7 +42,7 @@ on conflict (game) do update set better = excluded.better, min_v = excluded.min_
 
 -- ---------- регистрация ----------
 create or replace function public.lb_register(p_nick text, p_pass text) returns json
-language plpgsql security definer set search_path = public, extensions as $$
+language plpgsql security definer set search_path = public, extensions as $fn$
 declare n text := btrim(p_nick); tok text := encode(gen_random_bytes(24), 'hex');
 begin
   if n !~ '^[A-Za-zА-Яа-яЁё0-9_ .-]{3,16}$' then return json_build_object('error', 'Ник: 3–16 символов (буквы, цифры, _ . -)'); end if;
@@ -50,27 +50,27 @@ begin
   if exists (select 1 from players where nick_lc = lower(n)) then return json_build_object('error', 'Такой ник уже занят'); end if;
   insert into players (nick, pass_hash, token) values (n, crypt(p_pass, gen_salt('bf')), tok);
   return json_build_object('token', tok, 'nick', n);
-end $$;
+end $fn$;
 
 -- ---------- вход ----------
 create or replace function public.lb_login(p_nick text, p_pass text) returns json
-language plpgsql security definer set search_path = public, extensions as $$
+language plpgsql security definer set search_path = public, extensions as $fn$
 declare r players%rowtype;
 begin
   select * into r from players where nick_lc = lower(btrim(p_nick));
   if not found or r.pass_hash <> crypt(coalesce(p_pass, ''), r.pass_hash) then return json_build_object('error', 'Неверный ник или пароль'); end if;
   return json_build_object('token', r.token, 'nick', r.nick);   -- токен постоянный: можно играть с нескольких устройств
-end $$;
+end $fn$;
 
 -- ---------- проверка токена ----------
 create or replace function public.lb_whoami(p_token text) returns json
-language sql security definer set search_path = public, extensions as $$
+language sql security definer set search_path = public, extensions as $fn$
   select coalesce((select json_build_object('nick', nick) from players where token = p_token), json_build_object('error', 'bad token'));
-$$;
+$fn$;
 
 -- ---------- отправка результата (сохраняется только лучший) ----------
 create or replace function public.lb_submit(p_token text, p_game text, p_value numeric) returns json
-language plpgsql security definer set search_path = public, extensions as $$
+language plpgsql security definer set search_path = public, extensions as $fn$
 declare pid bigint; g games%rowtype; old numeric; improved boolean := false;
 begin
   select id into pid from players where token = p_token;
@@ -86,11 +86,11 @@ begin
     update scores set plays = plays + 1, best = case when improved then p_value else best end, updated_at = now() where player_id = pid and game = p_game;
   end if;
   return json_build_object('ok', true, 'improved', improved);
-end $$;
+end $fn$;
 
 -- ---------- таблица лидеров + место игрока ----------
 create or replace function public.lb_top(p_game text, p_limit int default 20, p_token text default null) returns json
-language plpgsql security definer set search_path = public, extensions as $$
+language plpgsql security definer set search_path = public, extensions as $fn$
 declare g games%rowtype; rows json; me json; pid bigint;
 begin
   select * into g from games where game = p_game;
@@ -113,7 +113,7 @@ begin
     select json_build_object('rank', rnk, 'best', best) into me from ranked where player_id = pid;
   end if;
   return json_build_object('better', g.better, 'rows', rows, 'me', me);
-end $$;
+end $fn$;
 
 -- доступ с сайта (anon-ключ) — только к функциям
 revoke all on function public.lb_register(text, text), public.lb_login(text, text), public.lb_whoami(text),
