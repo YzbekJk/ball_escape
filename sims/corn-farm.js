@@ -334,7 +334,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { if (sendT) flushScore(); on = false; song.pause(); song.removeAttribute('src'); song.load(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.style.cursor = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); },
-      debug: { update, get coins() { return coins; }, set coins(v) { coins = v; }, get fieldLvl() { return fieldLvl; }, get growLvl() { return growLvl; }, buy, harvest, plots: () => plots, layout: layoutField }
+      debug: { update, plotAt, get z() { return zCur; }, get coins() { return coins; }, set coins(v) { coins = v; }, get fieldLvl() { return fieldLvl; }, get growLvl() { return growLvl; }, buy, harvest, plots: () => plots, layout: layoutField }
     };
   }
 });
