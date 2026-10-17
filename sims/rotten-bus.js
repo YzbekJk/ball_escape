@@ -87,12 +87,12 @@ Sims.register({
     let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, btns = [], choiceRects = [];
     const rnd = (a, b) => a + Math.random() * (b - a);
 
-    function newPlayer() { return { parryT: 0, blockCd: 0, wasBlock: false, x: 28, h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
+    function newPlayer() { return { parryT: 0, blockCd: 0, wasBlock: false, x: Math.round(LW * 0.25), h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
     function startStage(i) {
       stage = i; const E = ENEMIES[i];
       en = { def: E, x: 0, h: 0, hp: E.hp, max: E.hp, face: -1, st: 'idle', t: 0, atk: null, cd: 1, flash: 0, healsLeft: E.heal || 0, healT: 0, dashed: false, hit: false, dead: false };
-      en.x = LW - 30; waves = []; kidT = rnd(3, 4.5); kidWarn = 0;
-      if (!pl) pl = newPlayer(); else { pl.hp = Math.min(pl.max, pl.hp + 35); pl.x = 28; pl.h = 0; pl.vy = 0; pl.st = 'idle'; pl.cd = 0; }
+      en.x = Math.round(LW * 0.75); waves = []; kidT = rnd(3, 4.5); kidWarn = 0;
+      if (!pl) pl = newPlayer(); else { pl.hp = Math.min(pl.max, pl.hp + 35); pl.x = Math.round(LW * 0.25); pl.h = 0; pl.vy = 0; pl.st = 'idle'; pl.cd = 0; }
       mode = 'dialog'; hint = i <= 1;
       openDialog(DIALOGS[E.id].start);
     }
@@ -117,7 +117,7 @@ Sims.register({
     }
     function beginFight() {
       mode = 'fight'; en.st = 'idle'; en.cd = 1; en.t = 0; banner = ENEMIES[stage].id === 'mother' ? 'БОСС: Я ЖЕ МАТЬ!' : 'БОЙ!'; bannerT = 1.4; events.push('bell');
-      pl.x = 28; en.x = LW - 30; en.hp = en.max;
+      pl.x = Math.round(LW * 0.25); en.x = Math.round(LW * 0.75); en.hp = en.max;
     }
     function endFight() {
       mode = 'afterdlg'; afterQ = DIALOGS[ENEMIES[stage].id].after.map(a => ({ who: a[0], t: a[1] })); typed = 0;
