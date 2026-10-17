@@ -110,7 +110,15 @@ Sims.register({
       // a ring disappears as soon as the ball pokes even slightly past its outer edge; the rest flip direction
       d = Math.hypot(b.x, b.y);
       let removed = 0;
-      for (let k = 0; k < N; k++) if (!dead[k] && d + cfg.ballR > innerR + (k + 1) * dr + 1e-4) { dead[k] = 1; removed++; }
+      const ang = Math.atan2(b.y, b.x), hgNow = halfGap();
+      for (let k = 0; k < N; k++) {
+        if (dead[k]) continue;
+        const rIn = innerR + k * dr, rOut = rIn + dr;
+        const beyond = d + cfg.ballR > rOut + 1e-4;                                    // ball poked past the outer edge
+        const inGate = d + cfg.ballR > rIn && Math.abs(angDiff(ang, th[k])) < hgNow;   // ball is passing through the gap
+        const through = d > rIn + dr * 0.5;                                              // failsafe: ball centre is beyond the ring's middle
+        if (beyond || inGate || through) { dead[k] = 1; removed++; }
+      }
       if (removed) { if (cfg.reverse) dir = -dir; events.push({ pop: true }); }
 
       if (escaped && bounds) {            // after the escape the ball bounces around the screen
@@ -213,7 +221,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { alive = false; cancelAnimationFrame(raf); },
-      debug: { step, get escaped() { return escaped; }, get t() { return t; }, get passed() { return dead.reduce((a, b) => a + b, 0); } }
+      debug: { get ball() { return ball; }, get th() { return th; }, hg: halfGap, get dead() { return dead; }, get ir() { return innerR; }, get dr() { return dr; }, get N() { return N; }, step, get escaped() { return escaped; }, get t() { return t; }, get passed() { return dead.reduce((a, b) => a + b, 0); } }
     };
   }
 });
