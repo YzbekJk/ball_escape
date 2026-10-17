@@ -131,7 +131,7 @@ Sims.register({
       en.hp = Math.max(0, en.hp - dmg); en.flash = 0.15; sparks(en.x - en.face * -6, ground() - 22, '#ffe14d', 6); floatText(en.x, ground() - 52, '-' + dmg, '#ffe14d'); events.push('hit'); shake = 0.1;
       if (en.hp <= 0) { en.dead = true; en.st = 'dead'; en.t = 0; events.push('ko'); mode = 'ko'; t0ko = 0; return; }
       const armor = (en.def.id === 'mother' && en.st === 'act') && !noStun;
-      if (!armor && en.st !== 'hurt') { en.st = 'hurt'; en.t = 0; en.atk = null; en.x += -en.face * -3 * -1; }
+      if (!armor && en.st !== 'hurt') { en.st = 'hurt'; en.t = 0; en.atk = null; en.vx = -en.face * -1 * 70; }
       else if (en.st === 'heal') { en.st = 'hurt'; en.t = 0; }
     }
     let t0ko = 0;
@@ -142,15 +142,15 @@ Sims.register({
         const rd = Math.round(10 + en.max * 0.07); hurtEnemy(rd, true); if (!en.dead) { en.st = 'hurt'; en.t = -0.7; en.atk = null; en.x += en.face * -8; }
         banner = 'ОТРАЖЕНИЕ!'; bannerT = 0.6; return;
       }
-      if (pl.blocking && !low && pl.h < 1) { dmg = Math.max(1, Math.round(dmg * 0.35)); sparks(pl.x + 8, ground() - 22, '#9fd8ff', 6); floatText(pl.x, ground() - 52, 'блок', '#9fd8ff'); events.push('block'); pl.x -= 3; }
-      else { pl.flash = 0.2; pl.st = 'hurt'; pl.stT = 0; pl.x -= kb || 5; sparks(pl.x, ground() - 22, '#ff5a5a', 7); floatText(pl.x, ground() - 52, '-' + Math.round(dmg), '#ff6a6a'); events.push('ouch'); shake = 0.2; }
+      if (pl.blocking && !low && pl.h < 1) { dmg = Math.max(1, Math.round(dmg * 0.35)); sparks(pl.x + 8, ground() - 22, '#9fd8ff', 6); floatText(pl.x, ground() - 52, 'блок', '#9fd8ff'); events.push('block'); pl.vx = -40; }
+      else { pl.flash = 0.2; pl.st = 'hurt'; pl.stT = 0; pl.vx = -(kb || 5) * 16; sparks(pl.x, ground() - 22, '#ff5a5a', 7); floatText(pl.x, ground() - 52, '-' + Math.round(dmg), '#ff6a6a'); events.push('ouch'); shake = 0.2; }
       pl.hp = Math.max(0, pl.hp - dmg);
       if (pl.hp <= 0) { pl.st = 'dead'; mode = 'over'; events.push('over'); }
     }
     function playerAttack(kind) {
       if (mode !== 'fight' || pl.cd > 0 || pl.st === 'hurt' || pl.st === 'dead' || pl.blocking) return;
       const k = kind === 'punch' ? { dur: 0.22, cd: 0.28, reach: 24, dmg: 8 } : { dur: 0.4, cd: 0.6, reach: 30, dmg: 15 };
-      pl.st = kind; pl.stT = 0; pl.atk = k; pl.hitDone = false; pl.cd = k.cd; events.push('swing');
+      pl.vx = kind === 'punch' ? 55 : 80; pl.st = kind; pl.stT = 0; pl.atk = k; pl.hitDone = false; pl.cd = k.cd; events.push('swing');
     }
     function playerJump() { if (mode === 'fight' && pl.h <= 0 && pl.st !== 'hurt' && pl.st !== 'dead') { pl.vy = 150; events.push('jump'); } }
 
@@ -177,7 +177,8 @@ Sims.register({
       // enemy
       const E = en.def, pw = cfg.enemyPower, enraged = en.hp < en.max * 0.5;
       if (en.flash > 0) en.flash -= dt;
-      en.t += dt; en.face = pl.x < en.x ? -1 : 1;
+      en.t += dt; en.face = pl.x < en.x ? -1 : 1; en.moving = false;
+      en.x += (en.vx || 0) * dt; en.vx = (en.vx || 0) * Math.max(0, 1 - 7 * dt); pl.x += (pl.vx || 0) * dt; pl.vx = (pl.vx || 0) * Math.max(0, 1 - 7 * dt);
       if (en.st === 'hurt') { if (en.t > 0.22) { en.st = 'idle'; en.cd = rnd(0.15, 0.5); } }
       else if (en.st === 'guard') { if (en.t > 0.55) { en.st = 'idle'; en.cd = 0.15; } }
       else if (en.st === 'idle') {
@@ -187,10 +188,15 @@ Sims.register({
         const dx = Math.abs(pl.x - en.x), want = en.next ? en.next.reach - 4 : 20;
         if (!en.next) en.next = E.atks[Math.floor(Math.random() * E.atks.length)];
         if (E.heal && en.healsLeft > 0 && en.hp < en.max * 0.6 && Math.random() < dt * 0.4 && dx > 40) { en.st = 'heal'; en.t = 0; en.healsLeft--; say('Ой, сердце…'); }
-        else if (dx > want) en.x += Math.sign(pl.x - en.x) * E.speed * (enraged ? 1.3 : 1) * dt;
+        else if (dx > want) { en.x += Math.sign(pl.x - en.x) * E.speed * (enraged ? 1.3 : 1) * dt; en.moving = true; }
+        else if (en.cd > 0) {                                  // circling in front of the player: steps in and out
+          en.sT = (en.sT || 0) - dt; if (en.sT <= 0) { en.sT = rnd(0.35, 0.9); en.sd = Math.random() < 0.5 ? -1 : 1; }
+          const away = Math.sign(en.x - pl.x) || 1, dir = dx < want - 8 ? away : dx > want - 1 ? -away : en.sd * away;
+          en.x += dir * E.speed * 0.55 * dt; en.moving = true;
+        }
         else if (en.cd <= 0) { en.atk = en.next; en.next = null; en.st = 'wind'; en.t = 0; en.hit = false; en.combo = 0; en.hold = Math.random() < 0.3 ? rnd(0.12, 0.35) : 0; pl.parried = false; events.push('warn'); say(en.atk.say); }
       } else if (en.st === 'heal') { en.hp = Math.min(en.max, en.hp + 14 * dt); if (en.t > 2.2) { en.st = 'idle'; en.cd = 0.5; } }
-      else if (en.st === 'wind') { if (en.t >= en.atk.wind * (en.combo ? 0.65 : 1) / (enraged ? 1.25 : 1) + en.hold) { en.st = 'act'; en.t = 0; en.hit = false; pl.parried = false; } }
+      else if (en.st === 'wind') { if (en.t >= en.atk.wind * (en.combo ? 0.65 : 1) / (enraged ? 1.25 : 1) + en.hold) { en.st = 'act'; en.t = 0; en.hit = false; en.vx = en.face * (en.atk.dash ? 0 : 70); pl.parried = false; } }
       else if (en.st === 'act') {
         if (en.atk && en.atk.dash) en.x += en.face * (en.atk.dash / en.atk.act) * dt;
         if (en.atk && !en.hit) {
@@ -308,7 +314,7 @@ Sims.register({
     const R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(Math.round(x * F), Math.round(y * F), Math.max(1, Math.round(w * F)), Math.max(1, Math.round(h * F))); };
     function person(cx, fy, o) {
       // cx centre x, fy feet y (already minus jump height). o.face: 1 right, -1 left
-      const f = o.face, st = o.st || 'idle', bob = st === 'walk' ? Math.round(Math.sin(t * 14 + (o.ph || 0))) : 0;
+      const f = o.face, st = o.st || 'idle', bob = st === 'walk' ? Math.round(Math.sin(t * 14 + (o.ph || 0))) : Math.round(Math.sin(t * 7 + (o.ph || 0)) * 0.9);
       const flash = o.flash > 0 && Math.floor(t * 30) % 2 === 0, sk = flash ? '#fff' : '#f0c9a0', top = flash ? '#fff' : o.top, pants = flash ? '#fff' : o.pants;
       if (st === 'dead') {                                         // lying on the floor
         R(cx - 14, fy - 7, 12, 7, top); R(cx - 2, fy - 7, 8, 6, pants); R(cx + 6, fy - 5, 6, 4, '#222'); R(cx - 20, fy - 8, 8, 8, sk); R(cx - 20, fy - 9, 8, 3, o.hair); return;
@@ -316,7 +322,7 @@ Sims.register({
       const lean = st === 'hurt' ? -f * 2 : st === 'wind' ? -f * 1 : 0, hy = fy - 38 + bob * 0.5;
       const w = o.wide ? 18 : 14;
       // legs
-      const l1 = st === 'walk' ? Math.round(Math.sin(t * 14 + (o.ph || 0)) * 3) : 0;
+      const l1 = st === 'walk' ? Math.round(Math.sin(t * 14 + (o.ph || 0)) * 3) : Math.round(Math.sin(t * 5 + (o.ph || 0)) * 1.5);
       R(cx - 5 + l1, fy - 14, 4, 14, pants); R(cx + 1 - l1, fy - 14, 4, 14, pants); R(cx - 6 + l1, fy - 2, 5, 2, '#1a1a22'); R(cx + 1 - l1, fy - 2, 5, 2, '#1a1a22');
       if (st === 'kick') R(cx + f * 2, fy - 14, 4 * 1, 4, pants), R(cx + f * 4, fy - 14, 14 * f > 0 ? 14 : 14, 4, pants), R(cx + f * 16, fy - 15, 4, 6, '#1a1a22');
       // torso
@@ -327,16 +333,21 @@ Sims.register({
       if (o.hairBig) { R(cx - 7 + lean, hy - 2, 14, 6, o.hair); R(cx - 7 + lean, hy + 3, 3, 8, o.hair); R(cx + 4 + lean, hy + 3, 3, 8, o.hair); }
       if (o.scarf) { R(cx - 6 + lean, hy - 2, 12, 5, o.scarf); R(cx - 6 + lean, hy + 3, 3, 4, o.scarf); R(cx + 3 + lean, hy + 3, 3, 4, o.scarf); R(cx - 3 + lean, hy - 1, 2, 1, '#fff'); }
       if (o.cap) { R(cx - 6 + lean, hy - 3, 12, 4, o.cap); R(cx + (f > 0 ? 2 : -9) + lean, hy, 7, 1.5, o.cap); }
-      const ex = cx + lean + (f > 0 ? 1 : -4);
-      R(ex, hy + 4, 3, 3, '#fff'); R(ex + (f > 0 ? 1.5 : 0), hy + 5, 1.5, 2, '#111');
-      if (st === 'hurt') { R(ex - 1, hy + 3, 5, 1, '#111'); R(cx - 2 + lean, hy + 8, 4, 2, '#7a1a1a'); }
-      else if (st === 'wind' || st === 'act') { R(ex - 1, hy + 3, 5, 1, '#111'); R(cx - 2 + lean, hy + 8, 4, 1.5, '#7a1a1a'); }
+      const ex = cx + lean - 2;
+      R(cx + lean - 4, hy + 4, 3, 3, '#fff'); R(cx + lean + 1, hy + 4, 3, 3, '#fff');
+      R(cx + lean - 4 + (f > 0 ? 1.5 : 0), hy + 5, 1.5, 2, '#111'); R(cx + lean + 1 + (f > 0 ? 1.5 : 0), hy + 5, 1.5, 2, '#111');
+      if (st === 'hurt') { R(cx + lean - 5, hy + 3, 10, 1, '#111'); R(cx - 2 + lean, hy + 8, 4, 2, '#7a1a1a'); }
+      else if (st === 'wind' || st === 'act') { R(cx + lean - 5, hy + 3, 4, 1.5, '#111'); R(cx + lean + 1, hy + 3, 4, 1.5, '#111'); R(cx - 2 + lean, hy + 8, 4, 1.5, '#7a1a1a'); }
       else R(cx - 1 + lean + f, hy + 8, 3, 1, '#8a4a3a');
       // arms & weapons
       if (st === 'block') { R(cx + f * 2 - 3, hy + 3, 8, 6, top); R(cx + f * 2 - 3, hy + 9, 8, 3, sk); R(cx + f * 4, hy + 2, 3, 12, '#9fd8ff'); }
       else if (st === 'punch' || (st === 'act' && o.arm === 'punch')) { const len = 14; R(cx + (f > 0 ? 4 : -4 - len), hy + 14, len, 4, top); R(cx + (f > 0 ? 4 + len : -4 - len - 4), hy + 13, 4, 6, sk); }
       else if (st === 'wind') { R(cx - f * 8 - 2, hy + 6, 4, 14, top); R(cx - f * 8 - 2, hy + 4, 4, 3, sk); }
-      else { R(cx - 9 - 0, hy + 12 + bob, 3, 12, top); R(cx + 6, hy + 12 - bob, 3, 12, top); R(cx - 9, hy + 24, 3, 3, sk); R(cx + 6, hy + 24, 3, 3, sk); }
+      else {                                                       // fighting stance: back arm down, front fist up and bobbing
+        const sw = Math.round(Math.sin(t * 8 + (o.ph || 0)) * 1.5);
+        R(cx - f * 8 - 1.5, hy + 12 - bob, 3, 11, top); R(cx - f * 8 - 1.5, hy + 23 - bob, 3, 3, sk);
+        R(cx + f * 5 - (f > 0 ? 0 : 5), hy + 13 + sw, 5, 4, top); R(cx + f * 10 - (f > 0 ? 0 : 4), hy + 11 + sw, 4, 5, sk);
+      }
       if (o.prop) o.prop(cx, hy, f, st);
     }
     const CONDUCTOR = { hair: '#555', top: '#e8832a', vest: '#f2a03a', pants: '#2c2c3a', cap: '#3a3f4a' };
@@ -391,9 +402,8 @@ Sims.register({
     }
     function enemyStyle() {
       const base = en.def.id === 'conductor' ? CONDUCTOR : en.def.id === 'babka' ? BABKA : MOTHER, E = en.def.id;
-      const o = Object.assign({}, base, { face: en.face, st: en.st === 'act' ? 'act' : en.st === 'wind' ? 'wind' : en.st === 'hurt' ? 'hurt' : en.st === 'dead' ? 'dead' : en.st === 'heal' ? 'idle' : (Math.abs(0) || en.st === 'idle' ? 'walk' : 'idle'), flash: en.flash, ph: 1.3 });
-      if (en.st === 'idle' && en.cd > 0 && Math.abs(pl.x - en.x) <= (en.next ? en.next.reach - 4 : 20)) o.st = 'idle';
-      o.arm = 'punch';
+      const o = Object.assign({}, base, { face: en.face, st: en.st === 'act' ? 'act' : en.st === 'wind' ? 'wind' : en.st === 'hurt' ? 'hurt' : en.st === 'dead' ? 'dead' : en.st === 'heal' ? 'idle' : (Math.abs(0) || en.st === 'idle' ? 'walk' : 'idle'), flash: en.flash, ph: 1.3 + (en.def.id === 'babka' ? 0.8 : 0) });
+            o.arm = 'punch';
       o.prop = (cx, hy, f, st) => {
         const act = st === 'act', wind = st === 'wind';
         if (E === 'conductor') { R(cx - f * 8 - 1, hy + 14, 5, 4, '#c0c4cc'); if (act) R(cx + f * 18, hy + 12, 7, 5, '#c0c4cc'); R(cx - 5, hy + 12, 10, 3, '#8a5a2b'); }
