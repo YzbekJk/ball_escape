@@ -43,14 +43,15 @@
       const sec = SECTIONS[section];
       document.title = sec.title; $('menuTitle').textContent = sec.title; $('menuSub').textContent = 'Выберите, что открыть';
       back.hidden = false;
-      const items = Sims.list.filter(s => kindOf(s) === sec.kind);
+      const items = Sims.list.filter(s => kindOf(s) === sec.kind).sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0));   // hits first
       items.forEach(sim => {
-        const b = document.createElement('button'); b.className = 'card';
+        const b = document.createElement('button'); b.className = 'card' + (sim.hit ? ' hit' : '');
         const cv = document.createElement('canvas'); cv.width = 420; cv.height = 300;
         if (sim.preview) { const c = cv.getContext('2d'); sim.preview(c, cv.width, cv.height); }
         const t = document.createElement('div'); t.className = 't'; t.textContent = sim.title;
         const d = document.createElement('div'); d.className = 'd'; d.textContent = sim.desc || '';
         b.append(cv, t, d);
+        if (sim.hit) { const h = document.createElement('div'); h.className = 'hitbadge'; h.textContent = 'ХИТ!'; b.appendChild(h); }
         b.onclick = () => { location.hash = '#/' + sim.id; };
         cards.appendChild(b);
       });
@@ -62,7 +63,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 43;
+  const APP_VERSION = 44;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 

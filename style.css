@@ -68,3 +68,8 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 .critter.pop{transition:opacity .18s;opacity:0}
 .fluff{position:absolute;width:9px;height:9px;margin:-4px;border-radius:50%;background:#b9b6c6;animation:fl .7s ease-out forwards}
 @keyframes fl{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+
+.card{position:relative}
+.card.hit{border-color:#ffb02e;box-shadow:0 0 0 1px #ffb02e55,0 0 22px #ff7a0033}
+.hitbadge{position:absolute;top:10px;right:-34px;transform:rotate(35deg);width:130px;text-align:center;background:linear-gradient(#ff4b2b,#ff9a1f);color:#fff;font-weight:900;font-size:15px;letter-spacing:1px;padding:5px 0;box-shadow:0 2px 8px rgba(0,0,0,.5);text-shadow:0 1px 2px rgba(0,0,0,.5);pointer-events:none;animation:hitpulse 1.4s ease-in-out infinite}
+@keyframes hitpulse{50%{filter:brightness(1.25)}}
