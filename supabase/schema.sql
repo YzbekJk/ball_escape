@@ -120,3 +120,6 @@ revoke all on function public.lb_register(text, text), public.lb_login(text, tex
   public.lb_submit(text, text, numeric), public.lb_top(text, int, text) from public;
 grant execute on function public.lb_register(text, text), public.lb_login(text, text), public.lb_whoami(text),
   public.lb_submit(text, text, numeric), public.lb_top(text, int, text) to anon, authenticated;
+
+-- обновить кэш API, чтобы новые функции сразу стали видны сайту
+notify pgrst, 'reload schema';
