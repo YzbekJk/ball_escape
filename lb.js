@@ -14,7 +14,7 @@
     if (!enabled) return { error: 'Лидерборд ещё не подключён к серверу' };
     try {
       const r = await fetch(CFG.url.replace(/\/$/, '') + '/rest/v1/rpc/' + fn, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', apikey: CFG.key, Authorization: 'Bearer ' + CFG.key }, body: JSON.stringify(args)
+        method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json', apikey: CFG.key }, CFG.key.startsWith('eyJ') ? { Authorization: 'Bearer ' + CFG.key } : {})   // new sb_publishable_ keys are not JWTs, body: JSON.stringify(args)
       });
       if (!r.ok) return { error: 'Ошибка сервера (' + r.status + ')' };
       return await r.json();
