@@ -73,3 +73,7 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 .card.hit{border-color:#ffb02e;box-shadow:0 0 0 1px #ffb02e55,0 0 22px #ff7a0033}
 .hitbadge{position:absolute;top:10px;right:-34px;transform:rotate(35deg);width:130px;text-align:center;background:linear-gradient(#ff4b2b,#ff9a1f);color:#fff;font-weight:900;font-size:15px;letter-spacing:1px;padding:5px 0;box-shadow:0 2px 8px rgba(0,0,0,.5);text-shadow:0 1px 2px rgba(0,0,0,.5);pointer-events:none;animation:hitpulse 1.4s ease-in-out infinite}
 @keyframes hitpulse{50%{filter:brightness(1.25)}}
+
+.credit{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0 28px;color:#9a9aa6;font-size:14px}
+.credit img{width:32px;height:32px;object-fit:contain;border-radius:50%}
+.credit img[src$=png]{border-radius:0}
