@@ -234,7 +234,9 @@ Sims.register({
         const pressed = Object.values(held).some(h => h.id === b.id);
         ctx.fillStyle = pressed ? '#3d4a82' : '#1b2240'; ctx.strokeStyle = '#4a5898'; ctx.lineWidth = 2;
         ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(b.x, b.y, b.w, b.h, 14); else ctx.rect(b.x, b.y, b.w, b.h); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#e6ebff'; ctx.font = '700 ' + b.h * 0.42 + 'px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 2);
+        ctx.fillStyle = '#e6ebff'; ctx.font = '700 ' + b.h * 0.42 + 'px system-ui, sans-serif'; ctx.textAlign = 'center'; const kbd = matchMedia('(pointer:fine)').matches, KH = { left: 'A', down: 'S', right: 'D', hard: 'Пробел', rot: 'E' };
+        ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + (kbd ? -5 : 2));
+        if (kbd) { ctx.font = '700 ' + Math.max(9, Math.min(13, Math.round(b.h * 0.2))) + 'px system-ui, sans-serif'; ctx.fillStyle = '#ffd98a'; ctx.fillText('(' + KH[b.id] + ')', b.x + b.w / 2, b.y + b.h - 9); }
       }
       if (over) {
         ctx.fillStyle = 'rgba(5,7,15,.78)'; ctx.fillRect(bx, by, cell * COLS, cell * ROWS);
