@@ -116,6 +116,7 @@ begin
 end $fn$;
 
 -- доступ с сайта (anon-ключ) — только к функциям
+grant usage on schema public to anon, authenticated;
 revoke all on function public.lb_register(text, text), public.lb_login(text, text), public.lb_whoami(text),
   public.lb_submit(text, text, numeric), public.lb_top(text, int, text) from public;
 grant execute on function public.lb_register(text, text), public.lb_login(text, text), public.lb_whoami(text),
