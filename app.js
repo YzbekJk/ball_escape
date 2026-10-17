@@ -63,7 +63,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 48;
+  const APP_VERSION = 50;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
@@ -201,7 +201,7 @@
   };
   addEventListener('keydown', e => {
     if (!current || e.target.tagName === 'INPUT') return;
-    if (e.key === ' ') { e.preventDefault(); $('btnPause').click(); }
+    if (e.key === ' ' && !current.sim.ownSpace) { e.preventDefault(); $('btnPause').click(); }
     if (e.key === 'r' || e.key === 'R') current.inst.restart();
     if (e.key === 'Escape') { if (!panel.hidden) panel.hidden = true; else $('btnBack').click(); }
   });

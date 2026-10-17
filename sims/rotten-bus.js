@@ -3,9 +3,9 @@
 Sims.register({
   id: 'rotten-bus',
   kind: 'game',
-  hit: true,
+  hit: true, ownSpace: true,
   title: 'Гнилая маршрутка',
-  desc: 'Пиксельный файтинг. Сначала поболтайте с кондуктором о билете, затем бой. Потом бабка, которая требует уступить место, и босс — «Я же мать!», чей ребёнок пинает ваше кресло.',
+  desc: 'Пиксельный файтинг. Сначала поболтайте с кондуктором о билете, затем бой. Потом бабка, которая требует уступить место, и босс — «Я же мать!», чей ребёнок пинает ваше кресло. Компьютер: A/D — ходить, Пробел — прыжок, E — щит, ЛКМ — удар рукой, ПКМ — удар ногой.',
 
   defaults: { playerHp: 100, enemyPower: 1.5, skipDialogs: false, sound: true, music: true, musicStart: 9, volume: 0.7 },
   schema: [
@@ -93,8 +93,8 @@ Sims.register({
       en = { def: E, x: 0, h: 0, hp: E.hp, max: E.hp, face: -1, st: 'idle', t: 0, atk: null, cd: 1, flash: 0, healsLeft: E.heal || 0, healT: 0, dashed: false, hit: false, dead: false };
       en.x = LW - 30; waves = []; kidT = rnd(3, 4.5); kidWarn = 0;
       if (!pl) pl = newPlayer(); else { pl.hp = Math.min(pl.max, pl.hp + 35); pl.x = 28; pl.h = 0; pl.vy = 0; pl.st = 'idle'; pl.cd = 0; }
-      openDialog(DIALOGS[E.id].start);
       mode = 'dialog'; hint = i <= 1;
+      openDialog(DIALOGS[E.id].start);
     }
     function restart() {
       pl = null; parts = []; floats = []; shake = 0; t = 0; events = []; held = {}; keys = {}; banner = ''; bannerT = 0; afterQ = null;
@@ -254,19 +254,23 @@ Sims.register({
       if (mode === 'over') { retry(); return; }
       if (mode === 'end') { restart(); return; }
       if (mode !== 'fight') return;
+      if (e.pointerType === 'mouse') { playerAttack(e.button === 2 ? 'kick' : 'punch'); e.preventDefault(); return; }   // desktop: LMB punch, RMB kick
       const b = btns.find(q => hitRect(x, y, q)); if (!b) return;
       if (b.tap) { if (b.id === 'jump') playerJump(); else playerAttack(b.id); }
       else held[b.id] = (held[b.id] || 0) + 1, (held['p' + e.pointerId] = b.id);
       canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
     }
     function onUp(e) { const id = held['p' + e.pointerId]; if (id) { held[id] = Math.max(0, (held[id] || 1) - 1); delete held['p' + e.pointerId]; } }
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp);
     function retry() { const s = stage; pl.hp = pl.max; pl.st = 'idle'; pl.h = 0; startStage(s); }
     function onKey(e) {
       if (e.target && e.target.tagName === 'INPUT') return; const k = e.key, down = e.type === 'keydown';
-      const map = { ArrowLeft: 'left', ArrowRight: 'right', c: 'block', C: 'block' };
-      if (map[k]) { keys[map[k]] = down; e.preventDefault(); return; }
+      const map = { ArrowLeft: 'left', ArrowRight: 'right', c: 'block', C: 'block' }, codeMap = { KeyA: 'left', KeyD: 'right', KeyE: 'block' };
+      const m = codeMap[e.code] || map[k];
+      if (m) { keys[m] = down; e.preventDefault(); return; }
       if (!down) return;
+      if (e.code === 'Space') { e.preventDefault(); if (e.repeat) return; if (mode === 'fight') playerJump(); else if (mode === 'dialog' && !node.ch) advance(); else if (mode === 'afterdlg') advance(); else if (mode === 'over') retry(); else if (mode === 'end') restart(); return; }
       if (k === 'ArrowUp') { playerJump(); e.preventDefault(); } else if (k === 'z' || k === 'Z') playerAttack('punch'); else if (k === 'x' || k === 'X') playerAttack('kick');
       else if (k === 'Enter') { if (mode === 'dialog' && !node.ch) advance(); else if (mode === 'afterdlg') advance(); else if (mode === 'over') retry(); else if (mode === 'end') restart(); }
     }
