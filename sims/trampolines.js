@@ -1,13 +1,15 @@
-/* Игра «Батуты»: шарик и точка появляются в случайных местах (не слишком близко).
-   Рисуйте батуты пальцем и жмите «Пуск» — шарик должен попасть в точку. */
+/* Игра «Батуты»: шарик и точка стоят на заданных местах — уровни одинаковые у всех игроков.
+   Уровень нельзя пройти без батутов (шарик в свободном падении не попадает в точку).
+   Рисуйте батуты пальцем и жмите «Пуск» — шарик должен попасть в точку. Таблица: кто прошёл больше уровней. */
 Sims.register({
   id: 'trampolines',
   kind: 'game',
   title: 'Батуты',
   desc: 'Шарик и точка появляются в случайных местах. Нарисуйте пальцем несколько батутов так, чтобы шарик отскочил прямо в точку, и нажмите «Пуск».',
 
+  lb: { label: 'Пройдено уровней за одну игру', better: 'high', fair: ['tramps', 'maxLen', 'trampBounce', 'gravity', 'ballR', 'targetR', 'wallDeath', 'wallBounce', 'floor'], fmt: v => v + ' ур.' },
   defaults: {
-    tramps: 3, maxLen: 0.35, trampBounce: 1.1, gravity: 1.6, ballR: 0.035, targetR: 0.05, minDist: 0.6,
+    tramps: 3, maxLen: 0.35, trampBounce: 1.1, gravity: 1.6, ballR: 0.035, targetR: 0.05,
     wallBounce: 0.8, wallDeath: true, floor: false, trail: true, sound: true, music: true, vocalStart: 8, volume: 0.7
   },
   schema: [
@@ -17,7 +19,6 @@ Sims.register({
     { k: 'gravity', l: 'Гравитация', min: 0.3, max: 5, step: 0.1, live: 1 },
     { k: 'ballR', l: 'Размер шарика', min: 0.02, max: 0.08, step: 0.005 },
     { k: 'targetR', l: 'Размер точки', min: 0.02, max: 0.12, step: 0.005 },
-    { k: 'minDist', l: 'Минимальное расстояние шарик–точка', min: 0.1, max: 1.2, step: 0.05 },
     { k: 'wallDeath', l: 'Коснулся стены — проигрыш', type: 'check', live: 1 },
     { k: 'wallBounce', l: 'Упругость стен', min: 0.3, max: 1.1, step: 0.01, live: 1 },
     { k: 'floor', l: 'Пол снизу (шарик не пропадает)', type: 'check', live: 1 },
@@ -44,21 +45,22 @@ Sims.register({
     const ctx = canvas.getContext('2d');
     canvas.style.touchAction = 'none';
     const TAU = Math.PI * 2;
-    let W = 0, H = 0, dpr = 1, S = 1, ww = 1, hh = 2;
+    let W = 0, H = 0, dpr = 1, S = 1, OX = 0, OY = 0;
+    const ww = 1, hh = 1.7, TOP = 118, BOT = 92;   /* fixed play field, the same for everyone */
     let ball, start, target, tr, state, stateT, level, attempts, parts, trail, events, drag, simT;
     let paused = false, acc = 0, last = 0, raf = 0, on = true;
     let btnRun = null, btnClear = null;
 
+    function rng(seed) { let a = (seed * 2654435761 + 12345) >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
     function newLevel(keep) {
       if (!keep) level++;
-      const r = cfg.ballR, tr0 = cfg.targetR;
+      const R = rng(level * 7919 + 17), r = 0.035, tr0 = 0.05, minD = 0.55 + Math.min(0.25, level * 0.012);
       let tries = 0, bx, by, tx, ty;
-      const minD = Math.min(cfg.minDist, Math.hypot(ww, hh) * 0.8);
       do {
-        bx = r + 0.08 + Math.random() * (ww - 2 * r - 0.16); by = Math.max(140 / S, hh * 0.14) + Math.random() * (hh * 0.5 - Math.max(140 / S, hh * 0.14));
-        tx = tr0 + Math.random() * (ww - 2 * tr0); ty = hh * (0.35 + Math.random() * 0.5);
+        bx = r + 0.08 + R() * (ww - 2 * r - 0.16); by = 0.18 + R() * 0.55;
+        tx = tr0 + 0.04 + R() * (ww - 2 * tr0 - 0.08); ty = hh * (0.38 + R() * 0.5);
         tries++;
-      } while (Math.hypot(bx - tx, by - ty) < minD && tries < 500);
+      } while ((Math.hypot(bx - tx, by - ty) < minD || (Math.abs(bx - tx) < r + tr0 + 0.14 && ty > by - 0.1)) && tries < 2000);   /* straight fall must not reach the target */
       start = { x: bx, y: by }; target = { x: tx, y: ty };
       tr = []; reset();
     }
@@ -99,7 +101,7 @@ Sims.register({
       if (cfg.floor && b.y > hh - r) { b.y = hh - r; if (b.vy > 0) { b.vy = -b.vy * cfg.wallBounce; events.push({ hit: 0.3 }); } }
       for (const s of tr) segHit(b, s, r + 0.008);
       if (Math.hypot(b.x - target.x, b.y - target.y) < r + cfg.targetR) {
-        state = 'won'; stateT = 0; events.push({ win: true }); burst(target.x, target.y, 70, 90);
+        state = 'won'; stateT = 0; events.push({ win: true }); burst(target.x, target.y, 70, 90); if (ctl.submitScore) ctl.submitScore(level);
         return;
       }
       if (b.y > hh + 0.3 || simT > 25) { state = 'fail'; stateT = 0; attempts++; events.push({ fail: true }); }
@@ -123,7 +125,7 @@ Sims.register({
     }
 
     // ----- input -----
-    const pt = e => { const r = canvas.getBoundingClientRect(); return { px: e.clientX - r.left, py: e.clientY - r.top, x: (e.clientX - r.left) / S, y: (e.clientY - r.top) / S }; };
+    const pt = e => { const r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top; return { px, py, x: Math.max(0, Math.min(ww, (px - OX) / S)), y: Math.max(0, Math.min(hh, (py - OY) / S)) }; };
     const inRect = (p, b) => b && p.px >= b.x && p.px <= b.x + b.w && p.py >= b.y && p.py <= b.y + b.h;
     function nearSeg(p) {
       let best = -1, bd = 0.05;
@@ -176,13 +178,12 @@ Sims.register({
     }
 
     // ----- render -----
-    function layout() { S = Math.min(W, H); ww = W / S; hh = H / S; }
+    function layout() { const availH = Math.max(100, H - TOP - BOT); S = Math.max(50, Math.min(W / ww, availH / hh)); OX = (W - S * ww) / 2; OY = TOP + (availH - S * hh) / 2; }
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = canvas.clientWidth; H = canvas.clientHeight;
       canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-      const ow = ww, oh = hh; layout();
-      if (start && (Math.abs(ow - ww) > 1e-6 || Math.abs(oh - hh) > 1e-6)) { const k = ww / ow; start.x *= k; target.x *= k; ball.x *= k; tr.forEach(s => { s.x1 *= k; s.x2 *= k; }); }
+      layout();
     }
     function button(label, x, y, w, h, on) {
       ctx.fillStyle = on ? 'rgba(47,212,255,.9)' : 'rgba(255,255,255,.1)'; ctx.strokeStyle = 'rgba(255,255,255,.25)';
@@ -195,6 +196,8 @@ Sims.register({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = '#0d1020'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = 'rgba(255,255,255,.05)'; for (let i = 0; i < 30; i++) ctx.fillRect(((i * 97) % 100) / 100 * W, ((i * 53) % 100) / 100 * H, 2, 2);
+      ctx.save(); ctx.translate(OX, OY);
+      ctx.strokeStyle = cfg.wallDeath ? 'rgba(255,90,90,.45)' : 'rgba(255,255,255,.18)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.strokeRect(1, 1, S * ww - 2, S * hh - 2); ctx.setLineDash([]);
       // target
       const tx = target.x * S, ty = target.y * S, pulse = 1 + Math.sin(simT * 0 + performance.now() / 300) * 0.06;
       ctx.strokeStyle = '#3dff8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(tx, ty, cfg.targetR * S * pulse * 1.5, 0, TAU); ctx.stroke();
@@ -214,6 +217,7 @@ Sims.register({
         ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(ball.x * S - cfg.ballR * S * 0.3, ball.y * S - cfg.ballR * S * 0.3, cfg.ballR * S * 0.3, 0, TAU); ctx.fill();
       }
       for (const p of parts) { ctx.fillStyle = 'hsla(' + p.hue + ',100%,60%,' + Math.max(0, p.life) + ')'; ctx.fillRect(p.x * S, p.y * S, 3, 3); }
+      ctx.restore();
       // HUD
       ctx.fillStyle = '#cfd6e6'; ctx.font = '700 ' + Math.max(15, Math.min(22, W * 0.05)) + 'px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('Уровень ' + (level + 0) + ' · попыток: ' + attempts, W / 2, 80);
@@ -221,7 +225,7 @@ Sims.register({
         ctx.fillStyle = 'rgba(207,214,230,.6)'; ctx.font = '500 ' + Math.max(12, Math.min(16, W * 0.036)) + 'px Inter, system-ui, sans-serif';
         ctx.fillText('Рисуйте батуты пальцем · осталось: ' + Math.max(0, cfg.tramps - tr.length), W / 2, 106);
       }
-      if (state === 'won') { ctx.fillStyle = '#3dff8a'; ctx.font = '800 ' + Math.min(48, W * 0.11) + 'px Inter, system-ui, sans-serif'; ctx.fillText('Попал!', W / 2, H * 0.4); }
+      if (state === 'won') { ctx.fillStyle = '#3dff8a'; ctx.font = '800 ' + Math.min(48, W * 0.11) + 'px Inter, system-ui, sans-serif'; ctx.fillText('Попал!', W / 2, OY + S * hh * 0.4); }
       const bh = 52, by = H - bh - 18, bw = Math.min(160, W * 0.4);
       btnRun = button(state === 'run' ? '↺ Заново' : '▶ Пуск', W / 2 + 8, by, bw, bh, state === 'plan');
       btnClear = button('Очистить', W / 2 - bw - 8, by, bw, bh, false);
@@ -242,7 +246,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { on = false; song.pause(); song.removeAttribute('src'); song.load(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up); },
-      debug: { step, get state() { return state; }, get level() { return level; }, get start() { return start; }, get target() { return target; }, get hh() { return hh; }, get ww() { return ww; }, get tr() { return tr; }, run() { state = 'run'; simT = 0; } }
+      debug: { step, next() { newLevel(false); }, get state() { return state; }, get level() { return level; }, get start() { return start; }, get target() { return target; }, get hh() { return hh; }, get ww() { return ww; }, get tr() { return tr; }, run() { state = 'run'; simT = 0; } }
     };
   }
 });

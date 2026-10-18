@@ -40,7 +40,8 @@ insert into public.games (game, better, min_v, max_v) values
   ('pop-cats',   'high', 0,   2000),
   ('corn-farm',  'high', 0,   1000000000),
   ('rotten-bus', 'low',  30,  36000),
-  ('svetofor',   'high', 0,   5000)
+  ('svetofor',   'high', 0,   5000),
+  ('trampolines','high', 0,   100000)
 on conflict (game) do update set better = excluded.better, min_v = excluded.min_v, max_v = excluded.max_v;
 
 -- ---------- регистрация ----------
