@@ -327,16 +327,17 @@ Sims.register({
     function hero() {
       const cx = Math.round(pl.x), fy = ground() - pl.h, f = pl.face, st = pl.st, ph = Math.sin(t * 10);
       const SK = window.Skins ? Skins.get() : { skin: '#f0c9a0', hair: '#432a1a', top: '#3a6fd8', pants: '#2a3350', shoes: '#1a1a22' };
+      const RB = SK.custom ? () => {} : R;
       if (st === 'dead') { R(cx - 14, fy - 7, 12, 7, SK.top); R(cx - 2, fy - 7, 8, 6, SK.pants); R(cx - 20, fy - 8, 8, 8, SK.skin); R(cx - 20, fy - 9, 8, 3, SK.hair); return; }
       const fh = pl.flash > 0 && Math.floor(t * 30) % 2 === 0, sk = fh ? '#fff' : SK.skin, top = fh ? '#fff' : SK.top, pants = fh ? '#fff' : SK.pants;
       if (st === 'dash') { R(cx - f * 12, fy - 22, 22, 3, 'rgba(255,255,255,.35)'); R(cx - f * 18, fy - 14, 18, 2, 'rgba(255,255,255,.25)'); }
       const roll = st === 'dash', hy = fy - (roll ? 26 : 38), l1 = st === 'walk' ? Math.round(ph * 2) : 0;
-      R(cx - 5 + l1, fy - 14, 4, 14, pants); R(cx + 1 - l1, fy - 14, 4, 14, pants); R(cx - 6 + l1, fy - 2, 5, 2, SK.shoes); R(cx + 1 - l1, fy - 2, 5, 2, SK.shoes);
+      RB(cx - 5 + l1, fy - 14, 4, 14, pants); RB(cx + 1 - l1, fy - 14, 4, 14, pants); RB(cx - 6 + l1, fy - 2, 5, 2, SK.shoes); RB(cx + 1 - l1, fy - 2, 5, 2, SK.shoes);
       const lean = st === 'hurt' ? -f * 2 : roll ? f * 3 : 0;
-      R(cx - 6 + lean, hy + 10, 12, 16, top); R(cx - 6 + lean, hy + 22, 12, 2, '#222');
-      R(cx - 5 + lean, hy, 10, 10, sk); R(cx - 5 + lean, hy - 1, 10, 3, SK.hair);
-      R(cx + lean - 4, hy + 4, 3, 3, '#fff'); R(cx + lean + 1, hy + 4, 3, 3, '#fff'); R(cx + lean - 4 + (f > 0 ? 1.5 : 0), hy + 5, 1.5, 2, '#111'); R(cx + lean + 1 + (f > 0 ? 1.5 : 0), hy + 5, 1.5, 2, '#111');
-      if (st === 'hurt') R(cx - 2 + lean, hy + 8, 4, 2, '#7a1a1a'); else R(cx - 1 + lean + f, hy + 8, 3, 1, '#8a4a3a');
+      RB(cx - 6 + lean, hy + 10, 12, 16, top); RB(cx - 6 + lean, hy + 22, 12, 2, '#222');
+      RB(cx - 5 + lean, hy, 10, 10, sk); RB(cx - 5 + lean, hy - 1, 10, 3, SK.hair);
+      RB(cx + lean - 4, hy + 4, 3, 3, '#fff'); RB(cx + lean + 1, hy + 4, 3, 3, '#fff'); RB(cx + lean - 4 + (f > 0 ? 1.5 : 0), hy + 5, 1.5, 2, '#111'); RB(cx + lean + 1 + (f > 0 ? 1.5 : 0), hy + 5, 1.5, 2, '#111');
+      if (st === 'hurt') RB(cx - 2 + lean, hy + 8, 4, 2, '#7a1a1a'); else RB(cx - 1 + lean + f, hy + 8, 3, 1, '#8a4a3a');
       if (window.Skins) Skins.deco(R, cx + lean, hy, fy, f, st, t, SK, fh);
       // bat
       const p = (st === 'hit' || st === 'heavy') ? Math.min(1, pl.stT / pl.atk.dur) : -1, bat = '#9a6a3a', tip = '#c8a070';
