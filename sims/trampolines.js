@@ -50,11 +50,14 @@ Sims.register({
     const ww = 1, hh = 1.7, TOP = 118, BOT = 92;   /* fixed play field, the same for everyone */
     let ball, start, target, tr, state, stateT, level, attempts, parts, trail, events, drag, simT;
     let paused = false, acc = 0, last = 0, raf = 0, on = true;
-    let btnRun = null, btnClear = null;
+    let btnRun = null, btnClear = null, btnReset = null, resetAsk = 0;
+    const SAVE_KEY = 'trampolines_level';
+    const loadLevel = () => { try { const v = parseInt(localStorage.getItem(SAVE_KEY), 10); return v >= 1 ? v : 1; } catch (e) { return 1; } };
+    const saveLevel = () => { try { localStorage.setItem(SAVE_KEY, String(level)); } catch (e) {} };
 
     function rng(seed) { let a = (seed * 2654435761 + 12345) >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
     function newLevel(keep) {
-      if (!keep) level++;
+      if (!keep) { level++; saveLevel(); }
       const R = rng(level * 7919 + 17), r = 0.035, tr0 = 0.05, minD = 0.55 + Math.min(0.25, level * 0.012);
       let tries = 0, bx, by, tx, ty;
       do {
@@ -68,7 +71,7 @@ Sims.register({
     function reset() {
       ball = { x: start.x, y: start.y, vx: 0, vy: 0 }; trail = []; state = 'plan'; stateT = 0; drag = null; simT = 0;
     }
-    function restart() { level = 0; attempts = 0; parts = []; events = []; layout(); newLevel(false); }
+    function restart() { level = Math.max(1, level) - 1; attempts = 0; parts = []; events = []; layout(); newLevel(false); }
 
     function segHit(b, s, r) {
       const dx = s.x2 - s.x1, dy = s.y2 - s.y1, L2 = dx * dx + dy * dy;
@@ -140,6 +143,7 @@ Sims.register({
       const p = pt(e); musicTick();
       if (inRect(p, btnRun)) { if (state === 'plan') { state = 'run'; simT = 0; attempts += 0; } else if (state === 'run') { reset(); } return; }
       if (inRect(p, btnClear)) { if (state === 'plan') tr = []; return; }
+      if (inRect(p, btnReset)) { if (performance.now() < resetAsk) { resetAsk = 0; level = 0; attempts = 0; newLevel(false); } else resetAsk = performance.now() + 3000; return; }
       if (state !== 'plan') return;
       const i = nearSeg(p);
       if (i >= 0) { tr.splice(i, 1); return; }                       // tap a trampoline to remove it
@@ -227,6 +231,9 @@ Sims.register({
         ctx.fillText('Рисуйте батуты пальцем · осталось: ' + Math.max(0, cfg.tramps - tr.length), W / 2, 106);
       }
       if (state === 'won') { ctx.fillStyle = '#3dff8a'; ctx.font = '800 ' + Math.min(48, W * 0.11) + 'px Inter, system-ui, sans-serif'; ctx.fillText('Попал!', W / 2, OY + S * hh * 0.4); }
+      const rb = { w: 170, h: 30, x: W / 2 - 85, y: 12 }, asking = performance.now() < resetAsk;
+      ctx.fillStyle = asking ? 'rgba(255,90,90,.85)' : 'rgba(255,255,255,.08)'; ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(rb.x, rb.y, rb.w, rb.h, 15) : ctx.rect(rb.x, rb.y, rb.w, rb.h); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = asking ? '#fff' : '#9aa3b8'; ctx.font = '600 13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(asking ? 'Точно? Нажмите ещё раз' : '↺ Начать с 1 уровня', rb.x + rb.w / 2, rb.y + rb.h / 2 + 1); btnReset = rb;
       const bh = 52, by = H - bh - 18, bw = Math.min(160, W * 0.4);
       btnRun = button(state === 'run' ? '↺ Заново' : '▶ Пуск', W / 2 + 8, by, bw, bh, state === 'plan');
       btnClear = button('Очистить', W / 2 - bw - 8, by, bw, bh, false);
@@ -241,7 +248,7 @@ Sims.register({
       draw(); raf = requestAnimationFrame(frame);
     }
 
-    resize(); level = 0; attempts = 0; parts = []; events = []; newLevel(false); level = 1;
+    resize(); level = loadLevel() - 1; attempts = 0; parts = []; events = []; newLevel(false);
     raf = requestAnimationFrame(frame);
     return {
       restart, resize,
