@@ -236,6 +236,7 @@ Sims.register({
     function say(s, d) { sayTxt = s; sayT = d || 0.9; }
 
     function update(dt) {
+      if (picking) return;
       t += dt; if (shake > 0) shake -= dt; if (sayT > 0) sayT -= dt; if (bannerT > 0) bannerT -= dt;
       if (mode === 'dialog' || mode === 'afterdlg') { const cur = mode === 'dialog' ? node : afterQ[0]; if (cur && typed < cur.t.length) typed = Math.min(cur.t.length, typed + dt * 45); }
       if (mode === 'fight' || mode === 'ko') runT += dt;
@@ -261,6 +262,7 @@ Sims.register({
     }
     function hitRect(x, y, r) { return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; }
     function onDown(e) {
+      if (picking) return;
       musicTick();
       const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
       if (mode === 'dialog') { if (node.ch) { const i = choiceRects.findIndex(c => hitRect(x, y, c)); if (i >= 0) advance(i); else if (typed < node.t.length) typed = node.t.length; } else advance(); return; }
@@ -279,6 +281,7 @@ Sims.register({
     canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp);
     function retry() { const s = stage; pl.hp = pl.max; pl.st = 'idle'; pl.h = 0; startStage(s); }
     function onKey(e) {
+      if (picking) return;
       if (e.target && e.target.tagName === 'INPUT') return; const k = e.key, down = e.type === 'keydown';
       const map = { ArrowLeft: 'left', ArrowRight: 'right', c: 'block', C: 'block' }, codeMap = { KeyA: 'left', KeyD: 'right', KeyE: 'block', KeyQ: 'duck' };
       const m = codeMap[e.code] || map[k];
@@ -335,7 +338,7 @@ Sims.register({
     function person(cx, fy, o) {
       // cx centre x, fy feet y (already minus jump height). o.face: 1 right, -1 left
       const f = o.face, st = o.st || 'idle', bob = st === 'walk' ? Math.round(Math.sin(t * 9 + (o.ph || 0))) : Math.round(Math.sin(t * 4 + (o.ph || 0)) * 0.8);
-      const flash = o.flash > 0 && Math.floor(t * 30) % 2 === 0, sk = flash ? '#fff' : '#f0c9a0', top = flash ? '#fff' : o.top, pants = flash ? '#fff' : o.pants;
+      const flash = o.flash > 0 && Math.floor(t * 30) % 2 === 0, sk = flash ? '#fff' : (o.skin || '#f0c9a0'), top = flash ? '#fff' : o.top, pants = flash ? '#fff' : o.pants;
       if (st === 'dead') {                                         // lying on the floor
         R(cx - 14, fy - 7, 12, 7, top); R(cx - 2, fy - 7, 8, 6, pants); R(cx + 6, fy - 5, 6, 4, '#222'); R(cx - 20, fy - 8, 8, 8, sk); R(cx - 20, fy - 9, 8, 3, o.hair); return;
       }
@@ -343,7 +346,7 @@ Sims.register({
       const w = o.wide ? 18 : 14;
       // legs
       const l1 = st === 'walk' ? Math.round(Math.sin(t * 9 + (o.ph || 0)) * 2) : 0;       // legs stand still unless the character really moves
-      R(cx - 5 + l1, fy - 14, 4, 14, pants); R(cx + 1 - l1, fy - 14, 4, 14, pants); R(cx - 6 + l1, fy - 2, 5, 2, '#1a1a22'); R(cx + 1 - l1, fy - 2, 5, 2, '#1a1a22');
+      R(cx - 5 + l1, fy - 14, 4, 14, pants); R(cx + 1 - l1, fy - 14, 4, 14, pants); R(cx - 6 + l1, fy - 2, 5, 2, o.shoes || '#1a1a22'); R(cx + 1 - l1, fy - 2, 5, 2, o.shoes || '#1a1a22');
       if (st === 'kick') R(cx + f * 2, fy - 14, 4 * 1, 4, pants), R(cx + f * 4, fy - 14, 14 * f > 0 ? 14 : 14, 4, pants), R(cx + f * 16, fy - 15, 4, 6, '#1a1a22');
       // torso
       R(cx - w / 2 + lean, hy + 10, w, 16, top); if (o.vest) { R(cx - w / 2 + lean, hy + 10, w, 16, o.vest); R(cx - w / 2 + lean + (f > 0 ? 3 : 1), hy + 12, w - 4, 12, o.top); }
@@ -359,6 +362,7 @@ Sims.register({
       if (st === 'hurt') { R(cx + lean - 5, hy + 3, 10, 1, '#111'); R(cx - 2 + lean, hy + 8, 4, 2, '#7a1a1a'); }
       else if (st === 'wind' || st === 'act') { R(cx + lean - 5, hy + 3, 4, 1.5, '#111'); R(cx + lean + 1, hy + 3, 4, 1.5, '#111'); R(cx - 2 + lean, hy + 8, 4, 1.5, '#7a1a1a'); }
       else R(cx - 1 + lean + f, hy + 8, 3, 1, '#8a4a3a');
+      if (o.deco) o.deco(cx + lean, hy, fy, f, st, flash);
       // arms & weapons
       if (st === 'block') { R(cx + f * 2 - 3, hy + 3, 8, 6, top); R(cx + f * 2 - 3, hy + 9, 8, 3, sk); R(cx + f * 4, hy + 2, 3, 12, '#9fd8ff'); }
       else if (st === 'punch' || (st === 'act' && o.arm === 'punch')) { const len = 14, ay = o.high ? hy + 1 : hy + 14; R(cx + (f > 0 ? 4 : -4 - len), ay, len, 4, top); R(cx + (f > 0 ? 4 + len : -4 - len - 4), ay - 1, 4, 6, sk); }
@@ -399,7 +403,7 @@ Sims.register({
       if (stage === 2) R(LW - 14, gy - 36, 14, 22, '#7a3a5a'), R(LW - 4, gy - 38, 4, 24, '#5e2c46'), R(LW - 14, gy - 16, 14, 6, '#5e2c46');
       else R(LW - 14, gy - 36, 14, 22, '#3a4f78'), R(LW - 4, gy - 38, 4, 24, '#2c3c5e'), R(LW - 14, gy - 16, 14, 6, '#2c3c5e');
       // characters
-      const pP = Object.assign({ face: pl.face, st: pl.ducking ? 'duck' : pl.st, flash: pl.flash, ph: 0, prop: (cx, hy, f, st) => { R(cx - f * 8 - 4, hy + 11, 4, 12, '#c0392b'); } }, PLAYER);
+      const SK = window.Skins ? Skins.get() : null, pP = Object.assign({ face: pl.face, st: pl.ducking ? 'duck' : pl.st, flash: pl.flash, ph: 0 }, PLAYER, SK ? { skin: SK.skin, hair: SK.hair, top: SK.top, pants: SK.pants, shoes: SK.shoes, deco: (cx, hy, fy, f, st, fh) => Skins.deco(R, cx, hy, fy, f, st, t, SK, fh) } : { prop: (cx, hy, f, st) => { R(cx - f * 8 - 4, hy + 11, 4, 12, '#c0392b'); } });
       const eoP = enemyStyle();
       // waves
       for (const w of waves) { for (let k = 0; k < 4; k++) R(w.x + k * 2, gy - 2 - k, 2, 2 + k, 'rgba(255,230,120,' + (0.9 - k * 0.15) + ')'); R(w.x - 2, gy - 6, 5, 6, '#ffd23a'); }
@@ -505,12 +509,14 @@ Sims.register({
       if (!paused) { update(dt); playEvents(); }
       musicTick(); draw(); raf = requestAnimationFrame(frame);
     }
+    let picking = !!window.Skins;
     resize(); restart();
+    if (picking) Skins.pick(() => { picking = false; });
     raf = requestAnimationFrame(frame);
     return {
       restart, resize,
       setPaused(p) { paused = p; },
-      destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); song.pause(); song.removeAttribute('src'); song.load(); },
+      destroy() { on = false; if (window.Skins) Skins.close(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); song.pause(); song.removeAttribute('src'); song.load(); },
       debug: { update, advance, attack: playerAttack, jump: playerJump, get mode() { return mode; }, get stage() { return stage; }, get pl() { return pl; }, get en() { return en; }, get nodeId() { return nodeId; }, set heldBlock(v) { held.block = v ? 1 : 0; }, set heldDuck(v) { held.duck = v ? 1 : 0; } }
     };
   }
