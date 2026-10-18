@@ -64,7 +64,7 @@ Sims.register({
 
     /* ================= состояние ================= */
     let score, mode, wave, spawnQ, spawnT, pl, es, parts, floats, projs, pickups, shake, t, events, held, keys, banner, bannerT, kills, runT, hitStop, waveWait, flashR;
-    let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, dec, dg, btns = [];
+    let ox = 0, paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, dec, dg, btns = [];
     const ground = () => Math.round(LH * 0.8);
 
     function newPlayer() { return { x: Math.round(LW * 0.5), h: 0, vy: 0, vx: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, inv: 0, flash: 0, dashCd: 0, hitDone: false, atk: null }; }
@@ -443,7 +443,7 @@ Sims.register({
     function overlay() {
       const fs = Math.max(11, Math.min(15, Math.round(W / 28))), kbd = matchMedia('(pointer:fine)').matches;
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      for (const f of floats) { ctx.font = '800 ' + mono(Math.max(11, u * 3.6)); ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.fillStyle = f.col; ctx.globalAlpha = Math.min(1, f.life * 2); ctx.strokeText(f.s, f.x * u, f.y * u); ctx.fillText(f.s, f.x * u, f.y * u); ctx.globalAlpha = 1; }
+      for (const f of floats) { ctx.font = '800 ' + mono(Math.max(11, u * 3.6)); ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.fillStyle = f.col; ctx.globalAlpha = Math.min(1, f.life * 2); ctx.strokeText(f.s, f.x * u + ox, f.y * u); ctx.fillText(f.s, f.x * u + ox, f.y * u); ctx.globalAlpha = 1; }
       const top = H - ctrlH; ctx.fillStyle = '#140a0e'; ctx.fillRect(0, top, W, ctrlH); ctx.fillStyle = '#3a1a22'; ctx.fillRect(0, top, W, 3);
       const KEY = { jump: 'Пробел', dash: 'Q', left: 'A', right: 'D', hit: 'ЛКМ', heavy: 'ПКМ' };
       if (mode === 'play' || mode === 'over' || mode === 'win') {
@@ -477,7 +477,7 @@ Sims.register({
       scene();
       ctx.imageSmoothingEnabled = false;
       const sx = shake > 0 ? Math.round(Math.sin(t * 90) * u * 0.8) : 0;
-      ctx.drawImage(off, 0, 0, LW * F, LH * F, sx, 0, LW * u, LH * u);
+      ctx.drawImage(off, 0, 0, LW * F, LH * F, ox + sx, 0, LW * u, LH * u);
       overlay();
     }
     function resize() {
@@ -486,7 +486,7 @@ Sims.register({
       canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
       ctrlH = Math.round(Math.max(190, Math.min(260, H * 0.3)));
       u = Math.max(2, Math.floor(Math.min(W / 125, (H - ctrlH) / 150)));
-      LW = Math.ceil(W / u); LH = Math.ceil((H - ctrlH) / u);
+      LW = Math.min(Math.ceil(W / u), 172); ox = Math.floor((W - LW * u) / 2);   /* on wide screens the arena stays compact and centred */ LH = Math.ceil((H - ctrlH) / u);
       off = document.createElement('canvas'); off.width = LW * F; off.height = LH * F; g = off.getContext('2d');
       const old = dec; dec = document.createElement('canvas'); dec.width = LW * F; dec.height = LH * F; dg = dec.getContext('2d'); if (old) dg.drawImage(old, 0, 0);
       layoutBtns();

@@ -86,7 +86,7 @@ Sims.register({
 
     // ================= state =================
     let mode, stage, node, nodeId, typed, afterQ, pl, en, parts, floats, waves, shake, t, events, banner, bannerT, held, keys, kidT, kidWarn, hint;
-    let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, btns = [], choiceRects = [];
+    let ox = 0, paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, btns = [], choiceRects = [];
     const rnd = (a, b) => a + Math.random() * (b - a);
 
     function newPlayer() { return { heat: 0, ducking: false, parryT: 0, blockCd: 0, wasBlock: false, x: Math.round(LW * 0.25), h: 0, vy: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, flash: 0, hurtT: 0 }; }
@@ -454,7 +454,7 @@ Sims.register({
       ctx.textAlign = 'left'; ctx.strokeText('ТЫ', 8 * u, 33 * u); ctx.fillText('ТЫ', 8 * u, 33 * u);
       ctx.textAlign = 'right'; ctx.strokeText(en.def.name, (LW - 8) * u, 33 * u); ctx.fillText(en.def.name, (LW - 8) * u, 33 * u);
       ctx.textAlign = 'center';
-      if (sayT > 0 && mode === 'fight') { ctx.font = '800 ' + mono(Math.max(12, u * 4.5)); const tx = Math.max(60, Math.min(W - 60, (stage === 2 && sayTxt.startsWith('Малыш') ? W / 2 : en.x * u))); ctx.fillStyle = sayTxt.startsWith('Малыш') ? '#6fb4ff' : '#fff'; ctx.strokeText(sayTxt, tx, (ground() - 76) * u); ctx.fillText(sayTxt, tx, (ground() - 76) * u); }
+      if (sayT > 0 && mode === 'fight') { ctx.font = '800 ' + mono(Math.max(12, u * 4.5)); const tx = Math.max(60, Math.min(W - 60, (stage === 2 && sayTxt.startsWith('Малыш') ? W / 2 : en.x * u + ox))); ctx.fillStyle = sayTxt.startsWith('Малыш') ? '#6fb4ff' : '#fff'; ctx.strokeText(sayTxt, tx, (ground() - 76) * u); ctx.fillText(sayTxt, tx, (ground() - 76) * u); }
       if (bannerT > 0) { ctx.font = '800 ' + mono(Math.min(40, u * 9)); ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#3a2600'; ctx.lineWidth = 5; ctx.strokeText(banner, W / 2, 70 * u); ctx.fillText(banner, W / 2, 70 * u); }
       if (hint && mode === 'fight' && bannerT <= 0) { ctx.font = '700 ' + mono(Math.max(10, u * 3)); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('красный ! — блок · синий ! — прыжок · жёлтый ! — пригнуться', W / 2, 58 * u); }
       // bottom panel
@@ -483,7 +483,7 @@ Sims.register({
       }
       if (mode === 'over') { ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(0, 0, W, H); ctx.textAlign = 'center'; ctx.fillStyle = '#ff5a5a'; ctx.font = '800 ' + mono(Math.min(34, u * 8)); ctx.fillText('ВЫКИНУЛИ НА ОСТАНОВКЕ', W / 2, H * 0.38); ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs + 2); ctx.fillText('нажмите, чтобы попробовать снова', W / 2, H * 0.48); }
       if (mode === 'end') { ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, W, H); ctx.textAlign = 'center'; ctx.fillStyle = '#ffd23a'; ctx.font = '800 ' + mono(Math.min(38, u * 9)); ctx.fillText('КОНЕЧНАЯ!', W / 2, H * 0.36); ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs + 2); ctx.fillText('вы победили гнилую маршрутку', W / 2, H * 0.45); ctx.fillStyle = '#9fd8ff'; ctx.fillText('нажмите, чтобы сыграть ещё раз', W / 2, H * 0.55); }
-      for (const f of floats) { ctx.globalAlpha = Math.max(0, f.life / 0.9); ctx.font = '800 ' + mono(Math.max(11, u * 4)); ctx.fillStyle = f.col; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.textAlign = 'center'; ctx.strokeText(f.s, f.x * u, f.y * u); ctx.fillText(f.s, f.x * u, f.y * u); ctx.globalAlpha = 1; }
+      for (const f of floats) { ctx.globalAlpha = Math.max(0, f.life / 0.9); ctx.font = '800 ' + mono(Math.max(11, u * 4)); ctx.fillStyle = f.col; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.textAlign = 'center'; ctx.strokeText(f.s, f.x * u + ox, f.y * u); ctx.fillText(f.s, f.x * u + ox, f.y * u); ctx.globalAlpha = 1; }
     }
     function draw() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -491,7 +491,7 @@ Sims.register({
       scene();
       ctx.imageSmoothingEnabled = false;
       const sx = shake > 0 ? Math.round(Math.sin(t * 90) * u * 0.8) : 0;
-      ctx.drawImage(off, 0, 0, LW * F, LH * F, sx, 0, LW * u, LH * u);
+      ctx.drawImage(off, 0, 0, LW * F, LH * F, ox + sx, 0, LW * u, LH * u);
       overlay();
     }
     function resize() {
@@ -500,7 +500,7 @@ Sims.register({
       canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
       ctrlH = Math.round(Math.max(190, Math.min(260, H * 0.3)));
       u = Math.max(2, Math.floor(Math.min(W / 125, (H - ctrlH) / 150)));
-      LW = Math.ceil(W / u); LH = Math.ceil((H - ctrlH) / u);
+      LW = Math.min(Math.ceil(W / u), 172); ox = Math.floor((W - LW * u) / 2);   /* on wide screens the arena stays compact and centred */ LH = Math.ceil((H - ctrlH) / u);
       off = document.createElement('canvas'); off.width = LW * F; off.height = LH * F; g = off.getContext('2d'); layoutBtns();
       if (en && pl) { en.x = Math.min(en.x, LW - 12); }
     }
