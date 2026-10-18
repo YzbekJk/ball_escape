@@ -1,13 +1,14 @@
 /* Игра «Светофор» (пиксель-арт файтинг): кровавый магазин, в котором ты отбиваешься битой от монстров.
    Пять волн: зомби-кассиры, колбасные ползуны, тележки-тараны, консервный голем и босс «Мясник».
-   Компьютер: A/D — ходить, Пробел — прыжок, ЛКМ — удар битой, ПКМ — мощный удар, Q — перекат (неуязвимость). */
+   Компьютер: A/D — ходить, Пробел — прыжок, ЛКМ — удар битой, ПКМ — удар ногой (только им убиваются розовые ползуны), Q — перекат (неуязвимость). */
 Sims.register({
   id: 'svetofor',
   kind: 'game',
   hit: true, ownSpace: true,
   title: 'Светофор',
-  desc: 'Пиксельный файтинг. Магазин «Светофор» кишит монстрами — зомби-кассиры, колбасные ползуны, тележки-тараны, консервный голем. Отбивайтесь битой, прыгайте, перекатывайтесь и дойдите до босса. Компьютер: A/D — ходить, Пробел — прыжок, ЛКМ — удар, ПКМ — мощный удар, Q — перекат.',
+  desc: 'Пиксельный файтинг. Магазин «Светофор» кишит монстрами — зомби-кассиры, колбасные ползуны, тележки-тараны, консервный голем. Отбивайтесь битой, прыгайте, перекатывайтесь и дойдите до босса. Компьютер: A/D — ходить, Пробел — прыжок, ЛКМ — удар битой, ПКМ — удар ногой, Q — перекат. Розовых ползунов бита не берёт — их можно убить только ногой.',
 
+  lb: { label: 'Очки (убийства монстров + бонус за победу)', better: 'high', fair: ['playerHp', 'enemyPower', 'maxAlive'], fmt: v => v + ' оч.' },
   defaults: { playerHp: 100, enemyPower: 1, maxAlive: 4, blood: true, sound: true, music: true, musicStart: 9, volume: 0.7 },
   schema: [
     { k: 'playerHp', l: 'Ваше здоровье', min: 40, max: 300, step: 10 },
@@ -40,11 +41,11 @@ Sims.register({
 
     /* ================= монстры ================= */
     const DEFS = {
-      zombie:  { name: 'Зомби-кассир', hp: 32, spd: 19, reach: 15, wind: 0.6, act: 0.14, dmg: 8, rec: 0.7 },
-      crawler: { name: 'Колбасный ползун', hp: 14, spd: 40, reach: 11, wind: 0.4, act: 0.3, dmg: 6, rec: 0.9, leap: true },
-      cart:    { name: 'Тележка-таран', hp: 46, spd: 22, reach: 0, wind: 0.85, act: 0.7, dmg: 14, rec: 1.0, charge: true },
-      golem:   { name: 'Консервный голем', hp: 150, spd: 13, reach: 24, wind: 0.9, act: 0.22, dmg: 20, rec: 1.0, armor: true },
-      butcher: { name: 'МЯСНИК', hp: 440, spd: 21, reach: 28, wind: 0.6, act: 0.2, dmg: 18, rec: 0.8, armor: true, boss: true }
+      zombie:  { name: 'Зомби-кассир', pts: 10, hp: 32, spd: 19, reach: 15, wind: 0.6, act: 0.14, dmg: 8, rec: 0.7 },
+      crawler: { name: 'Колбасный ползун', pts: 12, kickOnly: true, hp: 14, spd: 40, reach: 11, wind: 0.4, act: 0.3, dmg: 6, rec: 0.9, leap: true },
+      cart:    { name: 'Тележка-таран', pts: 20, hp: 46, spd: 22, reach: 0, wind: 0.85, act: 0.7, dmg: 14, rec: 1.0, charge: true },
+      golem:   { name: 'Консервный голем', pts: 50, hp: 150, spd: 13, reach: 24, wind: 0.9, act: 0.22, dmg: 20, rec: 1.0, armor: true },
+      butcher: { name: 'МЯСНИК', pts: 300, hp: 440, spd: 21, reach: 28, wind: 0.6, act: 0.2, dmg: 18, rec: 0.8, armor: true, boss: true }
     };
     const WAVES = [
       ['zombie', 'zombie', 'zombie', 'zombie'],
@@ -55,17 +56,18 @@ Sims.register({
     ];
 
     /* ================= состояние ================= */
-    let mode, wave, spawnQ, spawnT, pl, es, parts, floats, projs, pickups, shake, t, events, held, keys, banner, bannerT, kills, runT, hitStop, waveWait, flashR;
+    let score, mode, wave, spawnQ, spawnT, pl, es, parts, floats, projs, pickups, shake, t, events, held, keys, banner, bannerT, kills, runT, hitStop, waveWait, flashR;
     let paused = false, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, u = 3, LW = 130, LH = 200, ctrlH = 200, off, g, dec, dg, btns = [];
     const ground = () => Math.round(LH * 0.8);
 
     function newPlayer() { return { x: Math.round(LW * 0.5), h: 0, vy: 0, vx: 0, hp: cfg.playerHp, max: cfg.playerHp, face: 1, st: 'idle', stT: 0, cd: 0, inv: 0, flash: 0, dashCd: 0, hitDone: false, atk: null }; }
     function restart() {
       mode = 'title'; wave = -1; spawnQ = []; spawnT = 0; pl = newPlayer(); es = []; parts = []; floats = []; projs = []; pickups = [];
-      shake = 0; t = 0; events = []; held = {}; keys = {}; banner = ''; bannerT = 0; kills = 0; runT = 0; hitStop = 0; waveWait = 0; flashR = 0;
+      shake = 0; t = 0; events = []; held = {}; keys = {}; banner = ''; bannerT = 0; kills = 0; score = 0; runT = 0; hitStop = 0; waveWait = 0; flashR = 0;
       if (dec) { dg.clearRect(0, 0, dec.width, dec.height); }
     }
-    function startGame() { mode = 'play'; pl = newPlayer(); es = []; parts = []; floats = []; projs = []; pickups = []; kills = 0; runT = 0; startWave(0); }
+    function submit() { if (ctl.submitScore && score > 0) ctl.submitScore(score); }
+    function startGame() { mode = 'play'; pl = newPlayer(); es = []; parts = []; floats = []; projs = []; pickups = []; kills = 0; score = 0; runT = 0; startWave(0); }
     function startWave(i) {
       wave = i; spawnQ = WAVES[i].slice(); spawnT = 1.2; waveWait = 0;
       banner = i === WAVES.length - 1 ? 'БОСС: МЯСНИК!' : 'ВОЛНА ' + (i + 1) + ' / ' + WAVES.length; bannerT = 1.8; events.push('bell');
@@ -97,13 +99,14 @@ Sims.register({
       const d = (held.left || keys.left) ? -1 : (held.right || keys.right) ? 1 : pl.face;
       pl.st = 'dash'; pl.stT = 0; pl.inv = 0.32; pl.dashCd = 0.8; pl.vx = d * 175; pl.atk = null; events.push('dash');
     }
-    function hurtEnemy(e, dmg, kb, stun) {
+    function hurtEnemy(e, dmg, kb, stun, kick) {
       if (e.st === 'dead') return;
+      if (e.D.kickOnly && !kick) { floatText(e.x, ground() - e.h - 22, 'только ногой!', '#ff9ad0'); events.push('clink'); splat(e.x, ground() - e.h - 8, 0, false); e.vx = pl.face * 25; return; }
       e.hp -= dmg; e.flash = 0.12; hitStop = Math.max(hitStop, stun ? 0.07 : 0.035); shake = Math.max(shake, stun ? 0.14 : 0.07);
       floatText(e.x, ground() - e.h - 40 - (e.D.boss ? 14 : e.type === 'golem' ? 8 : 0), '-' + Math.round(dmg), '#ffe14d');
       splat(e.x, ground() - e.h - 20, e.D.armor ? 5 : 8, false); events.push(e.hp <= 0 ? 'splat' : 'hit');
       if (e.hp <= 0) {
-        e.st = 'dead'; e.t = 0; kills++; splat(e.x, ground() - e.h - 18, e.D.boss ? 60 : 24, true); stain(e.x - 8, ground() + 5 + Math.random() * 14, 14 + Math.random() * 10);
+        e.st = 'dead'; e.t = 0; kills++; score += e.D.pts; splat(e.x, ground() - e.h - 18, e.D.boss ? 60 : 24, true); stain(e.x - 8, ground() + 5 + Math.random() * 14, 14 + Math.random() * 10);
         if (!e.D.boss && Math.random() < 0.2) pickups.push({ x: e.x, h: 30, vy: 0, kind: 'can' });
         return;
       }
@@ -115,7 +118,7 @@ Sims.register({
       if (pl.inv > 0 || pl.st === 'dead') return false;
       dmg *= cfg.enemyPower; pl.hp = Math.max(0, pl.hp - dmg); pl.flash = 0.25; pl.inv = 0.45; pl.st = 'hurt'; pl.stT = 0; pl.atk = null; pl.vx = kbDir * 90;
       splat(pl.x, ground() - pl.h - 22, 9, false); stain(pl.x - 4, ground() + 6 + Math.random() * 12, 8 + Math.random() * 8); floatText(pl.x, ground() - pl.h - 44, '-' + Math.round(dmg), '#ff6a6a'); events.push('ouch'); shake = Math.max(shake, 0.22);
-      if (pl.hp <= 0) { pl.st = 'dead'; mode = 'over'; events.push('over'); splat(pl.x, ground() - 20, 40, true); }
+      if (pl.hp <= 0) { pl.st = 'dead'; mode = 'over'; events.push('over'); submit(); splat(pl.x, ground() - 20, 40, true); }
       return true;
     }
 
@@ -131,7 +134,7 @@ Sims.register({
           pl.hitDone = true; let any = false;
           for (const e of es) {
             if (e.st === 'dead') continue; const dx = (e.x - pl.x) * pl.face;
-            if (dx > -6 && dx < pl.atk.reach + (e.D.boss ? 6 : 0) && Math.abs(e.h - pl.h) < 22) { hurtEnemy(e, pl.atk.dmg, pl.atk.kb, pl.atk.stun); any = true; }
+            if (dx > -6 && dx < pl.atk.reach + (e.D.boss ? 6 : 0) && Math.abs(e.h - pl.h) < 22) { hurtEnemy(e, pl.atk.dmg, pl.atk.kb, pl.atk.stun, pl.st === 'heavy'); any = true; }
           }
           if (!any) events.push('whiff');
         }
@@ -200,7 +203,7 @@ Sims.register({
           else if (!alive.length) {
             if (waveWait === 0) { waveWait = 1; if (wave < WAVES.length - 1) { pl.hp = Math.min(pl.max, pl.hp + pl.max * 0.2); floatText(pl.x, ground() - 56, '+здоровье', '#6fe07a'); banner = 'ВОЛНА ОЧИЩЕНА'; bannerT = 1.4; } }
             waveWait += dt;
-            if (waveWait > 2.6) { if (wave < WAVES.length - 1) startWave(wave + 1); else { mode = 'win'; events.push('win'); } }
+            if (waveWait > 2.6) { if (wave < WAVES.length - 1) startWave(wave + 1); else { mode = 'win'; score += 200; events.push('win'); submit(); } }
           }
         }
         for (const p of projs) { p.x += p.vx * dt; p.life -= dt; if (!p.dead && Math.abs(p.x - pl.x) < 7 && pl.h < 12 && hurtPlayer(10, Math.sign(p.vx))) p.dead = true; }
@@ -225,7 +228,7 @@ Sims.register({
         { id: 'right', label: '▶', x: pad * 2 + bw, y: top + pad * 2 + rowH, w: bw, h: rowH },
         { id: 'dash', label: '💨 ПЕРЕКАТ', x: pad * 2 + halfW, y: top + pad, w: halfW, h: rowH, tap: true },
         { id: 'hit', label: '🏏', x: pad * 2 + halfW, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true },
-        { id: 'heavy', label: '💥', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
+        { id: 'heavy', label: '🦵', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
       ];
     }
     const hitRect = (x, y, r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
@@ -277,6 +280,7 @@ Sims.register({
       for (const e of ev) {
         if (e === 'swing') blip(320, 0.07, 'sawtooth', 0.025, 0, 130);
         else if (e === 'swingH') blip(220, 0.16, 'sawtooth', 0.04, 0, 70);
+        else if (e === 'clink') { blip(900, 0.05, 'square', 0.05); blip(600, 0.08, 'triangle', 0.04, 0.04); }
         else if (e === 'hit') { blip(160, 0.09, 'square', 0.08, 0, 60); noise(0.08, 0.1, 1400); }
         else if (e === 'splat') { noise(0.28, 0.2, 700); blip(110, 0.2, 'sawtooth', 0.07, 0, 40); }
         else if (e === 'ouch') { blip(150, 0.2, 'sawtooth', 0.09, 0, 55); noise(0.12, 0.1, 1000); }
@@ -322,7 +326,12 @@ Sims.register({
       if (st === 'hurt') R(cx - 2 + lean, hy + 8, 4, 2, '#7a1a1a'); else R(cx - 1 + lean + f, hy + 8, 3, 1, '#8a4a3a');
       // bat
       const p = (st === 'hit' || st === 'heavy') ? Math.min(1, pl.stT / pl.atk.dur) : -1, bat = '#9a6a3a', tip = '#c8a070';
-      if (p < 0) { R(cx + f * 5 - (f > 0 ? 0 : 3), hy + 12, 3, 8, top); R(cx + f * 7 - 1, hy - 4, 3, 18, bat); R(cx + f * 7 - 1, hy - 5, 3, 3, tip); }
+      if (st === 'heavy') {
+        R(cx + f * 5 - (f > 0 ? 0 : 3), hy + 12, 3, 8, top); R(cx + f * 7 - 1, hy - 4, 3, 18, bat); R(cx + f * 7 - 1, hy - 5, 3, 3, tip);
+        if (p < pl.atk.hitAt) { R(cx + f * 1 - (f > 0 ? 0 : 7), fy - 22, 8, 5, pants); R(cx + f * 6 - (f > 0 ? 0 : 5), fy - 18, 5, 6, '#1a1a22'); }
+        else { R(cx + (f > 0 ? 2 : -2 - 20), fy - 17, 20, 5, pants); R(cx + (f > 0 ? 20 : -26), fy - 19, 6, 8, '#1a1a22'); if (p < pl.atk.hitAt + 0.3) R(cx + (f > 0 ? 8 : -34), fy - 24, 26, 14, 'rgba(255,200,230,.3)'); }
+      }
+      else if (p < 0) { R(cx + f * 5 - (f > 0 ? 0 : 3), hy + 12, 3, 8, top); R(cx + f * 7 - 1, hy - 4, 3, 18, bat); R(cx + f * 7 - 1, hy - 5, 3, 3, tip); }
       else if (p < pl.atk.hitAt) { R(cx - f * 6 - 1, hy - 8, 3, 20, bat); R(cx - f * 4 - 2, hy + 8, 4, 8, top); }
       else {
         const len = st === 'heavy' ? 30 : 22; R(cx + (f > 0 ? 4 : -4 - len), hy + 13, len, 3, bat); R(cx + (f > 0 ? 4 + len - 4 : -4 - len), hy + 12, 4, 5, tip); R(cx + (f > 0 ? 3 : -9), hy + 12, 6, 5, sk);
@@ -432,19 +441,19 @@ Sims.register({
       }
       if (mode === 'play') {
         ctx.font = '800 ' + mono(Math.max(11, u * 3.4)); ctx.fillStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.textAlign = 'left';
-        const s = 'Убито: ' + kills; ctx.strokeText(s, 8, (by0()) * u); ctx.fillText(s, 8, (by0()) * u); ctx.textAlign = 'right'; const w = 'Волна ' + (wave + 1) + '/' + WAVES.length; ctx.strokeText(w, W - 8, by0() * u); ctx.fillText(w, W - 8, by0() * u); ctx.textAlign = 'center';
+        const s = 'Очки: ' + score; ctx.strokeText(s, 8, (by0()) * u); ctx.fillText(s, 8, (by0()) * u); ctx.textAlign = 'right'; const w = 'Волна ' + (wave + 1) + '/' + WAVES.length; ctx.strokeText(w, W - 8, by0() * u); ctx.fillText(w, W - 8, by0() * u); ctx.textAlign = 'center';
         if (bannerT > 0) { ctx.globalAlpha = Math.min(1, bannerT * 2); ctx.font = '800 ' + mono(Math.min(34, u * 8)); ctx.fillStyle = '#ffd23a'; ctx.lineWidth = 5; ctx.strokeText(banner, W / 2, (ground() - 80) * u); ctx.fillText(banner, W / 2, (ground() - 80) * u); ctx.globalAlpha = 1; }
       }
       const shade = a => { ctx.fillStyle = 'rgba(10,0,4,' + a + ')'; ctx.fillRect(0, 0, W, H); };
       if (mode === 'title') {
         shade(0.62); ctx.fillStyle = '#ff4a3a'; ctx.font = '900 ' + mono(Math.min(46, u * 11)); ctx.fillText('СВЕТОФОР', W / 2, H * 0.28);
         ctx.fillStyle = '#f2c21a'; ctx.font = '800 ' + mono(fs + 3); ctx.fillText('кровавый магазин', W / 2, H * 0.28 + fs * 2.2);
-        ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs); const L = kbd ? ['A / D — ходить · Пробел — прыжок', 'ЛКМ — удар битой · ПКМ — мощный удар', 'Q — перекат (неуязвимость)'] : ['◀ ▶ — ходить · ⤒ — прыжок', '🏏 — удар · 💥 — мощный удар', '💨 — перекат (неуязвимость)'];
+        ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs); const L = kbd ? ['A / D — ходить · Пробел — прыжок', 'ЛКМ — удар битой · ПКМ — удар ногой', 'Q — перекат · розовых ползунов бьёт только нога'] : ['◀ ▶ — ходить · ⤒ — прыжок', '🏏 — удар битой · 🦵 — удар ногой', '💨 — перекат · розовых ползунов бьёт только нога'];
         L.forEach((s, i) => ctx.fillText(s, W / 2, H * 0.28 + fs * 5 + i * fs * 1.7));
         ctx.fillStyle = '#9fd8ff'; ctx.font = '800 ' + mono(fs + 2); ctx.fillText('нажмите, чтобы начать', W / 2, H * 0.28 + fs * 11);
       }
-      if (mode === 'over') { shade(0.6); ctx.fillStyle = '#ff5a5a'; ctx.font = '800 ' + mono(Math.min(34, u * 8)); ctx.fillText('ВАС РАЗОРВАЛИ', W / 2, H * 0.34); ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs + 2); ctx.fillText('убито монстров: ' + kills + ' · волна ' + (wave + 1), W / 2, H * 0.44); ctx.fillText('нажмите, чтобы попробовать снова', W / 2, H * 0.52); }
-      if (mode === 'win') { shade(0.6); ctx.fillStyle = '#ffd23a'; ctx.font = '800 ' + mono(Math.min(34, u * 8)); ctx.fillText('МАГАЗИН ЗАЧИЩЕН!', W / 2, H * 0.34); ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs + 2); ctx.fillText('убито монстров: ' + kills + ' · время ' + Math.floor(runT / 60) + ':' + ('0' + Math.floor(runT % 60)).slice(-2), W / 2, H * 0.44); ctx.fillStyle = '#9fd8ff'; ctx.fillText('нажмите, чтобы сыграть ещё раз', W / 2, H * 0.52); }
+      if (mode === 'over') { shade(0.6); ctx.fillStyle = '#ff5a5a'; ctx.font = '800 ' + mono(Math.min(34, u * 8)); ctx.fillText('ВАС РАЗОРВАЛИ', W / 2, H * 0.34); ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs + 2); ctx.fillText('очки: ' + score + ' · убито: ' + kills + ' · волна ' + (wave + 1), W / 2, H * 0.44); ctx.fillText('нажмите, чтобы попробовать снова', W / 2, H * 0.52); }
+      if (mode === 'win') { shade(0.6); ctx.fillStyle = '#ffd23a'; ctx.font = '800 ' + mono(Math.min(34, u * 8)); ctx.fillText('МАГАЗИН ЗАЧИЩЕН!', W / 2, H * 0.34); ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs + 2); ctx.fillText('очки: ' + score + ' · убито: ' + kills + ' · время ' + Math.floor(runT / 60) + ':' + ('0' + Math.floor(runT % 60)).slice(-2), W / 2, H * 0.44); ctx.fillStyle = '#9fd8ff'; ctx.fillText('нажмите, чтобы сыграть ещё раз', W / 2, H * 0.52); }
     }
     function by0() { return 56; }
     function draw() {
@@ -480,7 +489,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); song.pause(); song.removeAttribute('src'); song.load(); },
-      debug: { update, startGame, attack: playerAttack, jump: playerJump, dash: playerDash, spawn, get mode() { return mode; }, get wave() { return wave; }, get pl() { return pl; }, get es() { return es; }, get kills() { return kills; }, set left(v) { keys.left = !!v; }, set right(v) { keys.right = !!v; } }
+      debug: { update, startGame, attack: playerAttack, jump: playerJump, dash: playerDash, spawn, get mode() { return mode; }, get wave() { return wave; }, get pl() { return pl; }, get es() { return es; }, get kills() { return kills; }, get score() { return score; }, set left(v) { keys.left = !!v; }, set right(v) { keys.right = !!v; } }
     };
   }
 });
