@@ -1,5 +1,6 @@
 /* Игра «Светофор» (пиксель-арт файтинг): кровавый магазин, в котором ты отбиваешься битой от монстров.
-   Пять волн: зомби-кассиры, колбасные ползуны, тележки-тараны, консервный голем и босс «Мясник».
+   Десять волн: зомби-кассиры, колбасные ползуны, тележки-тараны, консервные голем и боссы «Мясник» (5-я и 10-я волны).
+   После каждой второй волны выпадает зелёный плюс — он лечит.
    Компьютер: A/D — ходить, Пробел — прыжок, ЛКМ — удар битой, ПКМ — удар ногой (только им убиваются розовые ползуны), Q — перекат (неуязвимость). */
 Sims.register({
   id: 'svetofor',
@@ -47,12 +48,18 @@ Sims.register({
       golem:   { name: 'Консервный голем', pts: 50, hp: 150, spd: 13, reach: 24, wind: 0.9, act: 0.22, dmg: 20, rec: 1.0, armor: true },
       butcher: { name: 'МЯСНИК', pts: 300, hp: 440, spd: 21, reach: 28, wind: 0.6, act: 0.2, dmg: 18, rec: 0.8, armor: true, boss: true }
     };
+    DEFS.butcher2 = Object.assign({}, DEFS.butcher, { name: 'МЯСНИК-МУТАНТ', hp: 700, pts: 500, dmg: 22, spd: 25 });
     const WAVES = [
       ['zombie', 'zombie', 'zombie', 'zombie'],
       ['zombie', 'crawler', 'zombie', 'crawler', 'crawler', 'zombie'],
       ['cart', 'zombie', 'crawler', 'cart', 'zombie', 'crawler', 'zombie'],
       ['golem', 'zombie', 'cart', 'crawler', 'zombie', 'crawler', 'cart'],
-      ['butcher', 'zombie', 'crawler', 'zombie', 'crawler']
+      ['butcher', 'zombie', 'crawler', 'zombie', 'crawler'],
+      ['zombie', 'crawler', 'crawler', 'cart', 'zombie', 'crawler', 'zombie', 'cart'],
+      ['golem', 'crawler', 'crawler', 'zombie', 'zombie', 'cart', 'crawler', 'zombie'],
+      ['cart', 'cart', 'golem', 'crawler', 'crawler', 'zombie', 'zombie', 'crawler', 'zombie'],
+      ['golem', 'golem', 'cart', 'crawler', 'crawler', 'crawler', 'zombie', 'zombie', 'cart', 'zombie'],
+      ['butcher2', 'golem', 'cart', 'crawler', 'zombie', 'crawler', 'cart', 'zombie']
     ];
 
     /* ================= состояние ================= */
@@ -70,11 +77,11 @@ Sims.register({
     function startGame() { mode = 'play'; pl = newPlayer(); es = []; parts = []; floats = []; projs = []; pickups = []; kills = 0; score = 0; runT = 0; startWave(0); }
     function startWave(i) {
       wave = i; spawnQ = WAVES[i].slice(); spawnT = 1.2; waveWait = 0;
-      banner = i === WAVES.length - 1 ? 'БОСС: МЯСНИК!' : 'ВОЛНА ' + (i + 1) + ' / ' + WAVES.length; bannerT = 1.8; events.push('bell');
+      banner = WAVES[i][0].startsWith('butcher') ? (WAVES[i][0] === 'butcher2' ? 'ФИНАЛ: МЯСНИК-МУТАНТ!' : 'БОСС: МЯСНИК!') : 'ВОЛНА ' + (i + 1) + ' / ' + WAVES.length; bannerT = 1.8; events.push('bell');
     }
     function spawn(type) {
       const D = DEFS[type], side = Math.random() < 0.5 ? -1 : 1;
-      es.push({ type, D, x: side < 0 ? -8 : LW + 8, h: 0, vy: 0, vx: 0, hp: D.hp, max: D.hp, face: -side, st: 'walk', t: 0, cd: rnd(0.4, 1.2), flash: 0, hitDone: false, ph: Math.random() * 6, stun: 0, dir: side });
+      es.push({ type, D, x: side < 0 ? -8 : LW + 8, h: 0, vy: 0, vx: 0, hp: Math.round(D.hp * (D.boss ? 1 : 1 + wave * 0.05)), max: Math.round(D.hp * (D.boss ? 1 : 1 + wave * 0.05)), face: -side, st: 'walk', t: 0, cd: rnd(0.4, 1.2), flash: 0, hitDone: false, ph: Math.random() * 6, stun: 0, dir: side });
     }
 
     /* ================= эффекты ================= */
@@ -157,10 +164,12 @@ Sims.register({
       e.x += e.vx * dt; e.vx *= Math.max(0, 1 - 6 * dt);
       if (e.h > 0 || e.vy > 0) { e.vy -= 540 * dt; e.h += e.vy * dt; if (e.h <= 0) { e.h = 0; e.vy = 0; if (e.slam) { e.slam = false; shake = 0.3; events.push('slam'); stain(e.x - 8, ground() + 4, 20); if (Math.abs(pl.x - e.x) < 26 && pl.h < 14) hurtPlayer(D.dmg, Math.sign(pl.x - e.x) || 1); } } }
       if (e.st === 'dead') return;
+      if (e.x > 8 && e.x < LW - 8) e.inside = true; else if (e.inside && !(D.charge && e.st === 'act')) e.x = Math.max(8, Math.min(LW - 8, e.x));
       const dist = Math.abs(pl.x - e.x), enr = e.hp < e.max * 0.5;
       if (e.st === 'hurt') { if (e.t > 0.3) { e.st = 'walk'; e.cd = rnd(0.5, 1); } return; }
       if (e.st === 'walk') {
         e.face = pl.x < e.x ? -1 : 1; e.cd -= dt;
+        if (!e.inside) { e.x += (e.x < LW / 2 ? 1 : -1) * Math.max(D.spd, 30) * dt; e.face = e.x < LW / 2 ? 1 : -1; return; }
         const want = D.charge ? 70 : D.reach - 4;
         if (dist > want + 2 && !(D.boss && e.cd <= 0 && dist > 50)) e.x += e.face * D.spd * (enr ? 1.25 : 1) * dt;
         else if (e.cd <= 0 && pl.st !== 'dead') {
@@ -201,14 +210,14 @@ Sims.register({
         if (mode === 'play') {
           if (spawnQ.length) { spawnT -= dt; if (spawnT <= 0 && alive.length < cfg.maxAlive) { spawn(spawnQ.shift()); spawnT = rnd(0.9, 1.7); } }
           else if (!alive.length) {
-            if (waveWait === 0) { waveWait = 1; if (wave < WAVES.length - 1) { pl.hp = Math.min(pl.max, pl.hp + pl.max * 0.2); floatText(pl.x, ground() - 56, '+здоровье', '#6fe07a'); banner = 'ВОЛНА ОЧИЩЕНА'; bannerT = 1.4; } }
+            if (waveWait === 0) { waveWait = 1; if (wave < WAVES.length - 1) { banner = 'ВОЛНА ОЧИЩЕНА'; bannerT = 1.4; if ((wave + 1) % 2 === 0) { pickups.push({ x: Math.round(rnd(LW * 0.25, LW * 0.75)), h: 70, vy: 0, kind: 'plus' }); banner = 'ВОЛНА ОЧИЩЕНА · ЗЕЛЁНЫЙ ПЛЮС!'; events.push('heal'); } } }
             waveWait += dt;
             if (waveWait > 2.6) { if (wave < WAVES.length - 1) startWave(wave + 1); else { mode = 'win'; score += 200; events.push('win'); submit(); } }
           }
         }
         for (const p of projs) { p.x += p.vx * dt; p.life -= dt; if (!p.dead && Math.abs(p.x - pl.x) < 7 && pl.h < 12 && hurtPlayer(10, Math.sign(p.vx))) p.dead = true; }
         projs = projs.filter(p => !p.dead && p.life > 0 && p.x > -10 && p.x < LW + 10);
-        for (const k of pickups) { k.vy -= 400 * dt; k.h += k.vy * dt; if (k.h <= 0) { k.h = 0; k.vy = 0; } if (!k.got && Math.abs(k.x - pl.x) < 9 && pl.h < 12 && pl.st !== 'dead') { k.got = true; pl.hp = Math.min(pl.max, pl.hp + 22); floatText(pl.x, ground() - 56, '+22 тушёнка', '#6fe07a'); events.push('heal'); } }
+        for (const k of pickups) { if (k.kind === 'plus') { k.h = Math.max(14, k.h - 90 * dt); } else { k.vy -= 400 * dt; k.h += k.vy * dt; if (k.h <= 0) { k.h = 0; k.vy = 0; } } if (!k.got && Math.abs(k.x - pl.x) < 9 && pl.h < 12 && pl.st !== 'dead') { k.got = true; const hv = k.kind === 'plus' ? Math.round(pl.max * 0.4) : 22; pl.hp = Math.min(pl.max, pl.hp + hv); floatText(pl.x, ground() - 56, '+' + hv + (k.kind === 'plus' ? ' лечение' : ' тушёнка'), '#6fe07a'); events.push('heal'); } }
         pickups = pickups.filter(k => !k.got);
       }
       for (const p of parts) {
@@ -411,7 +420,7 @@ Sims.register({
       R(0, gy, LW, 2, '#4a343a');
       // blood decals (persistent layer)
       g.drawImage(dec, 0, 0);
-      for (const k of pickups) { const cy = gy - k.h; R(Math.round(k.x) - 4, cy - 8, 8, 8, '#d84a2a'); R(Math.round(k.x) - 4, cy - 6, 8, 2, '#f2c21a'); R(Math.round(k.x) - 4, cy - 9, 8, 1, '#c8d0d8'); }
+      for (const k of pickups) { const cy = gy - k.h; if (k.kind === 'plus') { const px = Math.round(k.x), pb = Math.round(Math.sin(tt * 4) * 1.5), gl = 0.25 + 0.15 * Math.sin(tt * 6); R(px - 11, cy - 20 + pb, 22, 22, 'rgba(80,255,120,' + gl + ')'); R(px - 7, cy - 11 + pb, 14, 4, '#0a3a14'); R(px - 2, cy - 16 + pb, 4, 14, '#0a3a14'); R(px - 6, cy - 10 + pb, 12, 3, '#3ddc5a'); R(px - 1, cy - 15 + pb, 3, 12, '#3ddc5a'); R(px - 5, cy - 10 + pb, 10, 1, '#b8ffc4'); continue; } R(Math.round(k.x) - 4, cy - 8, 8, 8, '#d84a2a'); R(Math.round(k.x) - 4, cy - 6, 8, 2, '#f2c21a'); R(Math.round(k.x) - 4, cy - 9, 8, 1, '#c8d0d8'); }
       for (const e of es) if (e.st === 'dead') monster(e);
       const alive = es.filter(e => e.st !== 'dead').sort((a, b) => a.h - b.h);
       for (const e of alive) monster(e);
