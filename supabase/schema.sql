@@ -126,5 +126,40 @@ revoke all on function public.lb_register(text, text), public.lb_login(text, tex
 grant execute on function public.lb_register(text, text), public.lb_login(text, text), public.lb_whoami(text),
   public.lb_submit(text, text, numeric), public.lb_top(text, int, text) to anon, authenticated;
 
+-- ---------- прогресс игр (сохранение уровня в аккаунте) ----------
+create table if not exists public.progress (
+  player_id  bigint not null references public.players(id) on delete cascade,
+  game       text   not null,
+  value      numeric not null,
+  updated_at timestamptz not null default now(),
+  primary key (player_id, game)
+);
+alter table public.progress enable row level security;
+
+create or replace function public.lb_progress_set(p_token text, p_game text, p_value numeric) returns json
+language plpgsql security definer set search_path = public, extensions as $fn$
+declare pid bigint;
+begin
+  select id into pid from players where token = p_token;
+  if pid is null then return json_build_object('error', 'Нужно войти в аккаунт'); end if;
+  if p_game is null or length(p_game) > 40 or p_value is null or p_value < 0 or p_value > 1000000 then return json_build_object('error', 'Недопустимое значение'); end if;
+  insert into progress (player_id, game, value) values (pid, p_game, p_value)
+    on conflict (player_id, game) do update set value = excluded.value, updated_at = now();
+  return json_build_object('ok', true);
+end $fn$;
+
+create or replace function public.lb_progress_get(p_token text, p_game text) returns json
+language plpgsql security definer set search_path = public, extensions as $fn$
+declare pid bigint; v numeric;
+begin
+  select id into pid from players where token = p_token;
+  if pid is null then return json_build_object('error', 'Нужно войти в аккаунт'); end if;
+  select value into v from progress where player_id = pid and game = p_game;
+  return json_build_object('value', v);
+end $fn$;
+
+revoke all on function public.lb_progress_set(text, text, numeric), public.lb_progress_get(text, text) from public;
+grant execute on function public.lb_progress_set(text, text, numeric), public.lb_progress_get(text, text) to anon, authenticated;
+
 -- обновить кэш API, чтобы новые функции сразу стали видны сайту
 notify pgrst, 'reload schema';

@@ -120,6 +120,8 @@
 
   window.LB = {
     enabled, openAccount, openBoard, submit, toast,
+    progressGet: game => token ? rpc('lb_progress_get', { p_token: token, p_game: game }) : Promise.resolve({ error: 'no login' }),
+    progressSet: (game, value) => token ? rpc('lb_progress_set', { p_token: token, p_game: game, p_value: value }) : Promise.resolve({ error: 'no login' }),
     get nick() { return nick; }, get creator() { return creator; }, get loggedIn() { return !!token; }, creatorBadge,
     onChange(f) { listeners.push(f); }
   };

@@ -51,9 +51,28 @@ Sims.register({
     let ball, start, target, tr, state, stateT, level, attempts, parts, trail, events, drag, simT;
     let paused = false, acc = 0, last = 0, raf = 0, on = true;
     let btnRun = null, btnClear = null, btnReset = null, resetAsk = 0;
-    const SAVE_KEY = 'trampolines_level';
-    const loadLevel = () => { try { const v = parseInt(localStorage.getItem(SAVE_KEY), 10); return v >= 1 ? v : 1; } catch (e) { return 1; } };
-    const saveLevel = () => { try { localStorage.setItem(SAVE_KEY, String(level)); } catch (e) {} };
+    /* progress: in the browser (per account nick, or as a guest) and, when logged in, on the server */
+    const GAME = 'trampolines', LB = window.LB;
+    let noPush = true;   /* do not overwrite the server value before it has been read */
+    const keyFor = () => 'trampolines_level' + (LB && LB.loggedIn && LB.nick ? ':' + LB.nick : '');
+    const readKey = k => { try { const v = parseInt(localStorage.getItem(k), 10); return v >= 1 ? v : 0; } catch (e) { return 0; } };
+    const loadLevel = () => readKey(keyFor()) || 1;
+    function saveLevel() {
+      try { localStorage.setItem(keyFor(), String(level)); } catch (e) {}
+      if (!noPush && LB && LB.loggedIn && LB.enabled) LB.progressSet(GAME, level);
+    }
+    function syncProgress() {
+      if (!LB || !LB.loggedIn || !LB.enabled) return;
+      LB.progressGet(GAME).then(r => {
+        if (!on) return;
+        if (!r || r.error) { noPush = false; return; }
+        const remote = Math.round(r.value) || 0, mine = Math.max(readKey(keyFor()), readKey('trampolines_level'), 1), best = Math.max(remote, mine, level);
+        noPush = false;
+        if (best > level) { level = best - 1; newLevel(false); }
+        else if (best > remote) LB.progressSet(GAME, best);
+      });
+    }
+    if (LB) LB.onChange(() => { if (on) syncProgress(); });
 
     function rng(seed) { let a = (seed * 2654435761 + 12345) >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
     function newLevel(keep) {
@@ -143,7 +162,7 @@ Sims.register({
       const p = pt(e); musicTick();
       if (inRect(p, btnRun)) { if (state === 'plan') { state = 'run'; simT = 0; attempts += 0; } else if (state === 'run') { reset(); } return; }
       if (inRect(p, btnClear)) { if (state === 'plan') tr = []; return; }
-      if (inRect(p, btnReset)) { if (performance.now() < resetAsk) { resetAsk = 0; level = 0; attempts = 0; newLevel(false); } else resetAsk = performance.now() + 3000; return; }
+      if (inRect(p, btnReset)) { if (performance.now() < resetAsk) { resetAsk = 0; try { localStorage.setItem('trampolines_level', '1'); } catch (e) {} level = 0; attempts = 0; newLevel(false); } else resetAsk = performance.now() + 3000; return; }
       if (state !== 'plan') return;
       const i = nearSeg(p);
       if (i >= 0) { tr.splice(i, 1); return; }                       // tap a trampoline to remove it
@@ -248,7 +267,7 @@ Sims.register({
       draw(); raf = requestAnimationFrame(frame);
     }
 
-    resize(); level = loadLevel() - 1; attempts = 0; parts = []; events = []; newLevel(false);
+    resize(); level = loadLevel() - 1; attempts = 0; parts = []; events = []; newLevel(false); syncProgress(); if (!LB || !LB.loggedIn) noPush = false;
     raf = requestAnimationFrame(frame);
     return {
       restart, resize,
