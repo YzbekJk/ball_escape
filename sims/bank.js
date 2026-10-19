@@ -2,13 +2,13 @@
    Часть 1 — бои: 5 волн (охранники, менеджеры, коллекторы) и босс «Директор банка». Три героя на выбор. Потом — взлом круглого замка сейфа (3 щелчка) и кража денег.
    Часть 2 — погоня: дорога в три полосы. Машины перекрывают две полосы из трёх — надо успеть уйти влево, вправо или остаться посередине, иначе врежутся.
    Бой: A/D — ходить, Пробел — прыжок, J / ЛКМ — удар, K / ПКМ — сильный удар ногой, Q — перекат.
-   Погоня: ←/→ (A/D) — сменить полосу, S / Пробел — в центр, цифры 1·2·3 — сразу на нужную полосу. */
+   Погоня: только ← и → (A/D): сдвигаешься на одну полосу — из левой вправо уходишь в центр, из центра влево/вправо и т.д. */
 Sims.register({
   id: 'bank',
   kind: 'game',
   ownSpace: true,
   title: 'Обнаглевший банк',
-  desc: 'Пиксельная игра. Банк обнаглел и не отдаёт ваши деньги — придётся забирать силой. Выберите героя (клиент, бабуля или курьер), пройдите пять волн охранников, менеджеров и коллекторов, победите Директора банка, вскройте большой круглый замок сейфа (жмите, когда стрелка в зелёной зоне — три щелчка), заберите деньги и прыгайте в машину. В финале — погоня: на дороге три полосы, и каждый раз кто-то перекрывает две из них. Уходите влево, вправо или оставайтесь посередине — иначе машина врежется. Бой: A/D — ходить, Пробел — прыжок, J или ЛКМ — удар, K или ПКМ — удар ногой, Q — перекат. Сейф: Пробел, Enter или тап — щёлкнуть замок. Погоня: ←/→ или A/D — полоса, S — центр, 1·2·3 — полоса напрямую.',
+  desc: 'Пиксельная игра. Банк обнаглел и не отдаёт ваши деньги — придётся забирать силой. Выберите героя (клиент, бабуля или курьер), пройдите пять волн охранников, менеджеров и коллекторов, победите Директора банка, вскройте большой круглый замок сейфа (жмите, когда стрелка в зелёной зоне — три щелчка), заберите деньги и прыгайте в машину. В финале — погоня: на дороге три полосы, и каждый раз кто-то перекрывает две из них. Уходите влево, вправо или оставайтесь посередине — иначе машина врежется. Бой: A/D — ходить, Пробел — прыжок, J или ЛКМ — удар, K или ПКМ — удар ногой, Q — перекат. Сейф: Пробел, Enter или тап — щёлкнуть замок. Погоня: только ← и → (или A/D) — сдвиг на одну полосу: слева нажали вправо — вы в центре.',
 
   lb: { label: 'Очки (бой + погоня + бонус за целую машину)', better: 'high', fair: ['playerHp', 'enemyPower', 'carLives', 'carSpeed'], fmt: v => v + ' оч.' },
   defaults: { playerHp: 100, enemyPower: 1, maxAlive: 4, carLives: 3, carSpeed: 1, sound: true, music: true, musicStart: 10, volume: 0.7 },
@@ -340,14 +340,16 @@ Sims.register({
     function startDrive() {
       checkScore = score; fade = 0;
       dv = { lane: 1, x: laneX(1), hp: cfg.carLives, inv: 0, rows: [], coins: [], passed: 0, spawnT: 1.2, road: 0, over: false, endT: 0, free: [], last: -1, rep: 0, sirens: 0, goalShown: false, crashT: 0 };
-      mode = 'drive'; banner = 'ПОГОНЯ! ВЛЕВО · ПОСЕРЕДИНЕ · ВПРАВО'; bannerT = 2.4; events.push('engine');
+      mode = 'drive'; banner = 'ПОГОНЯ! ← ВЛЕВО · ВПРАВО →'; bannerT = 2.4; events.push('engine');
     }
     const dvSpeed = () => Math.min(125, 64 + dv.passed * 4.2) * cfg.carSpeed;
     function setLane(l) { if (mode === 'drive' && !dv.over) { const n = clamp(l, 0, 2); if (n !== dv.lane) { dv.lane = n; events.push('swish'); } } }
     function spawnRow() {
       // 1 — свободны две полосы (легко), иначе одна свободная. Чтобы нельзя было стоять на месте — свободная полоса меняется.
       let free; const easy = dv.passed < 2 || (dv.passed > 4 && Math.random() < 0.12);
-      let f = Math.floor(Math.random() * 3); if (f === dv.last && dv.rep >= 1) f = (f + 1 + Math.floor(Math.random() * 2)) % 3;
+      let f = Math.floor(Math.random() * 3);
+      if (dv.last >= 0 && Math.random() < 0.8) { const near = [0, 1, 2].filter(l => Math.abs(l - dv.last) <= 1); f = near[Math.floor(Math.random() * near.length)]; }   // управление шагами по одной полосе — большие перескоки редкие
+      if (f === dv.last && dv.rep >= 1) f = (f + 1 + Math.floor(Math.random() * 2)) % 3;
       if (f === dv.last) dv.rep++; else dv.rep = 0; dv.last = f;
       free = [f]; if (easy) free.push((f + 1 + Math.floor(Math.random() * 2)) % 3);
       const row = { y: -30, free, cars: [], hit: false, counted: false };
@@ -364,7 +366,7 @@ Sims.register({
       if (dv.inv > 0) dv.inv -= dt; if (dv.crashT > 0) dv.crashT -= dt;
       if (!dv.over) {
         dv.spawnT -= dt;
-        if (dv.passed + dv.rows.filter(r => !r.counted).length < GOAL && dv.spawnT <= 0) { spawnRow(); dv.spawnT = Math.max(0.82, 96 / sp); }
+        if (dv.passed + dv.rows.filter(r => !r.counted).length < GOAL && dv.spawnT <= 0) { spawnRow(); dv.spawnT = Math.max(0.95, 96 / sp); }
       }
       const cy = carY();
       dv.rows.forEach(r => {
@@ -412,7 +414,8 @@ Sims.register({
       const top = H - ctrlH, pad = 8;
       if (mode === 'drive' || (mode === 'over' && dv) || (mode === 'win' && dv)) {
         const bw = (W - pad * 4) / 3, bh = ctrlH - pad * 2;
-        btns = [{ id: 'l0', label: '◀', sub: 'влево', x: pad, y: top + pad, w: bw, h: bh, tap: true }, { id: 'l1', label: '●', sub: 'центр', x: pad * 2 + bw, y: top + pad, w: bw, h: bh, tap: true }, { id: 'l2', label: '▶', sub: 'вправо', x: pad * 3 + bw * 2, y: top + pad, w: bw, h: bh, tap: true }];
+        const bw2 = (W - pad * 3) / 2;
+        btns = [{ id: 'dl', label: '◀', sub: 'влево', x: pad, y: top + pad, w: bw2, h: bh, tap: true }, { id: 'dr', label: '▶', sub: 'вправо', x: pad * 2 + bw2, y: top + pad, w: bw2, h: bh, tap: true }];
         return;
       }
       if (mode === 'vault') { btns = [{ id: 'crack', label: '🔓 ВСКРЫТЬ', x: pad, y: top + pad, w: W - pad * 2, h: ctrlH - pad * 2, tap: true }]; return; }
@@ -426,11 +429,11 @@ Sims.register({
         { id: 'heavy', label: '🦵', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
       ];
     }
-    const KEYLBL = { jump: 'Пробел', left: 'A', right: 'D', dash: 'Q', hit: 'J', heavy: 'K', l0: '←', l1: 'S', l2: '→', crack: 'Пробел' };
+    const KEYLBL = { jump: 'Пробел', left: 'A', right: 'D', dash: 'Q', hit: 'J', heavy: 'K', dl: '←', dr: '→', crack: 'Пробел' };
     function act(id) {
       if (id === 'jump') playerJump(); else if (id === 'dash') playerDash(); else if (id === 'hit') playerAttack('hit'); else if (id === 'heavy') playerAttack('heavy');
       else if (id === 'crack') crack();
-      else if (id[0] === 'l') setLane(+id[1]);
+      else if (id === 'dl') setLane(dv.lane - 1); else if (id === 'dr') setLane(dv.lane + 1);
     }
     function onDown(e) {
       const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
@@ -441,7 +444,7 @@ Sims.register({
       if ((mode === 'over' || mode === 'win') && lock <= 0) { if (mode === 'over' && dv) { score = checkScore; startDrive(); } else restart(); return; }
       if (mode === 'drive') {
         const b = btns.find(q => hitRect(x, y, q)); if (b) { act(b.id); return; }
-        if (y < H - ctrlH) setLane(Math.floor(clamp((x - ox) / (LW * u), 0, 0.999) * 3));
+        if (y < H - ctrlH) setLane(dv.lane + (x < W / 2 ? -1 : 1));
         return;
       }
       if (mode === 'vault') { crack(); return; }
@@ -468,7 +471,7 @@ Sims.register({
       if (mode === 'title') { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); startGame(); } else if (/^Digit[1-3]$/.test(e.code)) startGame(+e.code[5] - 1); return; }
       if ((mode === 'over' || mode === 'win')) { if ((e.code === 'Enter' || e.code === 'Space') && lock <= 0) { e.preventDefault(); if (mode === 'over' && dv) { score = checkScore; startDrive(); } else restart(); } return; }
       if (mode === 'drive') {
-        if (e.code === 'Digit1' || e.code === 'Numpad1') setLane(0); else if (e.code === 'Digit2' || e.code === 'Numpad2' || e.code === 'KeyS' || e.code === 'ArrowDown' || e.code === 'Space') { e.preventDefault(); setLane(1); } else if (e.code === 'Digit3' || e.code === 'Numpad3') setLane(2);
+        if (e.code === 'Space' || e.code === 'ArrowDown' || e.code === 'ArrowUp') e.preventDefault();
         return;
       }
       if (mode === 'vault') { if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE' || e.code === 'KeyJ' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); crack(); } return; }
@@ -705,7 +708,7 @@ Sims.register({
       // кнопки
       if (mode === 'play' || mode === 'drive' || mode === 'vault') {
         for (const b of btns) {
-          const down = b.id === 'left' || b.id === 'right' ? (held[b.id] > 0 || keys[b.id]) : (dv && b.id === 'l' + dv.lane);
+          const down = b.id === 'left' || b.id === 'right' ? (held[b.id] > 0 || keys[b.id]) : (b.id === 'dl' || b.id === 'dr') && false;
           ctx.fillStyle = down ? 'rgba(255,200,90,.55)' : 'rgba(255,255,255,.12)'; ctx.fillRect(b.x, b.y, b.w, b.h);
           ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 2; ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
           ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(Math.min(b.h * 0.42, b.w > W * 0.3 && b.id.length > 2 && b.id[0] !== 'l' ? fs + 2 : 34)); ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + (b.sub || kbd ? -6 : 0));
@@ -746,7 +749,7 @@ Sims.register({
         });
         ctx.fillStyle = '#fff'; ctx.font = '600 ' + mono(fs - 1); const ly = y0 + ch + fs * 2;
         ctx.fillText(kbd ? 'Бой: A/D ходить · Пробел прыжок · J/ЛКМ удар · K/ПКМ нога · Q перекат' : 'Бой: ◀ ▶ ходить · ⤒ прыжок · 👊 🦵 удары · 💨 перекат', W / 2, ly);
-        ctx.fillText(kbd ? 'Погоня: ← → или A/D меняют полосу · S — в центр · 1·2·3 — напрямую' : 'Погоня: жмите ◀ ● ▶ или тапайте по дороге — влево, центр, вправо', W / 2, ly + fs * 1.6);
+        ctx.fillText(kbd ? 'Погоня: только ← → (A/D) — сдвиг на одну полосу, из левой вправо — в центр' : 'Погоня: жмите ◀ ▶ или тапайте левую/правую половину дороги — сдвиг на одну полосу', W / 2, ly + fs * 1.6);
         ctx.fillStyle = '#ffd23a'; ctx.font = '800 ' + mono(fs + 1); ctx.fillText('Тапните по герою, чтобы начать', W / 2, ly + fs * 3.4);
       }
       if (mode === 'over') {
