@@ -1,5 +1,5 @@
 /* Игра «Обнаглевший банк» (пиксель-арт): банк совсем обнаглел — отбираешь свои деньги в драке, а потом удираешь на машине.
-   Часть 1 — бои: 5 волн (охранники, менеджеры, коллекторы) и босс «Директор банка». Три героя на выбор.
+   Часть 1 — бои: 5 волн (охранники, менеджеры, коллекторы) и босс «Директор банка». Три героя на выбор. Потом — взлом круглого замка сейфа (3 щелчка) и кража денег.
    Часть 2 — погоня: дорога в три полосы. Машины перекрывают две полосы из трёх — надо успеть уйти влево, вправо или остаться посередине, иначе врежутся.
    Бой: A/D — ходить, Пробел — прыжок, J / ЛКМ — удар, K / ПКМ — сильный удар ногой, Q — перекат.
    Погоня: ←/→ (A/D) — сменить полосу, S / Пробел — в центр, цифры 1·2·3 — сразу на нужную полосу. */
@@ -8,7 +8,7 @@ Sims.register({
   kind: 'game',
   ownSpace: true,
   title: 'Обнаглевший банк',
-  desc: 'Пиксельная игра. Банк обнаглел и не отдаёт ваши деньги — придётся забирать силой. Выберите героя (клиент, бабуля или курьер), пройдите пять волн охранников, менеджеров и коллекторов, победите Директора банка, схватите деньги и прыгайте в машину. В финале — погоня: на дороге три полосы, и каждый раз кто-то перекрывает две из них. Уходите влево, вправо или оставайтесь посередине — иначе машина врежется. Бой: A/D — ходить, Пробел — прыжок, J или ЛКМ — удар, K или ПКМ — удар ногой, Q — перекат. Погоня: ←/→ или A/D — полоса, S — центр, 1·2·3 — полоса напрямую.',
+  desc: 'Пиксельная игра. Банк обнаглел и не отдаёт ваши деньги — придётся забирать силой. Выберите героя (клиент, бабуля или курьер), пройдите пять волн охранников, менеджеров и коллекторов, победите Директора банка, вскройте большой круглый замок сейфа (жмите, когда стрелка в зелёной зоне — три щелчка), заберите деньги и прыгайте в машину. В финале — погоня: на дороге три полосы, и каждый раз кто-то перекрывает две из них. Уходите влево, вправо или оставайтесь посередине — иначе машина врежется. Бой: A/D — ходить, Пробел — прыжок, J или ЛКМ — удар, K или ПКМ — удар ногой, Q — перекат. Сейф: Пробел, Enter или тап — щёлкнуть замок. Погоня: ←/→ или A/D — полоса, S — центр, 1·2·3 — полоса напрямую.',
 
   lb: { label: 'Очки (бой + погоня + бонус за целую машину)', better: 'high', fair: ['playerHp', 'enemyPower', 'carLives', 'carSpeed'], fmt: v => v + ' оч.' },
   defaults: { playerHp: 100, enemyPower: 1, maxAlive: 4, carLives: 3, carSpeed: 1, sound: true, music: true, musicStart: 10, volume: 0.7 },
@@ -60,6 +60,7 @@ Sims.register({
       ['guard', 'guard', 'manager', 'collector', 'guard'],
       ['director']
     ];
+    let vt = null;     // состояние взлома сейфа
     const GOAL = 16;   // сколько «стенок» из машин надо пережить в погоне
 
     /* ================= состояние ================= */
@@ -116,7 +117,7 @@ Sims.register({
       sparks(e.x, ground() - e.h - 18 * (e.D.scale || 1), e.D.boss ? 8 : 6, ['#ffe14d', '#fff', '#ff9a3a']); events.push(e.hp <= 0 ? 'ko' : 'hit');
       if (e.hp <= 0) {
         e.st = 'dead'; e.t = 0; kills++; score += e.D.pts; sparks(e.x, ground() - e.h - 16, e.D.boss ? 40 : 16, ['#ffe14d', '#fff', '#5ad06a', '#ff9a3a'], true);
-        if (e.D.boss) { pickups.push({ x: Math.max(14, Math.min(LW - 14, e.x)), h: 40, vy: 0, kind: 'bag' }); }
+        if (e.D.boss) { /* деньги — в сейфе */ }
         else if (Math.random() < 0.18) pickups.push({ x: Math.max(14, Math.min(LW - 14, e.x)), h: 30, vy: 0, kind: 'med' });
         return;
       }
@@ -223,9 +224,110 @@ Sims.register({
           if (wave < WAVES.length - 1) {
             if (!waveWait) { waveWait = 1.8; score += 20; if (wave === 1 || wave === 3) pickups.push({ x: LW / 2, h: 60, vy: 0, kind: 'med' }); floatText(LW / 2, ground() - 50, 'ВОЛНА ЗАЧИЩЕНА +20', '#9fe8ff'); }
             waveWait -= dt; if (waveWait <= 0) startWave(wave + 1);
-          }
+          } else startVault();
         }
       }
+    }
+
+    /* ================= сейф: взлом круглого замка ================= */
+    const vaultL = () => LW - 42;                 // левый край проёма
+    const normA = a => { a = (a + Math.PI * 3) % (Math.PI * 2) - Math.PI; return a; };
+    function newZone(prev) { let a; do { a = rnd(-Math.PI, Math.PI); } while (prev != null && Math.abs(normA(a - prev)) < 1.0); return a; }
+    function startVault() {
+      if (mode !== 'play') return;
+      projs = []; es = []; pl.st = 'walk'; pl.atk = null; pl.vx = 0;
+      mode = 'vault'; banner = 'ТЯЖЁЛЫЙ СЕЙФ! ВСКРОЙ КРУГЛЫЙ ЗАМОК'; bannerT = 2.6; events.push('bell');
+      vt = { phase: 'walk', t: 0, pin: 0, ang: -Math.PI / 2, dir: 1, zone: newZone(), done: [], miss: 0, shake: 0, open: 0, loot: 0, bundles: 0, tx: vaultL() - 14, flash: 0 };
+    }
+    const zoneW = () => [0.62, 0.5, 0.4][vt.pin] || 0.4;
+    const vSpeed = () => 2.1 + vt.pin * 0.75;
+    function crack() {
+      if (mode !== 'vault' || !vt || vt.phase !== 'crack') return;
+      const d = Math.abs(normA(vt.ang - vt.zone));
+      if (d <= zoneW() / 2) {
+        vt.done.push({ a: vt.zone, w: zoneW() }); vt.pin++; vt.flash = 0.25; events.push('click');
+        sparks(LW / 2, dialCy(), 8, ['#37d65a', '#fff', '#ffe14d']);
+        if (vt.pin >= 3) { vt.phase = 'open'; vt.t = 0; const bonus = Math.max(0, 200 - 50 * vt.miss); score += bonus; floatText(LW / 2, dialCy() - dialR() - 10, 'ЗАМОК ВСКРЫТ! +' + bonus, '#ffe14d'); events.push('unlock'); }
+        else { vt.zone = newZone(vt.zone); vt.dir = -vt.dir; floatText(LW / 2, dialCy() - dialR() - 10, 'ЩЁЛК ' + vt.pin + '/3', '#9fe8ff'); }
+      } else {
+        vt.miss++; vt.shake = 0.3; events.push('alarm'); floatText(LW / 2, dialCy() - dialR() - 10, 'МИМО! тревога', '#ff6a6a');
+      }
+    }
+    function updateVault(dt) {
+      vt.t += dt; if (bannerT > 0) bannerT -= dt; if (vt.flash > 0) vt.flash -= dt; if (vt.shake > 0) vt.shake -= dt;
+      const ph = vt.phase;
+      if (ph === 'walk') {
+        pl.face = 1; pl.st = 'walk'; pl.ph += dt * 13; pl.x += Math.min(60 * dt, Math.max(0, vt.tx - pl.x));
+        if (pl.x >= vt.tx - 0.5) { pl.st = 'idle'; vt.phase = 'crack'; vt.t = 0; banner = 'ЖМИ, КОГДА СТРЕЛКА В ЗЕЛЁНОЙ ЗОНЕ!'; bannerT = 3; }
+      } else if (ph === 'crack') {
+        pl.st = 'idle'; vt.ang = normA(vt.ang + vt.dir * vSpeed() * dt);
+      } else if (ph === 'open') {
+        pl.st = 'idle'; vt.ang = normA(vt.ang + 9 * dt); vt.open = clamp((vt.t - 0.5) / 1.2, 0, 1);
+        if (vt.t > 1.8) { vt.phase = 'loot'; vt.t = 0; banner = 'ДЕНЬГИ! ХВАТАЙ!'; bannerT = 1.6; }
+      } else if (ph === 'loot') {
+        vt.open = 1; const tx = LW - 20;
+        if (pl.x < tx - 0.5) { pl.face = 1; pl.st = 'walk'; pl.ph += dt * 13; pl.x += Math.min(55 * dt, tx - pl.x); }
+        else {
+          pl.st = 'idle'; vt.loot += dt;
+          if (vt.loot > 0.28 * (vt.bundles + 1) && vt.bundles < 4) { vt.bundles++; score += 75; floatText(pl.x, ground() - 34, '+75', '#ffe14d'); sparks(pl.x + 6, ground() - 22, 8, ['#ffe14d', '#5ad06a', '#fff'], true); events.push('coin'); }
+          if (vt.bundles >= 4 && vt.loot > 0.28 * 4 + 0.7) { mode = 'cut'; cutT = 0; banner = 'ДЕНЬГИ У НАС! БЕГОМ К МАШИНЕ!'; bannerT = 3; pl.st = 'walk'; }
+        }
+      }
+    }
+    const dialR = () => Math.max(20, Math.min(36, Math.floor(LW * 0.28), Math.floor(LH * 0.26)));
+    const dialCy = () => Math.round(LH * 0.36);
+    function disc(c, cx, cy, r, col) { c.fillStyle = col; for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); c.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1); } }
+    function drawVault() {
+      const gy = ground(), o = vt ? vt.open : 0, x0 = vaultL(), w = LW - x0, top = gy - 56;
+      R(g, x0 - 3, top - 3, w + 3, 59, '#3d424b');                     // рама
+      R(g, x0, top, w, 56, '#17110c');                                   // внутри темно
+      // богатства внутри
+      if (o > 0) {
+        for (let k = 0; k < 4; k++) { R(g, x0 + 3 + k * 10, gy - 10, 8, 10, '#3a8a3a'); R(g, x0 + 3 + k * 10, gy - 7, 8, 2, '#e8e0a0'); R(g, x0 + 3 + k * 10, gy - 10, 8, 1, '#5ab85a'); }
+        for (let k = 0; k < 3; k++) { R(g, x0 + 5 + k * 11, gy - 17, 8, 7, '#3a8a3a'); R(g, x0 + 5 + k * 11, gy - 15, 8, 2, '#e8e0a0'); }
+        for (let k = 0; k < 3; k++) { R(g, x0 + 4 + k * 12, gy - 27, 9, 4, '#e8c020'); R(g, x0 + 4 + k * 12, gy - 27, 9, 1, '#fff2a0'); R(g, x0 + 7 + k * 12, gy - 31, 9, 4, '#e8c020'); }
+        R(g, x0 + w - 12, gy - 24, 9, 14, '#8a5a2a'); R(g, x0 + w - 12, gy - 26, 9, 3, '#b8803a'); R(g, x0 + w - 9, gy - 20, 3, 3, '#ffe14d');
+        g.globalAlpha = 0.35 * o; R(g, x0, top, w, 56, '#ffe9a0'); g.globalAlpha = 1;
+      }
+      // створка двери: сужается к петле слева
+      const dw = Math.round(w * (1 - o * 0.92));
+      if (dw > 1) {
+        R(g, x0, top, dw, 56, '#6f7680'); R(g, x0, top, dw, 3, '#9aa2ae'); R(g, x0, top + 53, dw, 3, '#4a4f58'); R(g, x0 + dw - 2, top, 2, 56, '#4a4f58');
+        for (let k = 0; k < 4; k++) { R(g, x0 + 2, top + 5 + k * 14, 2, 2, '#aab2bf'); R(g, x0 + dw - 5, top + 5 + k * 14, 2, 2, '#aab2bf'); }
+        if (o < 0.5) {
+          const cx = Math.round(x0 + dw * 0.5), cy = top + 28, r = Math.max(4, Math.round(10 * dw / w));
+          disc(g, cx, cy, r + 2, '#2b2f36'); disc(g, cx, cy, r, vt && vt.phase !== 'walk' ? '#d8b020' : '#c8a020'); disc(g, cx, cy, Math.max(2, Math.round(r * 0.45)), '#7a5a10');
+          for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + (vt ? vt.ang : 0) * (o > 0 ? 1 : 0); R(g, cx + Math.cos(a) * r * 0.75 - 1, cy + Math.sin(a) * r * 0.75 - 1, 2, 2, '#7a5a10'); }
+        }
+      }
+      R(g, x0 - 3, top - 3, w + 3, 3, '#5a606a');
+    }
+    function drawDial() {
+      const R0 = dialR(), cx = LW / 2 + (vt.shake > 0 ? Math.round(Math.sin(t * 80) * 2) : 0), cy = dialCy();
+      let al = 1; if (vt.phase === 'open') al = clamp(1 - vt.t / 0.9, 0, 1); if (al <= 0) return;
+      g.globalAlpha = 0.55 * al; g.fillStyle = '#000'; g.fillRect(0, 0, LW, LH); g.globalAlpha = al;
+      const z = vt.phase === 'crack' ? vt.zone : null, zw = vt.phase === 'crack' ? zoneW() : 0;
+      for (let y = -R0; y <= R0; y++) for (let x = -R0; x <= R0; x++) {
+        const d = Math.sqrt(x * x + y * y); if (d > R0 + 0.3) continue;
+        const a = Math.atan2(y, x); let col;
+        if (d > R0 - 2.5) col = '#2b2f36';
+        else if (d > R0 - 6) { const m = ((a + Math.PI * 2) % (Math.PI / 6)); col = (m < 0.07 || m > Math.PI / 6 - 0.07) && d > R0 - 5 ? '#2b2f36' : '#aab2bf'; }
+        else if (d > R0 - 14) {
+          col = '#555b66';
+          if (d > R0 - 13 && d < R0 - 7) {
+            if (z != null && Math.abs(normA(a - z)) < zw / 2) col = vt.flash > 0 ? '#ffffff' : '#37d65a';
+            else if (vt.done.some(q => Math.abs(normA(a - q.a)) < q.w / 2)) col = '#d8b020';
+          }
+        }
+        else if (d > 6) col = '#3d424b'; else col = d > 2.5 ? '#d8b020' : '#7a5a10';
+        g.fillStyle = col; g.fillRect(Math.round(cx + x), Math.round(cy + y), 1, 1);
+      }
+      // стрелка
+      for (let s = 0; s <= R0 - 5; s += 0.5) { const px = Math.round(cx + Math.cos(vt.ang) * s), py = Math.round(cy + Math.sin(vt.ang) * s); g.fillStyle = s > R0 - 12 ? '#ff4a3a' : '#e0e4ea'; g.fillRect(px, py, 2, 2); }
+      disc(g, cx, cy, 3, '#2b2f36'); disc(g, cx, cy, 2, '#d8b020');
+      // лампочки пинов
+      for (let k = 0; k < 3; k++) { R(g, cx - 11 + k * 8, cy - R0 - 9, 6, 4, k < vt.pin ? '#37d65a' : '#7a2020'); R(g, cx - 11 + k * 8, cy - R0 - 9, 6, 1, 'rgba(255,255,255,.35)'); }
+      g.globalAlpha = 1;
     }
     function updateCut(dt) {
       cutT += dt; if (bannerT > 0) bannerT -= dt;
@@ -296,6 +398,7 @@ Sims.register({
       parts = parts.filter(p => p.life > 0);
       floats.forEach(f => { f.y -= 22 * dt; f.life -= dt; }); floats = floats.filter(f => f.life > 0);
       if (mode === 'play') updateFight(dt);
+      else if (mode === 'vault') updateVault(dt);
       else if (mode === 'cut') { updateCut(dt); }
       else if (mode === 'drive') updateDrive(dt);
       else if (mode === 'over' || mode === 'win') {
@@ -312,6 +415,7 @@ Sims.register({
         btns = [{ id: 'l0', label: '◀', sub: 'влево', x: pad, y: top + pad, w: bw, h: bh, tap: true }, { id: 'l1', label: '●', sub: 'центр', x: pad * 2 + bw, y: top + pad, w: bw, h: bh, tap: true }, { id: 'l2', label: '▶', sub: 'вправо', x: pad * 3 + bw * 2, y: top + pad, w: bw, h: bh, tap: true }];
         return;
       }
+      if (mode === 'vault') { btns = [{ id: 'crack', label: '🔓 ВСКРЫТЬ', x: pad, y: top + pad, w: W - pad * 2, h: ctrlH - pad * 2, tap: true }]; return; }
       const halfW = (W - pad * 3) / 2, rowH = (ctrlH - pad * 3) / 2, bw = (halfW - pad) / 2;
       btns = [
         { id: 'jump', label: '⤒ ПРЫЖОК', x: pad, y: top + pad, w: halfW, h: rowH, tap: true },
@@ -322,9 +426,10 @@ Sims.register({
         { id: 'heavy', label: '🦵', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
       ];
     }
-    const KEYLBL = { jump: 'Пробел', left: 'A', right: 'D', dash: 'Q', hit: 'J', heavy: 'K', l0: '←', l1: 'S', l2: '→' };
+    const KEYLBL = { jump: 'Пробел', left: 'A', right: 'D', dash: 'Q', hit: 'J', heavy: 'K', l0: '←', l1: 'S', l2: '→', crack: 'Пробел' };
     function act(id) {
       if (id === 'jump') playerJump(); else if (id === 'dash') playerDash(); else if (id === 'hit') playerAttack('hit'); else if (id === 'heavy') playerAttack('heavy');
+      else if (id === 'crack') crack();
       else if (id[0] === 'l') setLane(+id[1]);
     }
     function onDown(e) {
@@ -339,6 +444,7 @@ Sims.register({
         if (y < H - ctrlH) setLane(Math.floor(clamp((x - ox) / (LW * u), 0, 0.999) * 3));
         return;
       }
+      if (mode === 'vault') { crack(); return; }
       if (mode !== 'play') return;
       const b = btns.find(q => hitRect(x, y, q));
       if (b) { if (b.tap) act(b.id); else { held[b.id] = (held[b.id] || 0) + 1; held['p' + e.pointerId] = b.id; } canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); return; }
@@ -365,6 +471,7 @@ Sims.register({
         if (e.code === 'Digit1' || e.code === 'Numpad1') setLane(0); else if (e.code === 'Digit2' || e.code === 'Numpad2' || e.code === 'KeyS' || e.code === 'ArrowDown' || e.code === 'Space') { e.preventDefault(); setLane(1); } else if (e.code === 'Digit3' || e.code === 'Numpad3') setLane(2);
         return;
       }
+      if (mode === 'vault') { if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE' || e.code === 'KeyJ' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); crack(); } return; }
       if (mode !== 'play') return;
       if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); playerJump(); }
       else if (e.code === 'KeyQ' || e.code === 'ShiftLeft') playerDash();
@@ -400,6 +507,9 @@ Sims.register({
         else if (e === 'clink') { blip(900, 0.05, 'square', 0.05); blip(600, 0.08, 'triangle', 0.04, 0.04); }
         else if (e === 'jump') blip(260, 0.12, 'square', 0.03, 0, 520);
         else if (e === 'dash') noise(0.12, 0.07, 3000);
+        else if (e === 'click') { blip(1200, 0.05, 'square', 0.05); blip(1800, 0.07, 'triangle', 0.04, 0.04); }
+        else if (e === 'alarm') { blip(520, 0.14, 'sawtooth', 0.05); blip(380, 0.18, 'sawtooth', 0.05, 0.15); }
+        else if (e === 'unlock') { noise(0.3, 0.12, 600); [392, 523, 659, 784].forEach((f, k) => blip(f, 0.14, 'square', 0.05, k * 0.09)); }
         else if (e === 'throw') blip(500, 0.08, 'triangle', 0.04, 0, 250);
         else if (e === 'bell') { blip(1100, 0.3, 'sine', 0.05); blip(1650, 0.4, 'sine', 0.03, 0.04); }
         else if (e === 'heal') { blip(520, 0.1, 'triangle', 0.05); blip(780, 0.16, 'triangle', 0.05, 0.08); }
@@ -487,7 +597,7 @@ Sims.register({
       // колонны
       [0.34, 0.66].forEach(k => { const cx = Math.round(LW * k); R(c, cx - 3, 0, 7, gy, '#efe8d0'); R(c, cx + 2, 0, 2, gy, '#b8ae90'); R(c, cx - 5, 0, 11, 3, '#c8bd9a'); R(c, cx - 5, gy - 3, 11, 3, '#c8bd9a'); });
       // хранилище справа
-      const vx = LW - 22; R(c, vx - 4, gy - 52, 30, 52, '#555a62'); R(c, vx - 1, gy - 49, 24, 46, '#7a808a'); c.fillStyle = '#d8b020'; c.beginPath(); c.arc(vx + 11, gy - 26, 8, 0, 7); c.fill(); R(c, vx + 8, gy - 29, 6, 6, '#7a5a10'); R(c, vx + 3, gy - 28, 16, 1, '#7a5a10');
+      // хранилище рисуется отдельно (drawVault), чтобы дверь могла открываться
       // пол
       for (let y = gy, k = 0; y < LH; y += 8, k++) for (let x = (k % 2) * 8 - 8; x < LW; x += 16) R(c, x, y, 8, 8, '#cfc2a0'), R(c, x + 8, y, 8, 8, '#a8997a');
       R(c, 0, gy, LW, 1, 'rgba(0,0,0,.35)');
@@ -496,6 +606,7 @@ Sims.register({
     function drawFight() {
       const gy = ground();
       g.drawImage(bg, 0, 0);
+      drawVault();
       pickups.forEach(p => {
         const y = gy - p.h; if (p.kind === 'med') { R(g, p.x - 4, y - 7, 8, 7, '#f4f4f4'); R(g, p.x - 1, y - 6, 2, 5, '#d02020'); R(g, p.x - 3, y - 4, 6, 2, '#d02020'); }
         else { R(g, p.x - 6, y - 10, 12, 10, '#2e8a3a'); R(g, p.x - 4, y - 12, 8, 3, '#2e8a3a'); R(g, p.x - 1, y - 8, 2, 6, '#ffe14d'); R(g, p.x - 3, y - 6, 6, 2, '#ffe14d'); }
@@ -520,6 +631,7 @@ Sims.register({
         else { R(g, p.x - 3, gy - p.h - 3, 6, 6, '#c8961a'); R(g, p.x - 2, gy - p.h - 2, 4, 4, '#ffe14d'); R(g, p.x - 1, gy - p.h - 1, 1, 2, '#9a6a08'); }
       });
       parts.forEach(p => R(g, p.x, p.y, 2, 2, p.col));
+      if (mode === 'vault' && vt && vt.phase !== 'loot' && !(vt.phase === 'walk')) drawDial();
     }
 
     function drawDrive() {
@@ -591,7 +703,7 @@ Sims.register({
       // подписи над героями
       floats.forEach(f => { ctx.globalAlpha = Math.min(1, f.life * 2); ctx.font = '800 ' + mono(Math.max(10, u * 3.4)); ctx.fillStyle = f.col; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; const px = ox + f.x * u, py = f.y * u; ctx.strokeText(f.s, px, py); ctx.fillText(f.s, px, py); ctx.globalAlpha = 1; });
       // кнопки
-      if (mode === 'play' || mode === 'drive') {
+      if (mode === 'play' || mode === 'drive' || mode === 'vault') {
         for (const b of btns) {
           const down = b.id === 'left' || b.id === 'right' ? (held[b.id] > 0 || keys[b.id]) : (dv && b.id === 'l' + dv.lane);
           ctx.fillStyle = down ? 'rgba(255,200,90,.55)' : 'rgba(255,255,255,.12)'; ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -602,7 +714,7 @@ Sims.register({
         }
       }
       const outlined = (s, x, y) => { ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.strokeText(s, x, y); ctx.fillText(s, x, y); };
-      if (mode === 'play' || mode === 'cut') {
+      if (mode === 'play' || mode === 'cut' || mode === 'vault') {
         hpBar(10, 10, Math.min(150, W * 0.4), 14, pl.hp, pl.max, '#e63a2e', HEROES[hero].name);
         ctx.font = '800 ' + mono(fs + 2); ctx.fillStyle = '#ffd23a'; ctx.textAlign = 'right'; outlined('Очки: ' + score, W - 10, 18); ctx.textAlign = 'center';
         ctx.font = '700 ' + mono(fs - 1); ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; outlined('Волна ' + (wave + 1) + ' / ' + WAVES.length, W - 10, 38); ctx.textAlign = 'center';
@@ -613,7 +725,7 @@ Sims.register({
         ctx.font = '800 ' + mono(fs + 2); ctx.fillStyle = '#ffd23a'; ctx.textAlign = 'right'; outlined('Очки: ' + score, W - 10, 18); ctx.textAlign = 'center';
         ctx.font = '700 ' + mono(fs - 1); ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; outlined('Оторвались: ' + Math.min(dv.passed, GOAL) + ' / ' + GOAL, W - 10, 38); ctx.textAlign = 'center';
       }
-      if (bannerT > 0 && (mode === 'play' || mode === 'cut' || mode === 'drive')) { ctx.globalAlpha = Math.min(1, bannerT * 2); ctx.font = '800 ' + mono(Math.min(30, u * 6.5)); ctx.fillStyle = '#ffd23a'; outlined(banner, W / 2, H * 0.3); ctx.globalAlpha = 1; }
+      if (bannerT > 0 && (mode === 'play' || mode === 'cut' || mode === 'drive' || mode === 'vault')) { ctx.globalAlpha = Math.min(1, bannerT * 2); ctx.font = '800 ' + mono(Math.min(30, u * 6.5)); ctx.fillStyle = '#ffd23a'; outlined(banner, W / 2, mode === 'vault' ? (H - ctrlH) * 0.76 : H * 0.3); ctx.globalAlpha = 1; }
       const shade = a => { ctx.fillStyle = 'rgba(10,4,0,' + a + ')'; ctx.fillRect(0, 0, W, H); };
       if (fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, fade) + ')'; ctx.fillRect(0, 0, W, H); }
       if (mode === 'title') {
@@ -703,7 +815,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { on = false; try { song.pause(); } catch (e) { } cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); },
-      debug: { update, startGame, startDrive, setLane, attack: playerAttack, jump: playerJump, dash: playerDash, spawn, hurtEnemy,
+      debug: { update, startGame, startDrive, startVault, crack, get vt() { return vt; }, setLane, attack: playerAttack, jump: playerJump, dash: playerDash, spawn, hurtEnemy,
         get mode() { return mode; }, get wave() { return wave; }, get pl() { return pl; }, get es() { return es; }, get dv() { return dv; }, get score() { return score; }, get kills() { return kills; }, get projs() { return projs; }, get pickups() { return pickups; },
         set left(v) { keys.left = !!v; }, set right(v) { keys.right = !!v; } }
     };
