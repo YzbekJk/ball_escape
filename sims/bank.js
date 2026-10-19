@@ -11,14 +11,17 @@ Sims.register({
   desc: 'Пиксельная игра. Банк обнаглел и не отдаёт ваши деньги — придётся забирать силой. Выберите героя (клиент, бабуля или курьер), пройдите пять волн охранников, менеджеров и коллекторов, победите Директора банка, схватите деньги и прыгайте в машину. В финале — погоня: на дороге три полосы, и каждый раз кто-то перекрывает две из них. Уходите влево, вправо или оставайтесь посередине — иначе машина врежется. Бой: A/D — ходить, Пробел — прыжок, J или ЛКМ — удар, K или ПКМ — удар ногой, Q — перекат. Погоня: ←/→ или A/D — полоса, S — центр, 1·2·3 — полоса напрямую.',
 
   lb: { label: 'Очки (бой + погоня + бонус за целую машину)', better: 'high', fair: ['playerHp', 'enemyPower', 'carLives', 'carSpeed'], fmt: v => v + ' оч.' },
-  defaults: { playerHp: 100, enemyPower: 1, maxAlive: 4, carLives: 3, carSpeed: 1, sound: true },
+  defaults: { playerHp: 100, enemyPower: 1, maxAlive: 4, carLives: 3, carSpeed: 1, sound: true, music: true, musicStart: 10, volume: 0.7 },
   schema: [
     { k: 'playerHp', l: 'Ваше здоровье (бой)', min: 40, max: 300, step: 10 },
     { k: 'enemyPower', l: 'Сила врагов ×', min: 0.3, max: 3, step: 0.1, live: 1 },
     { k: 'maxAlive', l: 'Сколько врагов одновременно', min: 1, max: 7, step: 1, live: 1 },
     { k: 'carLives', l: 'Прочность машины (жизни в погоне)', min: 1, max: 8, step: 1 },
     { k: 'carSpeed', l: 'Скорость погони ×', min: 0.5, max: 2, step: 0.1 },
-    { k: 'sound', l: 'Звуки', type: 'check', live: 1 }
+    { k: 'sound', l: 'Звуки', type: 'check', live: 1 },
+    { k: 'music', l: 'Саундтрек', type: 'check', live: 1 },
+    { k: 'musicStart', l: 'С какой секунды трека начинать', min: 0, max: 90, step: 0.5, live: 1 },
+    { k: 'volume', l: 'Громкость саундтрека', min: 0, max: 1, step: 0.05, live: 1 }
   ],
 
   preview(ctx, w, h) {
@@ -674,19 +677,32 @@ Sims.register({
       if (pl) pl.x = Math.min(pl.x, LW - 8);
       if (dv) dv.x = laneX(dv.lane);
     }
+    const song = new Audio('assets/bank-track.mp3'); song.preload = 'auto';
+    let songOn = false;
+    function seekPlay() {
+      const go = () => { try { song.currentTime = cfg.musicStart; } catch (er) {} const pr = song.play(); if (pr && pr.catch) pr.catch(() => { songOn = false; }); };
+      if (song.readyState >= 1) go(); else { song.addEventListener('loadedmetadata', go, { once: true }); song.load(); }
+    }
+    function musicTick() {
+      if (!cfg.music || paused) { if (songOn) { song.pause(); songOn = false; } return; }
+      song.volume = Math.max(0, Math.min(1, cfg.volume));
+      if (!songOn) { songOn = true; seekPlay(); return; }
+      if (!song.paused && song.currentTime < cfg.musicStart - 0.25) { try { song.currentTime = cfg.musicStart; } catch (er) {} }
+      if (song.ended || (song.duration && song.currentTime > song.duration - 0.2)) seekPlay();
+    }
     function frame(ts) {
       if (!on) return;
       const dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
       if (!paused) { update(dt); playEvents(); }
       const key = mode + ((mode === 'drive' || (dv && (mode === 'over' || mode === 'win'))) ? 'D' : 'F'); if (key !== lastLay) { lastLay = key; layoutBtns(); }
-      draw(); raf = requestAnimationFrame(frame);
+      musicTick(); draw(); raf = requestAnimationFrame(frame);
     }
     resize(); restart(); layoutBtns();
     raf = requestAnimationFrame(frame);
     return {
       restart, resize,
       setPaused(p) { paused = p; },
-      destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); },
+      destroy() { on = false; try { song.pause(); } catch (e) { } cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); },
       debug: { update, startGame, startDrive, setLane, attack: playerAttack, jump: playerJump, dash: playerDash, spawn, hurtEnemy,
         get mode() { return mode; }, get wave() { return wave; }, get pl() { return pl; }, get es() { return es; }, get dv() { return dv; }, get score() { return score; }, get kills() { return kills; }, get projs() { return projs; }, get pickups() { return pickups; },
         set left(v) { keys.left = !!v; }, set right(v) { keys.right = !!v; } }
