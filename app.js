@@ -26,12 +26,12 @@
     closeSim();
     view.hidden = true; menu.hidden = false; menu.scrollTop = 0;
     const cards = $('cards'); cards.innerHTML = ''; cards.className = '';
-    const back = $('menuBack');
+    const back = $('menuBack'); $('plumBtn').hidden = !!section;
     if (!section) {                                   // home: pick a section
       document.title = 'Шарики'; $('menuTitle').textContent = 'Шарики'; $('menuSub').textContent = 'Что хотите открыть?';
       back.hidden = true; cards.className = 'home';
       Object.keys(SECTIONS).forEach(id => {
-        const sec = SECTIONS[id], count = Sims.list.filter(s => kindOf(s) === sec.kind).length;
+        const sec = SECTIONS[id], count = Sims.list.filter(s => !s.secret && kindOf(s) === sec.kind).length;
         const b = document.createElement('button'); b.className = 'card big' + (count ? '' : ' empty');
         b.innerHTML = '<div class="ic"></div><div><div class="t"></div><div class="d"></div><span class="n"></span></div>';
         b.querySelector('.ic').textContent = sec.icon; b.querySelector('.t').textContent = sec.title;
@@ -43,7 +43,7 @@
       const sec = SECTIONS[section];
       document.title = sec.title; $('menuTitle').textContent = sec.title; $('menuSub').textContent = 'Выберите, что открыть';
       back.hidden = false;
-      const items = Sims.list.filter(s => kindOf(s) === sec.kind).sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0));   // hits first
+      const items = Sims.list.filter(s => !s.secret && kindOf(s) === sec.kind).sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0));   // hits first
       items.forEach(sim => {
         const b = document.createElement('button'); b.className = 'card' + (sim.hit ? ' hit' : '');
         const cv = document.createElement('canvas'); cv.width = 420; cv.height = 300;
@@ -63,7 +63,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 81;
+  const APP_VERSION = 82;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
@@ -195,7 +195,8 @@
   }
 
   // ---------- buttons ----------
-  $('btnBack').onclick = () => { location.hash = '#/' + sectionOfKind(kindOf(current.sim)); };
+  $('btnBack').onclick = () => { location.hash = current.sim.secret ? '#/' : '#/' + sectionOfKind(kindOf(current.sim)); };
+  $('plumBtn').onclick = () => { location.hash = '#/plum-clicker'; };
   $('menuBack').onclick = () => { location.hash = '#/'; };
   $('btnGear').onclick = () => { panel.hidden = !panel.hidden; initAudio(); };
   $('btnClose').onclick = () => { panel.hidden = true; };
