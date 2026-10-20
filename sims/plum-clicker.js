@@ -42,15 +42,36 @@ Sims.register({
     ];
     const RANKS = [[0, 'Сливовый новичок'], [100, 'Садовод'], [1e3, 'Фермер'], [1e4, 'Сливовый барон'], [1e5, 'Король компота'], [1e6, 'Император слив'], [1e7, 'Повелитель косточек'], [1e8, 'Сливовая вселенная']];
 
-    let S = { plums: 0, total: 0, clicks: 0, lv: {}, up: {}, ts: Date.now() };
-    function load() { try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && typeof j.plums === 'number') S = Object.assign(S, j); } catch (e) { } }
+    const fresh = () => ({ plums: 0, total: 0, run: 0, clicks: 0, lv: {}, up: {}, ach: {}, pits: 0, golds: 0, rebirths: 0, ts: Date.now() });
+    let S = fresh();
+    function load() { try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && typeof j.plums === 'number') S = Object.assign(S, j); } catch (e) { } S.run = S.run || S.total; S.ach = S.ach || {}; S.lv = S.lv || {}; S.up = S.up || {}; }
     function save() { S.ts = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
     load();
 
+    const ACH = [
+      { id: 'c1', ic: '👆', n: 'Первый клик', d: 'Кликнуть по сливе', t: () => S.clicks >= 1 },
+      { id: 'c100', ic: '💪', n: 'Сотня кликов', d: '100 кликов', t: () => S.clicks >= 100 },
+      { id: 'c1k', ic: '🔥', n: 'Тысяча кликов', d: '1000 кликов', t: () => S.clicks >= 1000 },
+      { id: 'c10k', ic: '⚡', n: 'Палец-молния', d: '10 000 кликов', t: () => S.clicks >= 10000 },
+      { id: 'p1k', ic: '🍑', n: 'Первая корзина', d: 'Собрать 1000 слив за всё время', t: () => S.total >= 1e3 },
+      { id: 'p1m', ic: '🧺', n: 'Миллионер', d: 'Собрать 1 млн слив', t: () => S.total >= 1e6 },
+      { id: 'p1b', ic: '🏭', n: 'Сливовый магнат', d: 'Собрать 1 млрд слив', t: () => S.total >= 1e9 },
+      { id: 'tree', ic: '🌱', n: 'Первое деревце', d: 'Купить деревце', t: () => lvl('tree') >= 1 },
+      { id: 'orch', ic: '🌳', n: 'Целый сад', d: '10 садов', t: () => lvl('orch') >= 10 },
+      { id: 'jam', ic: '🍯', n: 'Джемовый король', d: 'Построить джемовую фабрику', t: () => lvl('jam') >= 1 },
+      { id: 'b25', ic: '🏗️', n: 'Стройка века', d: '25 построек одного вида', t: () => BUILD.some(b => lvl(b.id) >= 25) },
+      { id: 'cps1k', ic: '⏱️', n: 'Тысяча в секунду', d: '1000 слив в секунду', t: () => cps() >= 1000 },
+      { id: 'cps1m', ic: '🚀', n: 'Миллион в секунду', d: '1 млн слив в секунду', t: () => cps() >= 1e6 },
+      { id: 'g1', ic: '🌟', n: 'Золотой улов', d: 'Поймать золотую сливу', t: () => S.golds >= 1 },
+      { id: 'g10', ic: '🏆', n: 'Охотник за золотом', d: 'Поймать 10 золотых слив', t: () => S.golds >= 10 },
+      { id: 'rb1', ic: '♻️', n: 'Новая жизнь', d: 'Первое перерождение', t: () => S.rebirths >= 1 }
+    ];
+    const achCount = () => ACH.filter(a => S.ach[a.id]).length;
+    const pitGain = () => Math.floor(Math.sqrt((S.run || 0) / 5e5));
     const lvl = id => S.lv[id] || 0;
     const costOf = (d, n) => Math.ceil(d.base * Math.pow(d.gr || 1.15, n));
     let frenzy = 0;
-    const globalMult = () => MULT.reduce((m, u) => m * (S.up[u.id] ? u.x : 1), 1) * (frenzy > 0 ? 7 : 1);
+    const globalMult = () => MULT.reduce((m, u) => m * (S.up[u.id] ? u.x : 1), 1) * (frenzy > 0 ? 7 : 1) * (1 + 0.1 * S.pits) * (1 + 0.02 * achCount());
     const clickPower = () => (1 + CLICKUP.reduce((a, u) => a + lvl(u.id) * u.add, 0)) * globalMult();
     const baseCps = () => BUILD.reduce((a, b) => a + lvl(b.id) * b.cps, 0);
     const cps = () => baseCps() * globalMult();
@@ -92,6 +113,9 @@ Sims.register({
       .pc-row .pr{font-weight:800;font-size:13px;color:#ffe08a;white-space:nowrap}
       .pc-row.done{border-color:#4f8f4f;background:#1f3a22}
       .pc-toast{position:absolute;left:calc(var(--tw,100%) / 2);top:var(--ty,70px);transform:translateX(-50%);background:rgba(0,0,0,.75);padding:8px 14px;border-radius:12px;font:700 14px system-ui;pointer-events:none;opacity:0;transition:opacity .3s;text-align:center;max-width:90%}
+      .pc-ach{display:flex;flex-wrap:wrap;gap:6px}
+      .pc-at{width:42px;height:42px;font-size:22px;border-radius:10px;border:1px solid #3a2457;background:#1a0d2b;filter:grayscale(1);opacity:.4;cursor:pointer}
+      .pc-at.on{filter:none;opacity:1;border-color:#c79bff;background:#3a1d5e}
       .pc-reset{margin-top:14px;font:600 12px system-ui;padding:7px 10px;border-radius:8px;border:1px solid #6a2a3a;background:#2a1020;color:#ff9aa8;cursor:pointer}
     `;
     document.head.appendChild(style);
@@ -116,8 +140,21 @@ Sims.register({
     addHead('Сила клика'); CLICKUP.forEach(d => addRow(d, 'click'));
     addHead('Постройки (сливы сами)'); BUILD.forEach(d => addRow(d, 'build'));
     addHead('Улучшения'); MULT.forEach(d => addRow(d, 'mult'));
+    addHead('Перерождение');
+    const rbRow = document.createElement('button'); rbRow.className = 'pc-row'; rbRow.innerHTML = '<span class="ic">♻️</span><span class="tx"><div class="nm"></div><div class="ds"></div></span><span class="pr"></span>'; panel.appendChild(rbRow);
+    rbRow.onclick = () => rebirth();
+    addHead('Достижения'); const achBox = document.createElement('div'); achBox.className = 'pc-ach'; panel.appendChild(achBox);
+    const achEls = ACH.map(a => { const e = document.createElement('button'); e.className = 'pc-at'; e.textContent = a.ic; e.onclick = () => say((S.ach[a.id] ? '✓ ' : '🔒 ') + a.n + ' — ' + a.d); achBox.appendChild(e); return e; });
+    const achCnt = document.createElement('div'); achCnt.className = 'ds'; achCnt.style.cssText = 'margin:6px 2px;color:#c7a8ea;font-size:12px'; panel.appendChild(achCnt);
+    function checkAch() { ACH.forEach(a => { if (!S.ach[a.id] && a.t()) { S.ach[a.id] = 1; say('Достижение: ' + a.ic + ' ' + a.n + ' (бонус +2% ко всему)'); blip(700, 0.25, 'triangle', 0.06, 1400); } }); }
+    function rebirth() {
+      const g = pitGain(); if (g < 1) return;
+      if (!confirm('Перерождение: вы потеряете сливы, постройки и улучшения, но получите ' + g + ' косточек (+' + (g * 10) + '% ко всему навсегда). Продолжить?')) return;
+      const keep = { total: S.total, clicks: S.clicks, ach: S.ach, golds: S.golds, pits: S.pits + g, rebirths: S.rebirths + 1 };
+      S = Object.assign(fresh(), keep); frenzy = 0; save(); say('Перерождение! +' + g + ' косточек'); blip(330, 0.5, 'sine', 0.07, 990); checkAch(); refreshRows();
+    }
     const rs = document.createElement('button'); rs.className = 'pc-reset'; rs.textContent = 'Сбросить весь прогресс'; panel.appendChild(rs);
-    rs.onclick = () => { if (confirm('Сбросить весь прогресс сливового кликера?')) { S = { plums: 0, total: 0, clicks: 0, lv: {}, up: {}, ts: Date.now() }; save(); refreshRows(); } };
+    rs.onclick = () => { if (confirm('Сбросить ВЕСЬ прогресс сливового кликера, включая косточки и достижения?')) { S = fresh(); frenzy = 0; save(); refreshRows(); } };
 
     function priceFor(def, kind) {
       if (kind === 'mult') return { n: S.up[def.id] ? 0 : 1, cost: def.cost };
@@ -132,6 +169,8 @@ Sims.register({
       S.plums -= p.cost; S.lv[id] = lvl(id) + p.n; blip(380, 0.12, 'square', 0.04, 760); refreshRows(); return true;
     }
     function refreshRows() {
+      { const g = pitGain(); rbRow.querySelector('.nm').textContent = 'Перерождение' + (S.pits ? ' · косточек: ' + S.pits : ''); rbRow.querySelector('.ds').textContent = g >= 1 ? 'Сейчас дадут +' + g + ' косточек (+' + (g * 10) + '% ко всему навсегда)' : 'Собери за забег от 500 тыс. слив — получишь косточки (бонус +10% каждая)'; rbRow.querySelector('.pr').textContent = g >= 1 ? '+' + g : ''; rbRow.classList.toggle('no', g < 1); }
+      achEls.forEach((e, i) => e.classList.toggle('on', !!S.ach[ACH[i].id])); achCnt.textContent = 'Открыто ' + achCount() + ' из ' + ACH.length + ' · каждое даёт +2% ко всему';
       rows.forEach(r => {
         const d = r.def;
         if (r.kind === 'mult') { const has = !!S.up[d.id]; r.nm.textContent = d.n + (has ? ' ✓' : ''); r.ds.textContent = d.d; r.pr.textContent = has ? '' : fmt(d.cost); r.b.classList.toggle('done', has); r.b.classList.toggle('no', !has && S.plums < d.cost); return; }
@@ -152,19 +191,19 @@ Sims.register({
     const plumC = () => { const hud = 178, r = Math.max(40, Math.min(area.w * 0.32, (area.h - hud - 30) / 2.4)); return { x: area.x + area.w / 2, y: hud + (area.h - hud) / 2, r }; };
 
     /* ---------- состояние эффектов ---------- */
-    let t = 0, sq = 0, parts = [], floats = [], gold = null, goldIn = rnd(35, 70), paused = false, raf = 0, last = 0, alive = true, saveT = 0, rowT = 0, sparkle = [];
+    let achT = 0, t = 0, sq = 0, parts = [], floats = [], gold = null, goldIn = rnd(35, 70), paused = false, raf = 0, last = 0, alive = true, saveT = 0, rowT = 0, sparkle = [];
     function rnd(a, b) { return a + Math.random() * (b - a); }
     for (let i = 0; i < 30; i++) sparkle.push({ x: Math.random(), y: Math.random(), s: rnd(0.5, 2), p: Math.random() * 6 });
 
     function clickPlum(px, py) {
-      const p = clickPower(); S.plums += p; S.total += p; S.clicks++; sq = 1;
+      const p = clickPower(); S.plums += p; S.total += p; S.run += p; S.clicks++; sq = 1;
       const c = plumC(), x = px != null ? px : c.x + rnd(-c.r * 0.4, c.r * 0.4), y = py != null ? py : c.y - c.r * 0.5;
       floats.push({ x, y, s: '+' + fmt(p), life: 0.9, col: frenzy > 0 ? '#ffe08a' : '#fff' });
       for (let i = 0; i < 6; i++) parts.push({ x, y, vx: rnd(-140, 140), vy: rnd(-260, -60), life: rnd(0.4, 0.9), col: Math.random() < 0.3 ? '#d8a8ff' : '#7b2fb0', r: rnd(2, 5) });
       blip(rnd(300, 420), 0.09, 'triangle', 0.05, rnd(500, 640));
     }
     function catchGold() {
-      gold = null; frenzy = 15; const bonus = Math.max(100, cps() * 30 / 7); S.plums += bonus; S.total += bonus;
+      gold = null; frenzy = 15; const bonus = Math.max(100, cps() * 30 / 7); S.plums += bonus; S.total += bonus; S.run += bonus; S.golds++;
       say('Золотая слива! Всё ×7 на 15 секунд, +' + fmt(bonus)); [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => blip(f, 0.2, 'sine', 0.06), i * 70));
       const c = plumC(); for (let i = 0; i < 30; i++) parts.push({ x: c.x, y: c.y, vx: rnd(-260, 260), vy: rnd(-300, 100), life: rnd(0.6, 1.2), col: '#ffd54a', r: rnd(2, 5) });
     }
@@ -172,7 +211,8 @@ Sims.register({
     function tick(dt) {
       t += dt; if (sq > 0) sq = Math.max(0, sq - dt * 5);
       if (frenzy > 0) frenzy = Math.max(0, frenzy - dt);
-      const g = cps() * dt; S.plums += g; S.total += g;
+      const g = cps() * dt; S.plums += g; S.total += g; S.run += g;
+      achT += dt; if (achT > 0.5) { achT = 0; checkAch(); }
       parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; p.life -= dt; }); parts = parts.filter(p => p.life > 0);
       floats.forEach(f => { f.y -= 50 * dt; f.life -= dt; }); floats = floats.filter(f => f.life > 0);
       if (gold) { gold.x += gold.vx * dt; gold.life -= dt; gold.y = gold.y0 + Math.sin(t * 3) * 14; if (gold.life <= 0 || gold.x < -60 || gold.x > W + 60) gold = null; }
@@ -216,7 +256,7 @@ Sims.register({
       const top = Math.max(64, area.h * 0.1);
       ctx.fillStyle = '#fff'; ctx.font = '900 ' + Math.round(Math.min(46, area.w * 0.1)) + 'px system-ui'; ctx.shadowColor = '#000'; ctx.shadowBlur = 6; ctx.fillText(fmt(S.plums) + ' слив', area.w / 2, top);
       ctx.shadowBlur = 0; ctx.font = '700 ' + Math.round(Math.min(18, area.w * 0.04)) + 'px system-ui'; ctx.fillStyle = frenzy > 0 ? '#ffe08a' : '#d9b8ff';
-      ctx.fillText('+' + fmt(cps()) + ' в секунду · +' + fmt(clickPower()) + ' за клик', area.w / 2, top + 30);
+      ctx.fillText('+' + fmt(cps()) + ' в секунду · +' + fmt(clickPower()) + ' за клик' + (S.pits ? ' · 🌰' + S.pits : ''), area.w / 2, top + 30);
       if (frenzy > 0) { ctx.fillStyle = '#ffe08a'; ctx.fillText('ЗОЛОТАЯ ЛИХОРАДКА ×7 — ещё ' + Math.ceil(frenzy) + ' с', area.w / 2, top + 52); }
       const ri = rankIdx(), nxt = RANKS[ri + 1]; ctx.fillStyle = '#ffd5f2'; ctx.fillText('Ранг: ' + RANKS[ri][1], area.w / 2, top + (frenzy > 0 ? 74 : 54));
       if (nxt) { const bw = Math.min(260, area.w * 0.6), bx = area.w / 2 - bw / 2, by = top + (frenzy > 0 ? 90 : 70), v = (S.total - RANKS[ri][0]) / (nxt[0] - RANKS[ri][0]); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(bx, by, bw, 8); ctx.fillStyle = '#c77bff'; ctx.fillRect(bx, by, bw * Math.min(1, v), 8); }
@@ -248,7 +288,7 @@ Sims.register({
     resize();
     // пока вас не было
     const away = Math.min(7200, (Date.now() - (S.ts || Date.now())) / 1000);
-    if (away > 60 && cps() > 0) { const g = cps() * away * 0.5; S.plums += g; S.total += g; say('Пока вас не было, сады дали +' + fmt(g) + ' слив'); }
+    if (away > 60 && cps() > 0) { const g = cps() * away * 0.5; S.plums += g; S.total += g; S.run += g; say('Пока вас не было, сады дали +' + fmt(g) + ' слив'); }
     refreshRows();
     raf = requestAnimationFrame(frame);
     return {
@@ -256,7 +296,7 @@ Sims.register({
       resize,
       setPaused(p) { paused = p; },
       destroy() { alive = false; save(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); removeEventListener('keydown', onKey); removeEventListener('pagehide', onHide); root.remove(); style.remove(); },
-      debug: { clickPlum, buy, tick, catchGold, get S() { return S; }, get cps() { return cps(); }, get click() { return clickPower(); }, fmt, rows, get gold() { return gold; }, set gold(v) { gold = v; } }
+      debug: { clickPlum, buy, tick, catchGold, rebirth, checkAch, pitGain, get ach() { return S.ach; }, get S() { return S; }, get cps() { return cps(); }, get click() { return clickPower(); }, fmt, rows, get gold() { return gold; }, set gold(v) { gold = v; } }
     };
   }
 });
