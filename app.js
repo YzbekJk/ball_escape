@@ -28,7 +28,7 @@
     const cards = $('cards'); cards.innerHTML = ''; cards.className = '';
     const back = $('menuBack'); $('plumBtn').hidden = !!section;
     if (!section) {                                   // home: pick a section
-      document.title = 'Шарики'; $('menuTitle').textContent = 'Шарики'; $('menuSub').textContent = 'Что хотите открыть?';
+      document.title = 'Свингейм'; $('menuTitle').textContent = 'Свингейм'; $('menuSub').textContent = 'Что хотите открыть?';
       back.hidden = true; cards.className = 'home';
       Object.keys(SECTIONS).forEach(id => {
         const sec = SECTIONS[id], count = Sims.list.filter(s => !s.secret && kindOf(s) === sec.kind).length;
@@ -63,7 +63,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 82;
+  const APP_VERSION = 83;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
