@@ -7,7 +7,7 @@ Sims.register({
   // lengths are in units of the ring radius
   defaults: {
     grow: 0.008, startR: 0.03, speed: 0.9, gravity: 1.0, bounce: 1.0,
-    simSpeed: 1, hue: 310, trail: true, sound: true, auto: true
+    simSpeed: 1, hue: 310, trail: true, sound: true, notes: false, auto: true
   },
   schema: [
     { k: 'grow', l: 'Рост за каждый отскок', min: 0.001, max: 0.04, step: 0.001 },
@@ -18,6 +18,7 @@ Sims.register({
     { k: 'simSpeed', l: 'Скорость времени ×', min: 0.25, max: 6, step: 0.25, live: 1 },
     { k: 'hue', l: 'Цвет шарика', min: 0, max: 360, step: 1, live: 1 },
     { k: 'trail', l: 'Шлейф', type: 'check', live: 1 },
+    { k: 'notes', l: 'Ноты вместо звука удара: до, ре, ми, фа, соль, ля, си, до… (нужен включённый звук)', type: 'check', live: 1 },
     { k: 'sound', l: 'Звук', type: 'check', live: 1 },
     { k: 'auto', l: 'Начинать заново, когда шарик заполнил кольцо', type: 'check', live: 1 }
   ],
@@ -43,7 +44,7 @@ Sims.register({
     let ball, bounces, fullAt, paused = false, acc = 0, last = 0, trail = [], flash = 0, events = [];
     let raf = 0, W = 0, H = 0, dpr = 1, S = 1, alive = true;
 
-    function restart() {
+    function restart() { noteN = 0;
       const a = Math.random() * Math.PI * 2, va = Math.random() * Math.PI * 2;
       ball = {
         x: Math.cos(a) * 0.3, y: Math.sin(a) * 0.3 - 0.2,
@@ -74,6 +75,8 @@ Sims.register({
       if (fullAt === null && b.r >= INNER * 0.995) { fullAt = performance.now(); flash = 1; events.push(-1); }
     }
 
+    let noteN = 0;
+    function noteHit(power) { Sims.note(ctl.audio(), noteN++, power); }
     // ----- sound -----
     const PENT = [0, 2, 4, 7, 9];
     let lastBlip = 0;
@@ -96,7 +99,7 @@ Sims.register({
       const now = performance.now();
       if (now - lastBlip < 40) return; lastBlip = now;
       const n = Math.min(bounces, 100), semi = PENT[n % 5] + 6 * Math.floor(n / 5);
-      blip(semi, ev[ev.length - 1]);
+      if (cfg.notes) noteHit(ev[ev.length - 1]); else blip(semi, ev[ev.length - 1]);
     }
 
     // ----- render -----

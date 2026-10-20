@@ -11,7 +11,7 @@ Sims.register({
   lb: { label: 'Пройдено уровней за одну игру', better: 'high', fair: ['tramps', 'maxLen', 'trampBounce', 'gravity', 'ballR', 'targetR', 'wallDeath', 'wallBounce', 'floor'], fmt: v => v + ' ур.' },
   defaults: {
     tramps: 3, maxLen: 0.35, trampBounce: 1.1, gravity: 1.6, ballR: 0.035, targetR: 0.05,
-    wallBounce: 0.8, wallDeath: true, floor: false, trail: true, sound: true, music: true, vocalStart: 8, volume: 0.7
+    wallBounce: 0.8, wallDeath: true, floor: false, trail: true, sound: true, notes: false, music: true, vocalStart: 8, volume: 0.7
   },
   schema: [
     { k: 'tramps', l: 'Сколько батутов дано', min: 1, max: 10, step: 1, live: 1 },
@@ -25,6 +25,7 @@ Sims.register({
     { k: 'floor', l: 'Пол снизу (шарик не пропадает)', type: 'check', live: 1 },
     { k: 'trail', l: 'След шарика', type: 'check', live: 1 },
     { k: 'sound', l: 'Звуки отскоков', type: 'check', live: 1 },
+    { k: 'notes', l: 'Ноты вместо звука отскока: до, ре, ми, фа, соль, ля, си, до… (нужны включённые звуки отскоков)', type: 'check', live: 1 },
     { k: 'music', l: 'Саундтрек', type: 'check', live: 1 },
     { k: 'vocalStart', l: 'С какой секунды трека начинается вокал', min: 0, max: 60, step: 0.1, live: 1 },
     { k: 'volume', l: 'Громкость саундтрека', min: 0, max: 1, step: 0.05, live: 1 }
@@ -75,7 +76,7 @@ Sims.register({
     if (LB) LB.onChange(() => { if (on) syncProgress(); });
 
     function rng(seed) { let a = (seed * 2654435761 + 12345) >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-    function newLevel(keep) {
+    function newLevel(keep) { noteN = 0;
       if (!keep) { level++; saveLevel(); }
       const R = rng(level * 7919 + 17), r = 0.035, tr0 = 0.05, minD = 0.55 + Math.min(0.25, level * 0.012);
       let tries = 0, bx, by, tx, ty;
@@ -182,6 +183,8 @@ Sims.register({
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
 
+    let noteN = 0;
+    function noteHit(power) { Sims.note(ctl.audio(), noteN++, power); }
     // ----- sound -----
     let lastBlip = 0;
     function blip(semi, power, dur, type) {
@@ -198,7 +201,7 @@ Sims.register({
       if (ev.some(e => e.win)) { [0, 4, 7, 12].forEach((s, k) => setTimeout(() => blip(s + 12, 0.8, 0.4), k * 90)); return; }
       if (ev.some(e => e.fail)) { blip(-12, 0.5, 0.3, 'triangle'); return; }
       const now = performance.now(); if (now - lastBlip < 60) return; lastBlip = now;
-      blip(7 + ev[ev.length - 1].hit * 12, ev[ev.length - 1].hit, 0.16, 'triangle');
+      if (cfg.notes) noteHit(ev[ev.length - 1].hit); else blip(7 + ev[ev.length - 1].hit * 12, ev[ev.length - 1].hit, 0.16, 'triangle');
     }
 
     // ----- render -----

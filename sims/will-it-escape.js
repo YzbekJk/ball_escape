@@ -7,7 +7,7 @@ Sims.register({
 
   defaults: {
     rings: 7, chip: 0.25, gravity: 1.2, speed: 0.7, ballR: 0.022, bounce: 1,
-    simSpeed: 1, label: false, debris: true, sound: true, auto: true
+    simSpeed: 1, label: false, debris: true, sound: true, notes: false, auto: true
   },
   schema: [
     { k: 'rings', l: 'Количество колец', min: 2, max: 14, step: 1 },
@@ -19,6 +19,7 @@ Sims.register({
     { k: 'simSpeed', l: 'Скорость времени ×', min: 0.25, max: 8, step: 0.25, live: 1 },
     { k: 'label', l: 'Надпись «Will the ball escape?»', type: 'check', live: 1 },
     { k: 'debris', l: 'Осколки', type: 'check', live: 1 },
+    { k: 'notes', l: 'Ноты вместо звука удара: до, ре, ми, фа, соль, ля, си, до… (нужен включённый звук)', type: 'check', live: 1 },
     { k: 'sound', l: 'Звук', type: 'check', live: 1 },
     { k: 'auto', l: 'Начинать заново после побега', type: 'check', live: 1 }
   ],
@@ -46,7 +47,7 @@ Sims.register({
 
     const ringColor = k => 'hsl(' + (48 - 72 * k / Math.max(1, N - 1)) + ',95%,' + (56 - 4 * k / Math.max(1, N - 1)) + '%)';
 
-    function restart() {
+    function restart() { noteN = 0;
       N = cfg.rings | 0;
       radius = []; alive = []; runs = [];
       for (let k = 0; k < N; k++) { radius.push(R0 + (1 - R0) * k / Math.max(1, N - 1)); alive.push(new Uint8Array(B).fill(1)); }
@@ -105,6 +106,8 @@ Sims.register({
       }
     }
 
+    let noteN = 0;
+    function noteHit(power) { Sims.note(ctl.audio(), noteN++, power); }
     // ----- sound -----
     let lastBlip = 0;
     function blip(semi, power, dur, type) {
@@ -126,7 +129,7 @@ Sims.register({
       const now = performance.now();
       if (now - lastBlip < 35) return; lastBlip = now;
       const e = ev[ev.length - 1];
-      blip([0, 2, 4, 7, 9, 12, 14][e.k % 7] + 12 * (e.k > 6 ? 1 : 0), e.power);
+      if (cfg.notes) noteHit(e.power); else blip([0, 2, 4, 7, 9, 12, 14][e.k % 7] + 12 * (e.k > 6 ? 1 : 0), e.power);
     }
 
     // ----- render -----

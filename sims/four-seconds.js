@@ -7,7 +7,7 @@ Sims.register({
 
   defaults: {
     limit: 4, gap: 0.9, randomGap: true, gapAngle: 211, maxFrozen: 30, restartOnEscape: true, gravity: 1.2, speed: 1.6, ballR: 0.06, bounce: 1,
-    simSpeed: 1, caption: true, digit: true, stars: true, sound: true
+    simSpeed: 1, caption: true, digit: true, stars: true, sound: true, notes: false
   },
   schema: [
     { k: 'limit', l: 'Секунд на побег у каждого шарика', min: 1, max: 20, step: 1, live: 1 },
@@ -24,6 +24,7 @@ Sims.register({
     { k: 'caption', l: 'Надпись сверху', type: 'check', live: 1 },
     { k: 'digit', l: 'Цифра обратного отсчёта', type: 'check', live: 1 },
     { k: 'stars', l: 'Мелкие светящиеся точки на фоне', type: 'check', live: 1 },
+    { k: 'notes', l: 'Ноты вместо звука удара: до, ре, ми, фа, соль, ля, си, до… (нужен включённый звук)', type: 'check', live: 1 },
     { k: 'sound', l: 'Звук', type: 'check', live: 1 }
   ],
 
@@ -62,7 +63,7 @@ Sims.register({
       cycleStart = simT;
       gapAng = Math.random() * TAU;             // a new random gap for every ball
     }
-    function restart() {
+    function restart() { noteN = 0;
       simT = 0; idx = 0; dots = []; frozen = []; events = []; acc = 0; tries = 0; wins = 0; gapAng = 0;
       stars = [];
       for (let i = 0; i < 45; i++) stars.push({ x: (Math.random() - 0.5) * 3, y: (Math.random() - 0.5) * 3.4, vx: (Math.random() - 0.5) * 0.04, vy: (Math.random() - 0.5) * 0.04, a: 0.25 + Math.random() * 0.5 });
@@ -122,6 +123,8 @@ Sims.register({
       }
     }
 
+    let noteN = 0;
+    function noteHit(power) { Sims.note(ctl.audio(), noteN++, power); }
     // ----- sound -----
     let lastBlip = 0;
     function blip(semi, power, dur, type) {
@@ -142,7 +145,7 @@ Sims.register({
       if (win) { [0, 4, 7, 12].forEach((s, k) => setTimeout(() => blip(s + 12, 0.7, 0.35), k * 90)); return; }
       if (ev.some(e => e.fail)) { blip(-12, 0.5, 0.3, 'triangle'); return; }
       const now = performance.now(); if (now - lastBlip < 40) return; lastBlip = now;
-      blip([0, 3, 5, 7, 10][Math.floor(Math.random() * 5)] + 5, ev[ev.length - 1].hit, 0.12, 'triangle');
+      if (cfg.notes) noteHit(ev[ev.length - 1].hit); else blip([0, 3, 5, 7, 10][Math.floor(Math.random() * 5)] + 5, ev[ev.length - 1].hit, 0.12, 'triangle');
     }
 
     // ----- render -----

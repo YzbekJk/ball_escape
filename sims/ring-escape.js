@@ -9,7 +9,7 @@ Sims.register({
     layers: 28, innerR: 0.43, gap0: 0.8, gap1: 6.3, help: 80, erode: 3,
     twist: 0.08, spin: 0.6, spinVar: 0.5, reverse: true,
     ballR: 0.022, ballSpeed: 0.6, gravity: 0.7, bounce: 1,
-    simSpeed: 1, trail: true, sound: true, auto: true
+    simSpeed: 1, trail: true, sound: true, notes: false, auto: true
   },
   schema: [
     { k: 'layers', l: 'Количество колец', min: 6, max: 80, step: 1 },
@@ -28,6 +28,7 @@ Sims.register({
     { k: 'bounce', l: 'Упругость', min: 0.3, max: 1.2, step: 0.01, live: 1 },
     { k: 'simSpeed', l: 'Скорость времени ×', min: 0.25, max: 8, step: 0.25, live: 1 },
     { k: 'trail', l: 'Шлейф', type: 'check', live: 1 },
+    { k: 'notes', l: 'Ноты вместо звука удара: до, ре, ми, фа, соль, ля, си, до… (нужен включённый звук)', type: 'check', live: 1 },
     { k: 'sound', l: 'Звук', type: 'check', live: 1 },
     { k: 'auto', l: 'Начинать заново после побега', type: 'check', live: 1 }
   ],
@@ -55,7 +56,7 @@ Sims.register({
     let N, dr, innerR, t, th, omega, dead, dir, ball, escaped, escapedAt, events, bounds;
     let paused = false, acc = 0, last = 0, trail = [], raf = 0, alive = true, W = 0, H = 0, dpr = 1, S = 1;
 
-    function restart() {
+    function restart() { noteN = 0;
       N = cfg.layers | 0; innerR = cfg.innerR; dr = (1 - innerR) / N;
       t = 0; dir = 1; escaped = false; escapedAt = 0; events = []; trail = []; acc = 0;
       th = new Float64Array(N); omega = new Float64Array(N); dead = new Uint8Array(N);
@@ -130,6 +131,8 @@ Sims.register({
       }
     }
 
+    let noteN = 0;
+    function noteHit(power) { Sims.note(ctl.audio(), noteN++, power); }
     // ----- sound -----
     const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
     let lastBlip = 0, noteIdx = 0;
@@ -154,7 +157,7 @@ Sims.register({
       const e = ev[ev.length - 1];
       if (e.pop) { blip(19, 0.6, 0.25, 'sine'); return; }
       noteIdx = (noteIdx + 1 + (Math.random() * 2 | 0)) % SCALE.length;
-      blip(SCALE[noteIdx] - 12 + Math.round(e.k / N * 5), e.power);
+      if (cfg.notes) noteHit(e.power); else blip(SCALE[noteIdx] - 12 + Math.round(e.k / N * 5), e.power);
     }
 
     // ----- render -----

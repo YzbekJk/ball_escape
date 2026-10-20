@@ -7,7 +7,7 @@ Sims.register({
 
   defaults: {
     spikes: 24, spikeH: 0.085, gap: 0.75, gapAngle: 125, randomGap: true, randomStart: true, eps: 0.002, gravity: 1.0, speed: 1.1, ballR: 0.055,
-    bounce: 1.06, maxDead: 40, deadly: true, simSpeed: 1, title: false, sound: true, auto: true
+    bounce: 1.06, maxDead: 40, deadly: true, simSpeed: 1, title: false, sound: true, notes: false, auto: true
   },
   schema: [
     { k: 'spikes', l: 'Количество шипов', min: 6, max: 60, step: 1, live: 1 },
@@ -25,6 +25,7 @@ Sims.register({
     { k: 'maxDead', l: 'Сколько серых шариков держать', min: 3, max: 120, step: 1, live: 1 },
     { k: 'simSpeed', l: 'Скорость времени ×', min: 0.25, max: 6, step: 0.25, live: 1 },
     { k: 'title', l: 'Заголовок сверху', type: 'check', live: 1 },
+    { k: 'notes', l: 'Ноты вместо звука удара: до, ре, ми, фа, соль, ля, си, до… (нужен включённый звук)', type: 'check', live: 1 },
     { k: 'sound', l: 'Звук', type: 'check', live: 1 },
     { k: 'auto', l: 'Автоперезапуск после побега', type: 'check', live: 1 }
   ],
@@ -66,7 +67,7 @@ Sims.register({
         i: idx, alive: true
       };
     }
-    function restart() {
+    function restart() { noteN = 0;
       gapA = Math.random() * TAU;
       if (cfg.randomStart) {
         const r = Math.random() * 0.5, q = Math.random() * TAU;
@@ -153,6 +154,8 @@ Sims.register({
       }
     }
 
+    let noteN = 0;
+    function noteHit(power) { Sims.note(ctl.audio(), noteN++, power); }
     // ----- sound -----
     let lastBlip = 0;
     function blip(semi, power, dur, type) {
@@ -172,7 +175,7 @@ Sims.register({
       if (ev.some(e => e.win)) { [0, 4, 7, 12].forEach((s, k) => setTimeout(() => blip(s + 12, 0.7, 0.4), k * 100)); return; }
       if (ev.some(e => e.die)) { blip(-14, 0.5, 0.25, 'sawtooth'); return; }
       const now = performance.now(); if (now - lastBlip < 40) return; lastBlip = now;
-      blip([0, 3, 5, 7, 10][Math.floor(Math.random() * 5)] + 5, ev[ev.length - 1].hit, 0.12, 'triangle');
+      if (cfg.notes) noteHit(ev[ev.length - 1].hit); else blip([0, 3, 5, 7, 10][Math.floor(Math.random() * 5)] + 5, ev[ev.length - 1].hit, 0.12, 'triangle');
     }
 
     // ----- render -----

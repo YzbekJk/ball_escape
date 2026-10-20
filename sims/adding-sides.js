@@ -8,7 +8,7 @@ Sims.register({
 
   defaults: {
     sides0: 3, maxSides: 99, perBounce: 1, gravity: 4, speed: 1.5, ballR: 0.1, bounce: 1,
-    simSpeed: 1, name: true, trail: true, plus: true, sound: true, auto: true
+    simSpeed: 1, name: true, trail: true, plus: true, sound: true, notes: false, auto: true
   },
   schema: [
     { k: 'sides0', l: 'Начальное число сторон', min: 3, max: 12, step: 1 },
@@ -22,6 +22,7 @@ Sims.register({
     { k: 'name', l: 'Название фигуры в центре', type: 'check', live: 1 },
     { k: 'plus', l: 'Всплывающее «+1»', type: 'check', live: 1 },
     { k: 'trail', l: 'Размытый след', type: 'check', live: 1 },
+    { k: 'notes', l: 'Ноты вместо звука удара: до, ре, ми, фа, соль, ля, си, до… (нужен включённый звук)', type: 'check', live: 1 },
     { k: 'sound', l: 'Звук', type: 'check', live: 1 },
     { k: 'auto', l: 'Начинать заново, когда сторон станет максимум', type: 'check', live: 1 }
   ],
@@ -57,7 +58,7 @@ Sims.register({
     let n, ball, hitAt, popups, trail, events, hitCount, doneAt, simT;
     let paused = false, acc = 0, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, S = 1;
 
-    function restart() {
+    function restart() { noteN = 0;
       n = cfg.sides0 | 0; hitAt = new Float64Array(360).fill(-1e9);
       popups = []; trail = []; events = []; hitCount = 0; doneAt = null; simT = 0; acc = 0;
       const va = (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.5);
@@ -93,6 +94,8 @@ Sims.register({
       }
     }
 
+    let noteN = 0;
+    function noteHit(power) { Sims.note(ctl.audio(), noteN++, power); }
     // ----- sound -----
     const PENT = [0, 2, 4, 7, 9];
     let lastBlip = 0;
@@ -113,7 +116,7 @@ Sims.register({
       const now = performance.now();
       if (now - lastBlip < 40) return; lastBlip = now;
       const k = ev[ev.length - 1];
-      blip(PENT[k % 5] + 12 * Math.min(3, Math.floor(k / 25)));
+      if (cfg.notes) noteHit(0.5); else blip(PENT[k % 5] + 12 * Math.min(3, Math.floor(k / 25)));
     }
 
     // ----- render -----
