@@ -1,5 +1,6 @@
 /* Игра «Батуты»: шарик и точка стоят на заданных местах — уровни одинаковые у всех игроков.
    Уровень нельзя пройти без батутов (шарик в свободном падении не попадает в точку).
+   С 10 уровня появляются зелёные батуты: они фиксированы, шарик обязан отскочить от каждого, иначе точка не засчитывается.
    Рисуйте батуты пальцем и жмите «Пуск» — шарик должен попасть в точку. Таблица: кто прошёл больше уровней. */
 Sims.register({
   id: 'trampolines',
@@ -49,7 +50,7 @@ Sims.register({
     const TAU = Math.PI * 2;
     let W = 0, H = 0, dpr = 1, S = 1, OX = 0, OY = 0;
     const ww = 1, hh = 1.7, TOP = 118, BOT = 92;   /* fixed play field, the same for everyone */
-    let ball, start, target, tr, state, stateT, level, attempts, parts, trail, events, drag, simT;
+    let ball, start, target, tr, greens = [], state, stateT, level, attempts, parts, trail, events, drag, simT;
     let paused = false, acc = 0, last = 0, raf = 0, on = true;
     let btnRun = null, btnClear = null, btnReset = null, resetAsk = 0;
     /* progress: in the browser (per account nick, or as a guest) and, when logged in, on the server */
@@ -86,21 +87,39 @@ Sims.register({
         tries++;
       } while ((Math.hypot(bx - tx, by - ty) < minD || (Math.abs(bx - tx) < r + tr0 + 0.14 && ty > by - 0.1)) && tries < 2000);   /* straight fall must not reach the target */
       start = { x: bx, y: by }; target = { x: tx, y: ty };
+      greens = [];
+      if (level >= 10) {   /* from level 10: fixed green trampolines; the ball must bounce off every one of them before the target counts */
+        const seg = (cx, cy, a, len) => ({ x1: cx - Math.cos(a) * len / 2, y1: cy - Math.sin(a) * len / 2, x2: cx + Math.cos(a) * len / 2, y2: cy + Math.sin(a) * len / 2, g: true, hit: false });
+        const gx = Math.max(0.2, Math.min(0.8, bx + (R() - 0.5) * 0.08)), gy = Math.min(hh - 0.5, by + 0.3 + R() * 0.3);
+        const a1 = (gx < 0.5 ? 1 : -1) * (0.25 + R() * 0.3);
+        greens.push(seg(gx, gy, a1, 0.24));
+        if (level >= 30) {   /* second one lies on the flight path after the first bounce (default physics, so it is the same for everybody) */
+          const b2 = { x: bx, y: by, vx: 0, vy: 0 }, path = []; let bounced = false;
+          for (let k = 0; k < 1500; k++) {
+            b2.vy += 1.6 / 240; b2.x += b2.vx / 240; b2.y += b2.vy / 240;
+            if (segHit(b2, greens[0], 0.043, 1.1, true)) bounced = true;
+            if (bounced) path.push({ x: b2.x, y: b2.y });
+            if (b2.x < 0.1 || b2.x > ww - 0.1 || b2.y > hh - 0.3 || b2.y < 0.1) break;
+          }
+          const cand = path.slice(Math.floor(path.length * 0.35), Math.floor(path.length * 0.8)).filter(q => Math.hypot(q.x - tx, q.y - ty) > 0.2 && q.x > 0.15 && q.x < ww - 0.15);
+          if (cand.length) { const q = cand[Math.floor(R() * cand.length)]; greens.push(seg(q.x, q.y + 0.01, (q.x < 0.5 ? 1 : -1) * (0.3 + R() * 0.35), 0.22)); }
+        }
+      }
       tr = []; reset();
     }
     function reset() {
-      ball = { x: start.x, y: start.y, vx: 0, vy: 0 }; trail = []; state = 'plan'; stateT = 0; drag = null; simT = 0;
+      greens.forEach(g => { g.hit = false; }); ball = { x: start.x, y: start.y, vx: 0, vy: 0 }; trail = []; state = 'plan'; stateT = 0; drag = null; simT = 0;
     }
     function restart() { level = Math.max(1, level) - 1; attempts = 0; parts = []; events = []; layout(); newLevel(false); }
 
-    function segHit(b, s, r) {
+    function segHit(b, s, r, bounce, quiet) {
       const dx = s.x2 - s.x1, dy = s.y2 - s.y1, L2 = dx * dx + dy * dy;
       const t = Math.max(0, Math.min(1, ((b.x - s.x1) * dx + (b.y - s.y1) * dy) / L2));
       const px = s.x1 + dx * t, py = s.y1 + dy * t, ex = b.x - px, ey = b.y - py, d = Math.hypot(ex, ey);
       if (d >= r || d < 1e-9) return false;
       const nx = ex / d, ny = ey / d, vn = b.vx * nx + b.vy * ny;
       b.x = px + nx * r; b.y = py + ny * r;
-      if (vn < 0) { const j = (1 + cfg.trampBounce) * vn; b.vx -= j * nx; b.vy -= j * ny; events.push({ hit: Math.min(1, -vn / 2) }); }
+      if (vn < 0) { if (!quiet) s.hit = true; const j = (1 + (bounce == null ? cfg.trampBounce : bounce)) * vn; b.vx -= j * nx; b.vy -= j * ny; if (!quiet) events.push({ hit: Math.min(1, -vn / 2) }); }
       return true;
     }
     function burst(x, y, n, hue) {
@@ -124,7 +143,8 @@ Sims.register({
       if (b.y < r) { b.y = r; if (b.vy < 0) { b.vy = -b.vy * cfg.wallBounce; events.push({ hit: 0.3 }); } }
       if (cfg.floor && b.y > hh - r) { b.y = hh - r; if (b.vy > 0) { b.vy = -b.vy * cfg.wallBounce; events.push({ hit: 0.3 }); } }
       for (const s of tr) segHit(b, s, r + 0.008);
-      if (Math.hypot(b.x - target.x, b.y - target.y) < r + cfg.targetR) {
+      for (const s of greens) segHit(b, s, r + 0.008);
+      if (Math.hypot(b.x - target.x, b.y - target.y) < r + cfg.targetR && greens.every(q => q.hit)) {
         state = 'won'; stateT = 0; events.push({ win: true }); burst(target.x, target.y, 70, 90); if (ctl.submitScore) ctl.submitScore(level);
         return;
       }
@@ -225,10 +245,16 @@ Sims.register({
       ctx.fillStyle = 'rgba(255,255,255,.05)'; for (let i = 0; i < 30; i++) ctx.fillRect(((i * 97) % 100) / 100 * W, ((i * 53) % 100) / 100 * H, 2, 2);
       ctx.save(); ctx.translate(OX, OY);
       ctx.strokeStyle = cfg.wallDeath ? 'rgba(255,90,90,.45)' : 'rgba(255,255,255,.18)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.strokeRect(1, 1, S * ww - 2, S * hh - 2); ctx.setLineDash([]);
+      const locked = greens.some(q => !q.hit);
       // target
       const tx = target.x * S, ty = target.y * S, pulse = 1 + Math.sin(simT * 0 + performance.now() / 300) * 0.06;
-      ctx.strokeStyle = '#3dff8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(tx, ty, cfg.targetR * S * pulse * 1.5, 0, TAU); ctx.stroke();
-      ctx.fillStyle = '#3dff8a'; ctx.beginPath(); ctx.arc(tx, ty, cfg.targetR * S, 0, TAU); ctx.fill();
+      ctx.strokeStyle = locked ? 'rgba(61,255,138,.35)' : '#3dff8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(tx, ty, cfg.targetR * S * pulse * 1.5, 0, TAU); ctx.stroke();
+      ctx.fillStyle = locked ? 'rgba(61,255,138,.25)' : '#3dff8a'; ctx.beginPath(); ctx.arc(tx, ty, cfg.targetR * S, 0, TAU); ctx.fill();
+      greens.forEach(s => {
+        ctx.lineCap = 'round'; ctx.strokeStyle = s.hit ? '#b6ff5a' : '#2bbf3a'; ctx.lineWidth = 11; ctx.beginPath(); ctx.moveTo(s.x1 * S, s.y1 * S); ctx.lineTo(s.x2 * S, s.y2 * S); ctx.stroke();
+        ctx.strokeStyle = s.hit ? '#f4ffd8' : '#a9f5b0'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(s.x1 * S, s.y1 * S); ctx.lineTo(s.x2 * S, s.y2 * S); ctx.stroke();
+        ctx.fillStyle = '#0d3a14'; [s.x1, s.x2].forEach((x, i) => { ctx.beginPath(); ctx.arc(x * S, (i ? s.y2 : s.y1) * S, 4, 0, TAU); ctx.fill(); });
+      });
       // trampolines
       const all = drag ? tr.concat([drag]) : tr;
       ctx.lineCap = 'round';
@@ -250,7 +276,7 @@ Sims.register({
       ctx.fillText('Уровень ' + (level + 0) + ' · попыток: ' + attempts, W / 2, 80);
       if (state === 'plan') {
         ctx.fillStyle = 'rgba(207,214,230,.6)'; ctx.font = '500 ' + Math.max(12, Math.min(16, W * 0.036)) + 'px Inter, system-ui, sans-serif';
-        ctx.fillText('Рисуйте батуты пальцем · осталось: ' + Math.max(0, cfg.tramps - tr.length), W / 2, 106);
+        ctx.fillText('Рисуйте батуты пальцем · осталось: ' + Math.max(0, cfg.tramps - tr.length) + (greens.length ? ' · зелёные: ' + greens.filter(q => q.hit).length + '/' + greens.length : ''), W / 2, 106);
       }
       if (state === 'won') { ctx.fillStyle = '#3dff8a'; ctx.font = '800 ' + Math.min(48, W * 0.11) + 'px Inter, system-ui, sans-serif'; ctx.fillText('Попал!', W / 2, OY + S * hh * 0.4); }
       const rb = { w: 170, h: 30, x: W / 2 - 85, y: 12 }, asking = performance.now() < resetAsk;
@@ -276,7 +302,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { on = false; song.pause(); song.removeAttribute('src'); song.load(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up); },
-      debug: { step, next() { newLevel(false); }, get state() { return state; }, get level() { return level; }, get start() { return start; }, get target() { return target; }, get hh() { return hh; }, get ww() { return ww; }, get tr() { return tr; }, run() { state = 'run'; simT = 0; } }
+      debug: { step, next() { newLevel(false); }, get state() { return state; }, get level() { return level; }, get start() { return start; }, get target() { return target; }, get hh() { return hh; }, get ww() { return ww; }, get tr() { return tr; }, get greens() { return greens; }, reset, set tr(v) { tr = v; }, run() { state = 'run'; simT = 0; } }
     };
   }
 });
