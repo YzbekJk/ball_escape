@@ -15,12 +15,16 @@
       document.querySelectorAll('audio,video').forEach(a => { a.muted = m; });
       if (AM.actx) { if (m) { if (AM.actx.state === 'running') AM.actx.suspend(); } else if (AM.actx.state === 'suspended') AM.actx.resume(); }
     },
+    held: [],
+    hold() { AM.held = []; const all = new Set(AM.media); document.querySelectorAll('audio,video').forEach(a => all.add(a)); all.forEach(a => { if (!a.paused && !a.ended) { AM.held.push(a); a.pause(); } }); },
+    release() { const h = AM.held; AM.held = []; h.forEach(a => { try { const p = a.play(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }); },
+    drop() { AM.held = []; },
     toggleMute() { AM.setMuted(!AM.muted); return AM.muted; }
   };
   const OrigAudio = window.Audio;
   window.Audio = function (src) { const a = new OrigAudio(src); a.muted = AM.muted; AM.media.add(a); return a; };
   window.Audio.prototype = OrigAudio.prototype;
   const play = HTMLMediaElement.prototype.play;
-  HTMLMediaElement.prototype.play = function () { if (AM.muted) this.muted = true; return play.apply(this, arguments); };
+  HTMLMediaElement.prototype.play = function () { AM.media.add(this); if (AM.muted) this.muted = true; return play.apply(this, arguments); };
   window.AudioManager = AM;
 })();

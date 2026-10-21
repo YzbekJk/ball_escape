@@ -59,7 +59,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 94;
+  const APP_VERSION = 95;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
@@ -254,6 +254,10 @@
   $('btnPause').onclick = e => {
     current.paused = !current.paused; current.inst.setPaused(current.paused);
     e.target.textContent = current.paused ? 'ПРОДОЛЖИТЬ' : 'ПАУЗА';
+  };
+  window.GameHold = {
+    on() { const c = current; if (!c) return null; const did = !c.paused; if (did) $('btnPause').click(); AM.hold(); return { c, did }; },
+    off(h, keep) { if (!h) return; if (keep || current !== h.c) { AM.drop(); return; } if (h.did && current.paused) $('btnPause').click(); AM.release(); }
   };
   $('btnDefaults').onclick = () => { Object.assign(current.cfg, current.sim.defaults); refresh(); writeURL(); current.inst.restart(); };
   $('btnCopy').onclick = e => {

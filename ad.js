@@ -40,7 +40,7 @@
   }
 
   function show() {
-    if (showing) return; showing = true;
+    if (showing) return; showing = true; const hold = window.GameHold && GameHold.on();
     const T = [], at = (ms, f) => T.push(setTimeout(f, ms)); let tick = 0;
     const card = document.createElement('div'); card.className = 'pad';
     const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕';
@@ -54,9 +54,9 @@
     card.append(reel, btn, win, logo, x); document.body.appendChild(card);
     const place = p => { const w = card.clientWidth, tw = w / 3; strip.style.transform = 'translateX(' + (-(p * tw + tw / 2 - w / 2)) + 'px)'; };
     strip.style.transition = 'none'; place(2);
-    const close = () => { T.forEach(clearTimeout); try { if (voice) voice.pause(); } catch (e) { } card.classList.remove('in'); setTimeout(() => { card.remove(); showing = false; }, 400); };
+    const close = go => { T.forEach(clearTimeout); if (window.GameHold) GameHold.off(hold, go === true); try { if (voice) voice.pause(); } catch (e) { } card.classList.remove('in'); setTimeout(() => { card.remove(); showing = false; }, 400); };
     x.onclick = e => { e.stopPropagation(); close(); };
-    card.onclick = () => { close(); location.hash = '#/peach-drop'; };
+    card.onclick = () => { close(true); location.hash = '#/peach-drop'; };
     requestAnimationFrame(() => card.classList.add('in'));
     at(150, speak);
     at(600, () => { btn.classList.remove('gone'); tone(520, 0.12, 'triangle', 0.05, 780); });
