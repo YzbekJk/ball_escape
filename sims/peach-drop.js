@@ -37,21 +37,36 @@ Sims.register({
       { id: 'coco', ic: '🥥', n: 'Кокос', v: 100000, col: '#ffd24a' },
       { id: 'gold', ic: '🌟', n: 'Золотой персик', v: 300000, col: '#ff4a4a' },
       { id: 'dia', ic: '💎', n: 'Алмазный персик', v: 1000000, col: '#4af0ff' },
-      { id: 'plum', ic: '', n: 'Слива', v: 5000000, col: '#ff3df0' }
+      { id: 'plum', ic: '', n: 'Слива', v: 5000000, col: '#ff3df0' },
+      { id: 'blueberry', n: 'Черника', v: 8 }, { id: 'raspberry', n: 'Малина', v: 15 }, { id: 'lime', n: 'Лайм', v: 40 }, { id: 'banana', n: 'Банан', v: 90 },
+      { id: 'kiwi', n: 'Киви', v: 180 }, { id: 'apricot', n: 'Абрикос', v: 380 }, { id: 'pomegranate', n: 'Гранат', v: 750 }, { id: 'fig', n: 'Инжир', v: 1400 },
+      { id: 'persimmon', n: 'Хурма', v: 1900 }, { id: 'lychee', n: 'Личи', v: 3500 }, { id: 'avocado', n: 'Авокадо', v: 4500 }, { id: 'starfruit', n: 'Карамбола', v: 9500 },
+      { id: 'papaya', n: 'Папайя', v: 22000 }, { id: 'dragon', n: 'Питайя', v: 60000 }, { id: 'durian', n: 'Дуриан', v: 150000 }, { id: 'rainbow', n: 'Радужный фрукт', v: 2000000 }
     ];
+    FRUITS.sort((a, b) => a.v - b.v);
+    const tierCol = v => v < 50 ? '#9aa3b8' : v < 300 ? '#6fb0ff' : v < 1500 ? '#b07cff' : v < 8000 ? '#ff6fd0' : v < 50000 ? '#ff9a4a' : v < 250000 ? '#ffd24a' : v < 1e6 ? '#ff4a4a' : v < 3e6 ? '#4af0ff' : '#ff3df0';
+    FRUITS.forEach(f => { f.col = tierCol(f.v); });
     const FB = {}; FRUITS.forEach(f => FB[f.id] = f);
     const CRATES = [
-      { id: 'c1', n: 'Корзинка', w: { sorrel: 30, cherry: 35, straw: 22, lemon: 11, orange: 5, apple: 1 } },
-      { id: 'c2', n: 'Ящик', w: { sorrel: 5, cherry: 15, straw: 15, lemon: 20, orange: 20, apple: 15, pear: 7, peach: 3 } },
-      { id: 'c3', n: 'Золотой ящик', w: { apple: 20, pear: 25, peach: 25, pine: 15, mango: 9, melon: 4, grape: 2, plum: 0.004 } }
+      { id: 'c1', n: 'Корзинка', col: '#a8703a', rr: 0.92, w: { sorrel: 25, blueberry: 20, cherry: 25, raspberry: 14, straw: 10, lime: 5, lemon: 1 } },
+      { id: 'c2', n: 'Ящик', col: '#5a8ad8', rr: 0.94, w: { cherry: 10, straw: 15, lime: 12, lemon: 18, banana: 14, orange: 14, kiwi: 8, apple: 6, pear: 2, peach: 1 } },
+      { id: 'c3', n: 'Золотой ящик', col: '#d8a82a', rr: 0.95, w: { apple: 15, pear: 18, apricot: 15, pomegranate: 12, peach: 14, fig: 8, persimmon: 7, pine: 6, lychee: 3, mango: 2 } },
+      { id: 'c4', n: 'Тропический', col: '#2fb872', rr: 0.96, w: { lychee: 15, avocado: 15, mango: 16, pine: 14, starfruit: 14, melon: 10, papaya: 8, grape: 5, dragon: 3 } },
+      { id: 'c5', n: 'Королевский', col: '#a05ad8', rr: 0.97, w: { papaya: 20, melon: 20, grape: 20, dragon: 14, coco: 12, durian: 8, gold: 4, rainbow: 0.5 } },
+      { id: 'c6', n: 'Мифический', col: '#e0405a', rr: 0.98, w: { coco: 20, durian: 22, gold: 25, dia: 14, rainbow: 5, plum: 0.5 } }
     ];
-    CRATES.forEach(c => { let tw = 0, ev = 0; for (const k in c.w) { tw += c.w[k]; ev += c.w[k] * FB[k].v; } c.price = Math.max(5, Math.ceil(ev / tw / 0.93 / 5) * 5); });   // в среднем возвращается ~93% цены
+    CRATES.forEach(c => {
+      let tw = 0, ev = 0; for (const k in c.w) { tw += c.w[k]; ev += c.w[k] * FB[k].v; } const u = ev / tw / c.rr, unit = u < 1000 ? 5 : u < 20000 ? 50 : u < 300000 ? 500 : 5000;
+      c.price = Math.max(5, Math.ceil(u / unit) * unit);
+      c.rare = Object.keys(c.w).filter(k => FB[k].v >= c.price * 1.2);
+    });
+    const PITY = 8, DOUBLE = 0.08, SHOP_MS = 5 * 60 * 1000;
     const EDGE = 0.95, HARVEST_EVERY = 45, HARVEST = 15;
 
     let rng = Math.random;
-    const fresh = () => ({ coins: 100, inv: { cherry: 2 }, best: 0, spins: 0, wins: 0, harvestAt: 0, crates: 0 });
+    const fresh = () => ({ coins: 100, inv: { cherry: 2 }, best: 0, spins: 0, wins: 0, harvestAt: 0, crates: 0, pity: {}, shop: { slot: 0, offers: [] } });
     let S = fresh();
-    try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && typeof j.coins === 'number') S = Object.assign(S, j); } catch (e) { }
+    try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && typeof j.coins === 'number') S = Object.assign(S, j); } catch (e) { } S.pity = S.pity || {}; S.shop = S.shop || { slot: 0, offers: [] };
     const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } };
     const fmt = n => { n = Math.round(n); return n < 1000 ? String(n) : n < 1e6 ? (n / 1000).toFixed(n < 1e4 ? 1 : 0).replace(/\.0$/, '') + ' тыс.' : (n / 1e6).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + ' млн'; };
     const count = id => S.inv[id] || 0;
@@ -127,7 +142,7 @@ Sims.register({
     const coinLab = mk('span', null, 'Добавить монеты: 0'); coinRow.append(coinLab, coinRange); col.appendChild(coinRow);
     const go = mk('button', 'pd-btn go', 'УЛУЧШИТЬ'); col.appendChild(go);
     const tabs = mk('div', 'pd-tabs'); const tabBtns = {};
-    [['inv', 'Мои фрукты'], ['tg', 'Цель'], ['cr', 'Ящики']].forEach(([k, l]) => { const b = mk('button', 'pd-btn', l); b.onclick = () => { tab = k; render(); }; tabBtns[k] = b; tabs.appendChild(b); });
+    [['inv', 'Фрукты'], ['tg', 'Цель'], ['cr', 'Ящики'], ['sh', 'Магазин']].forEach(([k, l]) => { const b = mk('button', 'pd-btn', l); b.onclick = () => { tab = k; render(); }; tabBtns[k] = b; tabs.appendChild(b); });
     col.appendChild(tabs);
     const body = mk('div'); col.appendChild(body);
     col.appendChild(mk('div', 'pd-note', 'Монеты и фрукты в игре виртуальные: их нельзя купить за деньги или вывести. Шанс считается честно: сумма ваших фруктов и монет ÷ цена цели, минус 5% комиссии игры.'));
@@ -142,24 +157,43 @@ Sims.register({
     /* ----- действия ----- */
     function giveFruit(id, n) { S.inv[id] = count(id) + (n || 1); const f = FB[id]; if (f.v > S.best) S.best = f.v; }
     function takeFruit(id, n) { S.inv[id] = count(id) - n; if (S.inv[id] <= 0) delete S.inv[id]; }
+    function seedRng(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+    function genShop(slot) {
+      const R = seedRng(slot * 7919 + 13), pool = FRUITS.filter(f => f.v >= 8 && f.v <= 150000), offers = [], used = {};
+      for (let k = 0; k < 8; k++) { let f, g = 0; do { f = pool[Math.floor(Math.pow(R(), 1.3) * pool.length)]; } while (used[f.id] && ++g < 20); used[f.id] = 1; const sale = k < 2; offers.push({ id: f.id, price: Math.ceil(f.v * (sale ? 1.02 + R() * 0.06 : 1.2 + R() * 0.2)), left: sale ? 1 : f.v > 5000 ? 1 : 1 + Math.floor(R() * 3), tag: sale ? 'СКИДКА' : '' }); }
+      const big = FRUITS.filter(f => f.v > 150000 && f.v <= 2000000), bf = big[Math.floor(R() * big.length)]; if (bf) offers.push({ id: bf.id, price: Math.ceil(bf.v * 1.4), left: 1, tag: 'РЕДКОСТЬ' });
+      return offers;
+    }
+    function getShop() { const slot = Math.floor(Date.now() / SHOP_MS); if (S.shop.slot !== slot) { S.shop = { slot, offers: genShop(slot) }; save(); } return S.shop; }
+    function buyOffer(i) { const sh = getShop(), o = sh.offers[i]; if (!o || o.left <= 0 || S.coins < o.price || spinning) return false; S.coins -= o.price; o.left--; giveFruit(o.id, 1); save(); blip(600, 0.12, 'square', 0.04, 900); render(); return true; }
     let opening = false;
+    function rollCrate(c) {
+      const pool = (S.pity[c.id] || 0) >= PITY && c.rare.length ? c.rare : Object.keys(c.w); let tw = 0; pool.forEach(k => tw += c.w[k]); let r = rng() * tw, got = pool[0];
+      for (const k of pool) { r -= c.w[k]; if (r < 0) { got = k; break; } }
+      S.pity[c.id] = c.rare.includes(got) ? 0 : (S.pity[c.id] || 0) + 1; const dbl = rng() < DOUBLE; giveFruit(got, dbl ? 2 : 1); S.crates++; return { id: got, dbl };
+    }
     function openCrate(id) {
       const c = CRATES.find(q => q.id === id); if (!c || spinning || opening || S.coins < c.price) return null;
-      S.coins -= c.price; S.crates++; let tw = 0; for (const k in c.w) tw += c.w[k]; let r = rng() * tw, got = null;
-      for (const k in c.w) { r -= c.w[k]; if (r < 0) { got = k; break; } } if (!got) got = Object.keys(c.w)[0];
-      giveFruit(got, 1); save(); render(); crateAnim(c, got); return got;
+      S.coins -= c.price; const r = rollCrate(c); save(); render(); crateAnim(c, r.id, r.dbl); return r.id;
     }
-    function crateAnim(c, got) {
+    function openMany(id, n) {
+      const c = CRATES.find(q => q.id === id); if (!c || spinning || opening || S.coins < c.price * n) return null;
+      S.coins -= c.price * n; const res = {}; for (let i = 0; i < n; i++) { const r = rollCrate(c); res[r.id] = (res[r.id] || 0) + (r.dbl ? 2 : 1); } save(); render();
+      const m = mk('div', 'pd-modal'), card = mk('div', 'pd-card'); card.style.width = 'min(360px,92vw)'; const grid = mk('div', 'pd-grid'); grid.style.margin = '10px 0';
+      Object.keys(res).sort((a, b) => FB[b].v - FB[a].v).forEach(k => { const t = tile(FB[k], { cn: '×' + res[k] }); t.style.cursor = 'default'; grid.appendChild(t); });
+      const ok = mk('button', 'pd-btn', 'Забрать'); card.append(mk('h3', null, c.n + ' ×' + n), grid, ok); m.appendChild(card); root.appendChild(m); ok.onclick = () => m.remove(); blip(520, 0.25, 'triangle', 0.06, 900); return res;
+    }
+    function crateAnim(c, got, dbl) {
       opening = true; const keys = Object.keys(c.w), IT = 80, N = 38, WIN = 32;
       const m = mk('div', 'pd-modal'), card = mk('div', 'pd-card'); card.style.width = 'min(340px,90vw)';
       const title = mk('h3', null, c.n); const box = mk('div', 'pd-crate'); card.append(title, box);
       const reel = mk('div', 'pd-reel'), strip = mk('div', 'pd-strip'); reel.appendChild(strip); reel.appendChild(mk('div', 'pd-mark'));
-      for (let i = 0; i < N; i++) { const id = i === WIN ? got : keys[Math.floor(Math.random() * keys.length)], it = mk('div', 'pd-it'); it.style.borderColor = FB[id].col; it.appendChild(drawFruit(id, 52)); strip.appendChild(it); }
+      for (let i = 0; i < N; i++) { const id = i === WIN ? got : keys[Math.floor(Math.random() * keys.length)], it = mk('div', 'pd-it'); it.style.borderColor = FB[id].col; it.style.background = 'linear-gradient(' + FB[id].col + '33,transparent)'; it.appendChild(drawFruit(id, 52)); strip.appendChild(it); }
       const res = mk('p', null, ''), ok = mk('button', 'pd-btn', 'Забрать'); ok.style.visibility = 'hidden';
       card.append(reel, res, ok); m.appendChild(card); root.appendChild(m);
-      box.appendChild(drawFruit('crate', 70)); box.classList.add('shake'); blip(200, 0.25, 'square', 0.04, 120);
+      box.appendChild(drawFruit('crate', 70, c.col)); box.classList.add('shake'); blip(200, 0.25, 'square', 0.04, 120);
       let done = false;
-      const reveal = () => { if (done) return; done = true; opening = false; box.remove(); res.textContent = FB[got].n + ' (' + fmt(FB[got].v) + ' монет)'; res.style.cssText = 'font:800 16px system-ui;color:#fff'; ok.style.visibility = 'visible'; blip(520, 0.25, 'triangle', 0.06, 900); render(); };
+      const reveal = () => { if (done) return; done = true; opening = false; box.remove(); res.textContent = (dbl ? 'ДВОЙНОЙ ДРОП ×2: ' : '') + FB[got].n + ' (' + fmt(FB[got].v) + ' монет)'; res.style.textShadow = '0 0 14px ' + FB[got].col; res.style.color = FB[got].col; res.style.cssText += ';font:800 16px system-ui'; ok.style.visibility = 'visible'; blip(520, 0.25, 'triangle', 0.06, 900); render(); };
       const close = () => { if (!done) { strip.style.transition = 'none'; reveal(); } m.remove(); };
       ok.onclick = close;
       setTimeout(() => {
@@ -225,10 +259,22 @@ Sims.register({
           const ch = chanceFor(f), t = tile(f, { tg: target && target.id === f.id, no: s <= 0 || ch <= 0.004, ch: s > 0 ? (ch * 100).toFixed(ch < 0.1 ? 1 : 0).replace(/\.0$/, '') + '%' : null });
           t.onclick = () => { if (spinning) return; target = f; render(); }; grid.appendChild(t);
         }); body.appendChild(grid); if (!grid.children.length) body.appendChild(mk('p', 'pd-note', 'Нет целей дороже вложенного. Уменьшите вложение.'));
-      } else {
+      } else if (tab === 'cr') {
         CRATES.forEach(c => {
-          const r = mk('div', 'pd-row'), tx = mk('div', 'tx'); const ds = mk('div', 'ds', 'Может выпасть: '); Object.keys(c.w).forEach(k => { const w = drawFruit(k, 22); w.style.verticalAlign = 'middle'; ds.appendChild(w); }); tx.append(mk('div', 'nm', c.n), ds);
-          const b = mk('button', 'pd-btn', fmt(c.price) + ' монет'); b.disabled = S.coins < c.price || spinning; b.onclick = () => openCrate(c.id); r.append(tx, b); body.appendChild(r);
+          const r = mk('div', 'pd-row'), tx = mk('div', 'tx'), ic = mk('div'); ic.appendChild(drawFruit('crate', 40, c.col));
+          const ds = mk('div', 'ds', 'Может выпасть: '); Object.keys(c.w).sort((a, b) => FB[a].v - FB[b].v).forEach(k => { const w = drawFruit(k, 20); w.style.verticalAlign = 'middle'; ds.appendChild(w); });
+          const pl = S.pity[c.id] || 0; tx.append(mk('div', 'nm', c.n), ds, mk('div', 'ds', c.rare.length ? 'Редкий дроп гарантирован: ' + (pl >= PITY ? 'следующий!' : 'через ' + (PITY - pl)) + ' · шанс x2 дропа 8%' : 'Шанс x2 дропа 8%'));
+          const bx = mk('div'); bx.style.cssText = 'display:flex;flex-direction:column;gap:5px';
+          const b = mk('button', 'pd-btn', fmt(c.price) + ' монет'); b.disabled = S.coins < c.price || spinning || opening; b.onclick = () => openCrate(c.id);
+          const b5 = mk('button', 'pd-btn', '×5 · ' + fmt(c.price * 5)); b5.disabled = S.coins < c.price * 5 || spinning || opening; b5.onclick = () => openMany(c.id, 5); bx.append(b, b5); r.append(ic, tx, bx); body.appendChild(r);
+        });
+      } else {
+        const sh = getShop(), lf = Math.max(0, Math.ceil(((sh.slot + 1) * SHOP_MS - Date.now()) / 1000));
+        const tm = mk('p', 'pd-note', ''); tm.id = 'pdShopTimer'; tm.style.margin = '0 0 8px'; tm.textContent = 'Ассортимент обновится через ' + Math.floor(lf / 60) + ':' + String(lf % 60).padStart(2, '0'); body.appendChild(tm);
+        sh.offers.forEach((o, i) => {
+          const f = FB[o.id], r = mk('div', 'pd-row'), ic = mk('div'); ic.appendChild(drawFruit(o.id, 40)); const tx = mk('div', 'tx');
+          tx.append(mk('div', 'nm', f.n + (o.tag ? ' · ' + o.tag : '')), mk('div', 'ds', 'Цена фрукта ' + fmt(f.v) + ' · в наличии: ' + o.left));
+          const b = mk('button', 'pd-btn', o.left > 0 ? fmt(o.price) + ' монет' : 'Продано'); b.disabled = o.left <= 0 || S.coins < o.price || spinning; b.onclick = () => buyOffer(i); r.append(ic, tx, b); body.appendChild(r);
         });
       }
       const ch = anim ? anim.ch : target ? chanceFor(target) : 0; go.disabled = spinning || !target || s <= 0 || ch <= 0.004;
@@ -257,7 +303,7 @@ Sims.register({
         if (Math.floor(theta / 12) !== Math.floor(prev / 12)) blip(900 + (k * 400), 0.03, 'square', 0.02);
         drawWheel(); if (k >= 1) finish();
       }
-      hT += dt; if (hT > 1) { hT = 0; if (!spinning) { const left = Math.ceil((S.harvestAt + HARVEST_EVERY * 1000 - Date.now()) / 1000); harvest.disabled = left > 0; harvest.textContent = left > 0 ? 'Урожай через ' + left + ' с' : 'Собрать урожай +' + HARVEST; } }
+      hT += dt; if (hT > 1) { hT = 0; if (tab === 'sh' && !spinning && !opening) { const sh0 = S.shop.slot, nw = Math.floor(Date.now() / SHOP_MS); if (nw !== sh0) render(); else { const te = document.getElementById('pdShopTimer'); if (te) { const lf = Math.max(0, Math.ceil(((nw + 1) * SHOP_MS - Date.now()) / 1000)); te.textContent = 'Ассортимент обновится через ' + Math.floor(lf / 60) + ':' + String(lf % 60).padStart(2, '0'); } } } if (!spinning) { const left = Math.ceil((S.harvestAt + HARVEST_EVERY * 1000 - Date.now()) / 1000); harvest.disabled = left > 0; harvest.textContent = left > 0 ? 'Урожай через ' + left + ' с' : 'Собрать урожай +' + HARVEST; } }
       raf = requestAnimationFrame(frame);
     }
     function resize() { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; const g = ctx.createLinearGradient(0, 0, 0, canvas.height); g.addColorStop(0, '#2b1236'); g.addColorStop(1, '#140a1c'); ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height); drawWheel(); }
@@ -265,7 +311,7 @@ Sims.register({
     return {
       restart() { render(); }, resize, setPaused() { },
       destroy() { alive = false; save(); cancelAnimationFrame(raf); root.remove(); style.remove(); },
-      debug: { get S() { return S; }, FRUITS, CRATES, select(id, n) { sel[id] = n; render(); }, setTarget(id) { target = FB[id]; render(); }, addCoins(n) { addCoins = n; render(); }, upgrade, openCrate, sellSelected, finish, doHarvest, chance: () => (target ? chanceFor(target) : 0), set rng(f) { rng = f; }, get spinning() { return spinning; }, tick(ms) { if (anim) { anim.t = anim.dur; frame(performance.now() + ms); } }, get anim() { return anim; }, render }
+      debug: { getShop, buyOffer, openMany, rollCrate, get S() { return S; }, FRUITS, CRATES, select(id, n) { sel[id] = n; render(); }, setTarget(id) { target = FB[id]; render(); }, addCoins(n) { addCoins = n; render(); }, upgrade, openCrate, sellSelected, finish, doHarvest, chance: () => (target ? chanceFor(target) : 0), set rng(f) { rng = f; }, get spinning() { return spinning; }, tick(ms) { if (anim) { anim.t = anim.dur; frame(performance.now() + ms); } }, get anim() { return anim; }, render }
     };
   }
 });
