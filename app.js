@@ -22,7 +22,7 @@
     closeSim();
     view.hidden = true; menu.hidden = false; menu.scrollTop = 0;
     const cards = $('cards'); cards.innerHTML = ''; cards.className = '';
-    const back = $('menuBack'); $('plumBtn').hidden = !!section;
+    const back = $('menuBack'); $('plumBtn').hidden = !!section; $('phBtn').hidden = !!section;
     if (!section) {                                   // home: pick a section
       document.title = 'Свингейм'; $('menuTitle').textContent = 'Свингейм'; $('menuSub').textContent = 'Что хотите открыть?';
       back.hidden = true; cards.className = 'home';
@@ -59,7 +59,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 97;
+  const APP_VERSION = 98;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
@@ -239,13 +239,22 @@
   function route() {
     const m = location.hash.match(/^#\/([\w-]+)/), id = m && m[1];
     if (id && SECTIONS[id]) showMenuPage(id);
-    else if (id && Sims.get(id)) openSim(id);
+    else if (id && Sims.get(id)) { if (PASS[id] && !unlocked(id) && !askPass(id)) { location.hash = '#/'; return; } openSim(id); }
     else showMenuPage(null);
   }
 
   // ---------- buttons ----------
   $('btnBack').onclick = () => { location.hash = current.sim.secret ? '#/' : '#/' + sectionOfKind(kindOf(current.sim)); };
   $('plumBtn').onclick = () => { location.hash = '#/plum-clicker'; };
+  const PASS = { filipinets: '43' };
+  const unlocked = id => { try { return sessionStorage.getItem('unl_' + id) === '1'; } catch (e) { return false; } };
+  function askPass(id) {
+    const v = prompt('Введите пароль');
+    if (v === null) return false;
+    if (v.trim() === PASS[id]) { try { sessionStorage.setItem('unl_' + id, '1'); } catch (e) { } return true; }
+    alert('Неверный пароль'); return false;
+  }
+  $('phBtn').onclick = () => { if (unlocked('filipinets') || askPass('filipinets')) location.hash = '#/filipinets'; };
   $('menuBack').onclick = () => { location.hash = '#/'; };
   $('btnGear').onclick = () => { panel.hidden = !panel.hidden; initAudio(); };
   $('btnClose').onclick = () => { panel.hidden = true; };

@@ -33,11 +33,22 @@
     const n = a.currentTime, o = a.createOscillator(), g = a.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(f, n); if (slide) o.frequency.exponentialRampToValueAtTime(slide, n + d);
     g.gain.setValueAtTime(0.0001, n); g.gain.exponentialRampToValueAtTime(v || 0.04, n + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, n + d); o.connect(g); g.connect(a.destination); o.start(n); o.stop(n + d + 0.02);
   }
-  let voice = null;
+  let voice = null, vbuf = null, vsrc = null, vload = false;
+  function preload() {
+    if (vbuf || vload || !AM || !AM.actx) return; vload = true;
+    fetch('assets/peach-ad-voice.mp3').then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => AM.actx.decodeAudioData(b, ok, no))).then(d => { vbuf = d; }).catch(() => { vload = false; });
+  }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { try { AM && AM.init(); } catch (e) { } preload(); }, { capture: true, passive: true }));
   function speak() {
     if (AM && AM.muted) return;
-    try { if (!voice) voice = new Audio('assets/peach-ad-voice.mp3'); voice.currentTime = 0; voice.muted = !!(AM && AM.muted); voice.volume = 1; const p = voice.play(); if (p && p.catch) p.catch(() => { }); } catch (e) { }
+    try {
+      const a = AM && AM.init();
+      if (a && a.state === 'running' && vbuf) { vsrc = a.createBufferSource(); vsrc.buffer = vbuf; const g = a.createGain(); g.gain.value = 1; vsrc.connect(g); g.connect(a.destination); vsrc.start(); return; }
+      preload();
+      if (!voice) voice = new Audio('assets/peach-ad-voice.mp3'); voice.currentTime = 0; voice.muted = false; voice.volume = 1; const p = voice.play(); if (p && p.catch) p.catch(() => { });
+    } catch (e) { }
   }
+  function stopVoice() { try { if (vsrc) vsrc.stop(); } catch (e) { } vsrc = null; try { if (voice) voice.pause(); } catch (e) { } }
 
   function show() {
     if (showing) return; showing = true; const hold = window.GameHold && GameHold.on();
@@ -54,7 +65,7 @@
     card.append(reel, btn, win, logo, x); document.body.appendChild(card);
     const place = p => { const w = card.clientWidth, tw = w / 3; strip.style.transform = 'translateX(' + (-(p * tw + tw / 2 - w / 2)) + 'px)'; };
     strip.style.transition = 'none'; place(2);
-    const close = go => { T.forEach(clearTimeout); if (window.GameHold) GameHold.off(hold, go === true); try { if (voice) voice.pause(); } catch (e) { } card.classList.remove('in'); setTimeout(() => { card.remove(); showing = false; }, 400); };
+    const close = go => { T.forEach(clearTimeout); if (window.GameHold) GameHold.off(hold, go === true); stopVoice(); card.classList.remove('in'); setTimeout(() => { card.remove(); showing = false; }, 400); };
     x.onclick = e => { e.stopPropagation(); close(); };
     card.onclick = () => { close(true); location.hash = '#/peach-drop'; };
     requestAnimationFrame(() => card.classList.add('in'));

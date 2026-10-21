@@ -115,3 +115,6 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 .midiRow .nm{flex:1 1 100%}
 .midiPick{font-size:12px;padding:6px 10px;border-radius:8px}
 .midiPick.del{opacity:.7}
+
+.phBtn{width:40px;height:40px;padding:0;border-radius:50%;font:800 11px system-ui;letter-spacing:.04em;flex:none;opacity:.7}
+.phBtn[hidden]{display:none}
