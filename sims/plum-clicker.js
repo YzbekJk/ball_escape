@@ -186,7 +186,11 @@ Sims.register({
       S = Object.assign(fresh(), keep); S.plums = 1e4 * plv('pstart');  frenzy = 0; save(); say('Перерождение! +' + g + ' косточек'); blip(330, 0.5, 'sine', 0.07, 990); checkAch(); refreshRows();
     }
     const rs = document.createElement('button'); rs.className = 'pc-reset'; rs.textContent = 'Сбросить весь прогресс'; panel.appendChild(rs);
-    rs.onclick = () => { if (confirm('Сбросить ВЕСЬ прогресс сливового кликера, включая косточки и достижения?')) { S = fresh(); frenzy = 0; save(); refreshRows(); } };
+    const RKEY = 'plum_reset_at', RCD = 5 * 60 * 1000;
+    const resetLeft = () => { let t = 0; try { t = +localStorage.getItem(RKEY) || 0; } catch (e) { } return Math.max(0, Math.ceil((t + RCD - Date.now()) / 1000)); };
+    const resetLabel = () => { const l = resetLeft(); rs.textContent = l > 0 ? 'Сброс будет доступен через ' + Math.floor(l / 60) + ':' + String(l % 60).padStart(2, '0') : 'Сбросить весь прогресс'; rs.style.opacity = l > 0 ? 0.4 : 1; };
+    rs.onclick = () => { if (resetLeft() > 0) { resetLabel(); return; } if (confirm('Сбросить ВЕСЬ прогресс сливового кликера, включая косточки и достижения? Следующий сброс будет доступен только через 5 минут.')) { S = fresh(); frenzy = 0; try { localStorage.setItem(RKEY, String(Date.now())); } catch (e) { } save(); refreshRows(); resetLabel(); } };
+    resetLabel(); const rsIv = setInterval(resetLabel, 1000);
 
     function priceFor(def, kind) {
       if (kind === 'mult') return { n: S.up[def.id] ? 0 : 1, cost: def.cost };
@@ -331,7 +335,7 @@ Sims.register({
       restart() { layout(); refreshRows(); },
       resize,
       setPaused(p) { paused = p; },
-      destroy() { alive = false; save(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); removeEventListener('keydown', onKey); removeEventListener('pagehide', onHide); root.remove(); style.remove(); },
+      destroy() { alive = false; clearInterval(rsIv); save(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); removeEventListener('keydown', onKey); removeEventListener('pagehide', onHide); root.remove(); style.remove(); },
       debug: { clickPlum, buy, tick, catchGold, rebirth, checkAch, pitGain, get ach() { return S.ach; }, get S() { return S; }, get cps() { return cps(); }, get click() { return clickPower(); }, fmt, rows, get gold() { return gold; }, set gold(v) { gold = v; } }
     };
   }

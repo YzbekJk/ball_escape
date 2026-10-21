@@ -147,7 +147,11 @@ Sims.register({
     const body = mk('div'); col.appendChild(body);
     col.appendChild(mk('div', 'pd-note', 'Монеты и фрукты в игре виртуальные: их нельзя купить за деньги или вывести. Шанс считается честно: сумма ваших фруктов и монет ÷ цена цели, минус 5% комиссии игры.'));
     const reset = mk('button', 'pd-btn', 'Сбросить прогресс'); reset.style.cssText = 'display:block;margin:14px auto 0;opacity:.6'; col.appendChild(reset);
-    reset.onclick = () => { if (confirm('Сбросить весь прогресс «Персик дроп»?')) { S = fresh(); sel = {}; addCoins = 0; target = null; save(); render(); } };
+    const RKEY = 'peach_reset_at', RCD = 5 * 60 * 1000;
+    const resetLeft = () => { let t = 0; try { t = +localStorage.getItem(RKEY) || 0; } catch (e) { } return Math.max(0, Math.ceil((t + RCD - Date.now()) / 1000)); };
+    const resetLabel = () => { const l = resetLeft(); reset.textContent = l > 0 ? 'Сброс будет доступен через ' + Math.floor(l / 60) + ':' + String(l % 60).padStart(2, '0') : 'Сбросить прогресс'; reset.style.opacity = l > 0 ? 0.35 : 0.6; };
+    reset.onclick = () => { if (resetLeft() > 0) { resetLabel(); return; } if (confirm('Сбросить весь прогресс «Персик дроп»? Следующий сброс будет доступен только через 5 минут.')) { S = fresh(); sel = {}; addCoins = 0; target = null; try { localStorage.setItem(RKEY, String(Date.now())); } catch (e) { } save(); render(); } };
+    resetLabel();
 
     function toast(icon, title, text) {
       const m = mk('div', 'pd-modal'), c = mk('div', 'pd-card'); const ice = mk('div', 'ic'); if (typeof icon === 'string') ice.textContent = icon; else ice.appendChild(drawFruit(icon, 72)); c.append(ice, mk('h3', null, title), mk('p', null, text)); const ok = mk('button', 'pd-btn', 'Ок'); c.appendChild(ok); m.appendChild(c); root.appendChild(m);
@@ -244,7 +248,7 @@ Sims.register({
       coinRange.max = Math.max(0, S.coins); coinRange.value = addCoins; coinRange.disabled = spinning; coinLab.textContent = 'Добавить монеты: ' + fmt(addCoins);
       const s = anim ? anim.sum : selSum(), names = Object.keys(sel).map(k => FB[k].n + '×' + sel[k]).join(' ');
       sumEl.textContent = anim ? 'Вложено: ' + anim.names + ' = ' + fmt(anim.sum) : s > 0 ? 'Вложено: ' + (names ? names + ' ' : '') + (addCoins ? '+ ' + fmt(addCoins) + ' монет ' : '') + '= ' + fmt(s) : 'Выберите фрукты на вкладке «Мои фрукты» и цель на вкладке «Цель»';
-      Object.keys(tabBtns).forEach(k => tabBtns[k].classList.toggle('on', k === tab));
+      resetLabel(); Object.keys(tabBtns).forEach(k => tabBtns[k].classList.toggle('on', k === tab));
       body.textContent = '';
       if (tab === 'inv') {
         const ids = FRUITS.filter(f => count(f.id) > 0);
@@ -303,7 +307,7 @@ Sims.register({
         if (Math.floor(theta / 12) !== Math.floor(prev / 12)) blip(900 + (k * 400), 0.03, 'square', 0.02);
         drawWheel(); if (k >= 1) finish();
       }
-      hT += dt; if (hT > 1) { hT = 0; if (tab === 'sh' && !spinning && !opening) { const sh0 = S.shop.slot, nw = Math.floor(Date.now() / SHOP_MS); if (nw !== sh0) render(); else { const te = document.getElementById('pdShopTimer'); if (te) { const lf = Math.max(0, Math.ceil(((nw + 1) * SHOP_MS - Date.now()) / 1000)); te.textContent = 'Ассортимент обновится через ' + Math.floor(lf / 60) + ':' + String(lf % 60).padStart(2, '0'); } } } if (!spinning) { const left = Math.ceil((S.harvestAt + HARVEST_EVERY * 1000 - Date.now()) / 1000); harvest.disabled = left > 0; harvest.textContent = left > 0 ? 'Урожай через ' + left + ' с' : 'Собрать урожай +' + HARVEST; } }
+      hT += dt; if (hT > 1) { hT = 0; resetLabel(); if (tab === 'sh' && !spinning && !opening) { const sh0 = S.shop.slot, nw = Math.floor(Date.now() / SHOP_MS); if (nw !== sh0) render(); else { const te = document.getElementById('pdShopTimer'); if (te) { const lf = Math.max(0, Math.ceil(((nw + 1) * SHOP_MS - Date.now()) / 1000)); te.textContent = 'Ассортимент обновится через ' + Math.floor(lf / 60) + ':' + String(lf % 60).padStart(2, '0'); } } } if (!spinning) { const left = Math.ceil((S.harvestAt + HARVEST_EVERY * 1000 - Date.now()) / 1000); harvest.disabled = left > 0; harvest.textContent = left > 0 ? 'Урожай через ' + left + ' с' : 'Собрать урожай +' + HARVEST; } }
       raf = requestAnimationFrame(frame);
     }
     function resize() { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; const g = ctx.createLinearGradient(0, 0, 0, canvas.height); g.addColorStop(0, '#2b1236'); g.addColorStop(1, '#140a1c'); ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height); drawWheel(); }
