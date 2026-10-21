@@ -61,6 +61,32 @@ Sims.register({
     const chanceFor = t => { const s = selSum(); return s <= 0 ? 0 : Math.max(0, Math.min(0.9, EDGE * s / t.v)); };
     const clean = () => { for (const k in sel) { sel[k] = Math.min(sel[k], count(k)); if (sel[k] <= 0) delete sel[k]; } addCoins = Math.min(addCoins, S.coins); };
 
+
+    function drawFruit(id, px) {
+      const c = document.createElement('canvas'), d = Math.min(window.devicePixelRatio || 1, 2); c.width = c.height = Math.round(px * d); c.style.width = c.style.height = px + 'px';
+      const x = c.getContext('2d'); x.scale(c.width / 100, c.height / 100); x.lineJoin = x.lineCap = 'round';
+      const ell = (cx, cy, rx, ry, col, rot) => { x.fillStyle = col; x.beginPath(); x.ellipse(cx, cy, rx, ry, rot || 0, 0, 7); x.fill(); };
+      const leaf = (cx, cy, rot, col) => ell(cx, cy, 14, 6, col || '#3fa84a', rot);
+      const shine = (cx, cy, r) => ell(cx, cy, r, r * 0.6, 'rgba(255,255,255,.45)', -0.6);
+      const stem = (x1, y1, x2, y2) => { x.strokeStyle = '#6b4226'; x.lineWidth = 5; x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2); x.stroke(); };
+      const out = (col) => { x.strokeStyle = col || 'rgba(0,0,0,.28)'; x.lineWidth = 3; x.stroke(); };
+      if (id === 'cherry') { stem(32, 66, 52, 18); stem(70, 68, 52, 18); ell(32, 70, 19, 19, '#d4203a'); ell(70, 72, 19, 19, '#b5162e'); shine(26, 63, 6); shine(64, 65, 6); leaf(62, 18, -0.3); }
+      else if (id === 'straw') { x.fillStyle = '#e0243a'; x.beginPath(); x.moveTo(18, 34); x.quadraticCurveTo(50, 22, 82, 34); x.quadraticCurveTo(76, 70, 50, 90); x.quadraticCurveTo(24, 70, 18, 34); x.fill(); x.fillStyle = '#ffe9a0'; [[36, 46], [52, 44], [66, 48], [44, 60], [58, 62], [50, 76]].forEach(q => ell(q[0], q[1], 2.6, 3.6, '#ffe9a0')); ell(50, 28, 22, 8, '#3fa84a'); ell(36, 24, 8, 5, '#3fa84a', -0.5); ell(64, 24, 8, 5, '#3fa84a', 0.5); }
+      else if (id === 'lemon') { x.fillStyle = '#ffe14a'; x.beginPath(); x.moveTo(8, 52); x.quadraticCurveTo(18, 22, 50, 22); x.quadraticCurveTo(82, 22, 92, 52); x.quadraticCurveTo(82, 82, 50, 82); x.quadraticCurveTo(18, 82, 8, 52); x.fill(); out('#c9a800'); shine(38, 40, 10); leaf(66, 24, -0.4); }
+      else if (id === 'orange') { ell(50, 56, 36, 36, '#ff9420'); out('#c9680a'); shine(36, 42, 10); leaf(56, 20, 0.2); x.fillStyle = '#3fa84a'; ell(50, 22, 4, 4, '#3fa84a'); }
+      else if (id === 'apple') { ell(36, 56, 28, 32, '#e02a2a'); ell(64, 56, 28, 32, '#d02020'); ell(50, 64, 30, 26, '#e02a2a'); shine(34, 46, 8); stem(50, 30, 54, 12); leaf(66, 18, -0.4); }
+      else if (id === 'pear') { ell(50, 70, 30, 26, '#a8d234'); ell(50, 40, 18, 22, '#b6dc3c'); shine(40, 64, 8); stem(50, 20, 54, 8); leaf(66, 16, -0.4); }
+      else if (id === 'peach') { ell(50, 56, 36, 34, '#ffb48a'); ell(66, 60, 22, 28, '#ff7d8f'); x.strokeStyle = 'rgba(160,50,60,.5)'; x.lineWidth = 3; x.beginPath(); x.moveTo(50, 24); x.quadraticCurveTo(40, 56, 52, 88); x.stroke(); shine(34, 44, 8); leaf(62, 20, -0.5); stem(50, 26, 50, 16); }
+      else if (id === 'pine') { ell(50, 62, 26, 32, '#f2b823'); x.strokeStyle = '#b57c10'; x.lineWidth = 2.5; for (let i = -3; i <= 3; i++) { x.beginPath(); x.moveTo(30 + i * 8, 36); x.lineTo(70 + i * 8, 90); x.moveTo(70 + i * 8, 36); x.lineTo(30 + i * 8, 90); x.stroke(); } x.fillStyle = '#3fa84a'; [[-22, -0.6], [-10, -0.25], [0, 0], [10, 0.25], [22, 0.6]].forEach(q => ell(50 + q[0] * 0.7, 18, 5, 16, '#3fa84a', q[1])); }
+      else if (id === 'mango') { ell(50, 56, 38, 28, '#ffa31f', -0.5); ell(60, 62, 24, 18, '#ff5b3a', -0.5); shine(34, 46, 8); leaf(66, 22, 0.4, '#2f8f45'); }
+      else if (id === 'melon') { x.fillStyle = '#2f8f45'; x.beginPath(); x.arc(50, 30, 44, 0, Math.PI); x.fill(); x.fillStyle = '#d9f0a8'; x.beginPath(); x.arc(50, 30, 38, 0, Math.PI); x.fill(); x.fillStyle = '#ff4a5a'; x.beginPath(); x.arc(50, 30, 33, 0, Math.PI); x.fill(); x.fillStyle = '#2a1410'; [[34, 46], [50, 56], [66, 46], [42, 36], [58, 38]].forEach(q => ell(q[0], q[1], 2.4, 3.6, '#2a1410', 0.3)); }
+      else if (id === 'grape') { [[36, 38], [64, 38], [50, 40], [28, 58], [50, 60], [72, 58], [40, 78], [60, 78], [50, 92]].forEach((q, i) => { ell(q[0], q[1] - 6, 13, 13, i % 2 ? '#8e3fd0' : '#7a2fc0'); ell(q[0] - 4, q[1] - 10, 3.5, 3.5, 'rgba(255,255,255,.5)'); }); stem(50, 28, 52, 10); leaf(66, 14, -0.3); }
+      else if (id === 'coco') { ell(50, 54, 38, 38, '#7a4a28'); out('#4a2a12'); ell(50, 54, 28, 28, '#f6f0e4'); ell(36, 46, 4.5, 5.5, '#4a2a12'); ell(52, 42, 4.5, 5.5, '#4a2a12'); ell(46, 60, 4.5, 5.5, '#4a2a12'); }
+      else if (id === 'gold') { ell(50, 56, 36, 34, '#ffd24a'); ell(66, 60, 22, 28, '#f0a21a'); out('#9a6a00'); leaf(62, 20, -0.5, '#ffe58a'); x.fillStyle = '#fff'; x.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? 4 : 11; x.lineTo(34 + Math.cos(a) * r, 40 + Math.sin(a) * r); } x.fill(); }
+      else if (id === 'dia') { x.fillStyle = '#5ae6ff'; x.beginPath(); x.moveTo(24, 22); x.lineTo(76, 22); x.lineTo(92, 42); x.lineTo(50, 92); x.lineTo(8, 42); x.closePath(); x.fill(); out('#1a8fb0'); x.fillStyle = '#c4f6ff'; x.beginPath(); x.moveTo(24, 22); x.lineTo(40, 42); x.lineTo(50, 22); x.lineTo(60, 42); x.lineTo(76, 22); x.lineTo(92, 42); x.lineTo(8, 42); x.closePath(); x.fill(); x.strokeStyle = '#1a8fb0'; x.lineWidth = 2; x.beginPath(); x.moveTo(8, 42); x.lineTo(92, 42); x.moveTo(40, 42); x.lineTo(50, 92); x.lineTo(60, 42); x.stroke(); }
+      return c;
+    }
+
     /* ----- звук ----- */
     function blip(f, dur, type, vol, slide) {
       if (!cfg.sound) return; const a = ctl.audio(); if (!a || a.state !== 'running') return;
@@ -80,9 +106,9 @@ Sims.register({
       .pd-btn.go{background:#2f9a4f;border-color:#58e08a;font-size:17px;padding:13px 0;width:100%;margin-top:8px}
       .pd-btn.go:disabled{background:#2a3a30;border-color:#3a5a46}
       .pd-wheelbox{position:relative;width:min(300px,86vw);height:min(300px,86vw);margin:4px auto}
-      .pd-wheelbox canvas{position:absolute;inset:0;width:100%;height:100%}
+      .pd-wheelbox>canvas:first-child{position:absolute;inset:0;width:100%;height:100%}
       .pd-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
-      .pd-mid .big{font:900 34px system-ui}.pd-mid .sm{font:600 12px system-ui;color:#cdb2e4}.pd-mid .fr{font-size:38px;margin-bottom:2px}
+      .pd-mid .big{font:900 34px system-ui}.pd-mid .sm{font:600 12px system-ui;color:#cdb2e4}
       .pd-sum{text-align:center;font:600 13px system-ui;color:#d9c2ee;min-height:36px;margin:2px 0 4px}
       .pd-tabs{display:flex;gap:6px;margin:14px 0 8px}.pd-tabs button{flex:1}
       .pd-tabs button.on{background:#7b3fb8;border-color:#c79bff}
@@ -123,7 +149,7 @@ Sims.register({
     reset.onclick = () => { if (confirm('Сбросить весь прогресс «Персик дроп»?')) { S = fresh(); sel = {}; addCoins = 0; target = null; save(); render(); } };
 
     function toast(icon, title, text) {
-      const m = mk('div', 'pd-modal'), c = mk('div', 'pd-card'); c.append(mk('div', 'ic', icon), mk('h3', null, title), mk('p', null, text)); const ok = mk('button', 'pd-btn', 'Ок'); c.appendChild(ok); m.appendChild(c); root.appendChild(m);
+      const m = mk('div', 'pd-modal'), c = mk('div', 'pd-card'); const ice = mk('div', 'ic'); if (typeof icon === 'string') ice.textContent = icon; else ice.appendChild(drawFruit(icon, 72)); c.append(ice, mk('h3', null, title), mk('p', null, text)); const ok = mk('button', 'pd-btn', 'Ок'); c.appendChild(ok); m.appendChild(c); root.appendChild(m);
       const close = () => m.remove(); ok.onclick = close; m.addEventListener('pointerdown', e => { if (e.target === m) close(); });
     }
 
@@ -135,7 +161,7 @@ Sims.register({
       S.coins -= c.price; S.crates++; let tw = 0; for (const k in c.w) tw += c.w[k]; let r = rng() * tw, got = null;
       for (const k in c.w) { r -= c.w[k]; if (r < 0) { got = k; break; } } if (!got) got = Object.keys(c.w)[0];
       giveFruit(got, 1); save(); blip(520, 0.2, 'triangle', 0.06, 900);
-      toast(FB[got].ic, FB[got].n, 'Из ящика «' + c.n + '» выпало (' + fmt(FB[got].v) + ' монет)'); render(); return got;
+      toast(got, FB[got].n, 'Из ящика «' + c.n + '» выпало (' + fmt(FB[got].v) + ' монет)'); render(); return got;
     }
     function sellSelected() {
       if (spinning) return; const s = Object.keys(sel).reduce((a, k) => a + FB[k].v * sel[k], 0); if (!s) return;
@@ -152,8 +178,8 @@ Sims.register({
     }
     function finish() {
       const a = anim; anim = null; spinning = false; theta = a.to % 360;
-      if (a.win) { giveFruit(a.target.id, 1); S.wins++; blip(660, 0.5, 'triangle', 0.07, 1320); toast(a.target.ic, 'Победа!', 'Вы получили: ' + a.target.n + ' (' + fmt(a.target.v) + ')'); }
-      else { blip(180, 0.5, 'sawtooth', 0.05, 70); toast('💨', 'Не повезло', 'Выбранные фрукты и монеты сгорели. Попробуйте ещё раз!'); }
+      if (a.win) { giveFruit(a.target.id, 1); S.wins++; blip(660, 0.5, 'triangle', 0.07, 1320); toast(a.target.id, 'Победа!', 'Вы получили: ' + a.target.n + ' (' + fmt(a.target.v) + ')'); }
+      else { blip(180, 0.5, 'sawtooth', 0.05, 70); toast('✕', 'Не повезло', 'Выбранные фрукты и монеты сгорели. Попробуйте ещё раз!'); }
       if (!bestId() && S.coins < 10) { S.coins += HARVEST; }
       save(); render();
     }
@@ -167,16 +193,16 @@ Sims.register({
     /* ----- отрисовка интерфейса ----- */
     function tile(f, opts) {
       const t = mk('button', 'pd-tile' + (opts.on ? ' on' : '') + (opts.tg ? ' tg' : '') + (opts.no ? ' no' : ''));
-      t.style.borderColor = opts.tg ? '#58e08a' : f.col; t.append(mk('div', 'ic', f.ic), mk('div', 'nm', f.n), mk('div', opts.ch != null ? 'ch' : 'vl', opts.ch != null ? opts.ch : fmt(f.v)));
+      t.style.borderColor = opts.tg ? '#58e08a' : f.col; const ic = mk('div', 'ic'); ic.appendChild(drawFruit(f.id, 40)); t.append(ic, mk('div', 'nm', f.n), mk('div', opts.ch != null ? 'ch' : 'vl', opts.ch != null ? opts.ch : fmt(f.v)));
       if (opts.cn) t.appendChild(mk('div', 'cn', opts.cn)); return t;
     }
     function render() {
       clean();
-      coinsEl.innerHTML = fmt(S.coins) + ' монет<small>лучший фрукт: ' + (bestId() ? bestId().ic + ' ' + bestId().n : 'пока нет') + '</small>';
+      coinsEl.innerHTML = fmt(S.coins) + ' монет<small>лучший фрукт: ' + (bestId() ? bestId().n : 'пока нет') + '</small>';
       const left = Math.ceil((S.harvestAt + HARVEST_EVERY * 1000 - Date.now()) / 1000);
       harvest.disabled = left > 0; harvest.textContent = left > 0 ? 'Урожай через ' + left + ' с' : 'Собрать урожай +' + HARVEST;
       coinRange.max = Math.max(0, S.coins); coinRange.value = addCoins; coinRange.disabled = spinning; coinLab.textContent = 'Добавить монеты: ' + fmt(addCoins);
-      const s = selSum(), names = Object.keys(sel).map(k => FB[k].ic + '×' + sel[k]).join(' ');
+      const s = selSum(), names = Object.keys(sel).map(k => FB[k].n + '×' + sel[k]).join(' ');
       sumEl.textContent = s > 0 ? 'Вложено: ' + (names ? names + ' ' : '') + (addCoins ? '+ ' + fmt(addCoins) + ' монет ' : '') + '= ' + fmt(s) : 'Выберите фрукты на вкладке «Мои фрукты» и цель на вкладке «Цель»';
       Object.keys(tabBtns).forEach(k => tabBtns[k].classList.toggle('on', k === tab));
       body.textContent = '';
@@ -195,7 +221,7 @@ Sims.register({
         }); body.appendChild(grid); if (!grid.children.length) body.appendChild(mk('p', 'pd-note', 'Нет целей дороже вложенного. Уменьшите вложение.'));
       } else {
         CRATES.forEach(c => {
-          const r = mk('div', 'pd-row'), tx = mk('div', 'tx'); tx.append(mk('div', 'nm', c.n), mk('div', 'ds', 'Может выпасть: ' + Object.keys(c.w).map(k => FB[k].ic).join(' ')));
+          const r = mk('div', 'pd-row'), tx = mk('div', 'tx'); const ds = mk('div', 'ds', 'Может выпасть: '); Object.keys(c.w).forEach(k => { const w = drawFruit(k, 22); w.style.verticalAlign = 'middle'; ds.appendChild(w); }); tx.append(mk('div', 'nm', c.n), ds);
           const b = mk('button', 'pd-btn', fmt(c.price) + ' монет'); b.disabled = S.coins < c.price || spinning; b.onclick = () => openCrate(c.id); r.append(tx, b); body.appendChild(r);
         });
       }
@@ -206,7 +232,7 @@ Sims.register({
 
     /* ----- колесо ----- */
     function drawWheel() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2), sz = wbox.clientWidth || 300; if (wc.width !== Math.round(sz * dpr)) { wc.width = wc.height = Math.round(sz * dpr); }
+      const dpr = Math.min(window.devicePixelRatio || 1, 2), sz = wbox.clientWidth || 300; if (wc.width !== Math.round(sz * dpr) || wc.height !== wc.width) { wc.width = wc.height = Math.round(sz * dpr); }
       const c = wc.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, sz, sz);
       const cx = sz / 2, cy = sz / 2, r = sz * 0.42, lw = sz * 0.1, ch = target && selSum() > 0 ? chanceFor(target) : 0, st = -Math.PI / 2;
       c.lineWidth = lw; c.lineCap = 'butt'; c.strokeStyle = '#3a2250'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke();
@@ -214,7 +240,7 @@ Sims.register({
       // стрелка
       const a = st + (theta * Math.PI / 180); c.save(); c.translate(cx, cy); c.rotate(a + Math.PI / 2); c.fillStyle = '#fff'; c.beginPath(); c.moveTo(0, -r - lw * 0.62); c.lineTo(-sz * 0.03, -r + lw * 0.2); c.lineTo(sz * 0.03, -r + lw * 0.2); c.closePath(); c.fill(); c.restore();
       c.strokeStyle = 'rgba(255,255,255,.15)'; c.lineWidth = 2; c.beginPath(); c.arc(cx, cy, r - lw / 2 - 2, 0, 7); c.stroke();
-      mid.innerHTML = target ? '<div class="fr">' + target.ic + '</div><div class="big">' + (ch * 100).toFixed(ch > 0 && ch < 0.1 ? 1 : 0) + '%</div><div class="sm">шанс на ' + target.n + '</div>' : '<div class="sm">Выберите цель</div>';
+      mid.textContent = ''; if (target) mid.appendChild(drawFruit(target.id, 44)); mid.insertAdjacentHTML('beforeend', target ? '<div class="big">' + (ch * 100).toFixed(ch > 0 && ch < 0.1 ? 1 : 0) + '%</div><div class="sm">шанс на ' + target.n + '</div>' : '<div class="sm">Выберите цель</div>');
     }
 
     let raf = 0, alive = true, last = 0, hT = 0;
