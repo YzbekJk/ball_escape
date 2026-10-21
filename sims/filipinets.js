@@ -26,7 +26,7 @@ Sims.register({
     canvas.style.touchAction = 'none';
     const rnd = (a, b) => a + Math.random() * (b - a);
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const GOAL = 43000, SC = 2, LW = 120, GRAV = 520, JUMP = -Math.sqrt(2 * GRAV * 56), SPRING = -Math.sqrt(2 * GRAV * 118);
+    const GOAL = 43000, SC = 6, LW = 120, GRAV = 520, JUMP = -Math.sqrt(2 * GRAV * 56), SPRING = -Math.sqrt(2 * GRAV * 118);
     const SPEED = 92, PW = 7, PH = 11;
     const ZONES = [
       { s: 0, n: 'Филиппины', a: '#3aa6ff', b: '#bfeaff' },
