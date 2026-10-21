@@ -61,7 +61,7 @@ Sims.register({
       { id: 'pstart', ic: '💰', n: 'Стартовый капитал', d: 'после перерождения начинаешь с 10 тыс. слив за уровень', cost: 3, max: 5 },
       { id: 'ptrain', ic: '🏋️', n: 'Сливовый тренинг', d: 'клик даёт +2% от слив в секунду за уровень', cost: 10, max: 5 }
     ];
-    const RANKS = [[0, 'Сливовый новичок'], [100, 'Садовод'], [1e3, 'Фермер'], [1e4, 'Сливовый барон'], [1e5, 'Король компота'], [1e6, 'Император слив'], [1e7, 'Повелитель косточек'], [1e8, 'Сливовая вселенная']];
+    const RANKS = [[0, 'Сливовый новичок'], [100, 'Садовод'], [1e3, 'Фермер'], [1e4, 'Сливовый барон'], [1e5, 'Король компота'], [1e6, 'Император слив'], [1e7, 'Повелитель косточек'], [1e8, 'Сливовая вселенная'], [1e12, 'Сливовый бог'], [1e18, 'Сливовое мироздание'], [1e27, 'Сливовая бесконечность']];
 
     const fresh = () => ({ plums: 0, total: 0, run: 0, clicks: 0, lv: {}, up: {}, ach: {}, pits: 0, golds: 0, rebirths: 0, perm: {}, ts: Date.now() });
     let S = fresh();
@@ -107,9 +107,11 @@ Sims.register({
     const baseCps = () => BUILD.reduce((a, b) => a + lvl(b.id) * b.cps, 0);
     const cps = () => baseCps() * globalMult();
     function fmt(n) {
+      if (!isFinite(n)) return '∞';
       if (n < 1000) return n < 10 && n % 1 ? n.toFixed(1).replace(/\.0$/, '') : String(Math.floor(n));
-      const sfx = [' тыс.', ' млн', ' млрд', ' трлн', ' квдрлн', ' квнтлн']; let i = -1; while (n >= 1000 && i < sfx.length - 1) { n /= 1000; i++; }
-      const v = n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : String(Math.floor(n));
+      const sfx = [' тыс.', ' млн', ' млрд', ' трлн', ' квдрлн', ' квнтлн', ' сксттлн', ' септлн', ' октлн', ' нонлн', ' децлн']; let i = -1, m = n; while (m >= 1000 && i < sfx.length - 1) { m /= 1000; i++; }
+      if (m >= 1000) { const e = Math.floor(Math.log10(n)); return (n / Math.pow(10, e)).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'e' + e; }
+      const v = m < 10 ? m.toFixed(2) : m < 100 ? m.toFixed(1) : String(Math.floor(m));
       return v.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '') + sfx[i];
     }
     const rankIdx = () => { let r = 0; RANKS.forEach((q, i) => { if (S.total >= q[0]) r = i; }); return r; };
