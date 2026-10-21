@@ -22,6 +22,7 @@ Sims.register({
     const ctx = canvas.getContext('2d');
     const KEY = 'peach_drop_v1';
     const FRUITS = [
+      { id: 'sorrel', ic: '', n: 'Щавель', v: 5, col: '#9aa3b8' },
       { id: 'cherry', ic: '🍒', n: 'Вишня', v: 10, col: '#9aa3b8' },
       { id: 'straw', ic: '🍓', n: 'Клубника', v: 25, col: '#9aa3b8' },
       { id: 'lemon', ic: '🍋', n: 'Лимон', v: 60, col: '#6fb0ff' },
@@ -35,13 +36,14 @@ Sims.register({
       { id: 'grape', ic: '🍇', n: 'Виноград', v: 40000, col: '#ffd24a' },
       { id: 'coco', ic: '🥥', n: 'Кокос', v: 100000, col: '#ffd24a' },
       { id: 'gold', ic: '🌟', n: 'Золотой персик', v: 300000, col: '#ff4a4a' },
-      { id: 'dia', ic: '💎', n: 'Алмазный персик', v: 1000000, col: '#4af0ff' }
+      { id: 'dia', ic: '💎', n: 'Алмазный персик', v: 1000000, col: '#4af0ff' },
+      { id: 'plum', ic: '', n: 'Слива', v: 5000000, col: '#ff3df0' }
     ];
     const FB = {}; FRUITS.forEach(f => FB[f.id] = f);
     const CRATES = [
-      { id: 'c1', n: 'Корзинка', w: { cherry: 55, straw: 28, lemon: 11, orange: 5, apple: 1 } },
-      { id: 'c2', n: 'Ящик', w: { cherry: 20, straw: 15, lemon: 20, orange: 20, apple: 15, pear: 7, peach: 3 } },
-      { id: 'c3', n: 'Золотой ящик', w: { apple: 20, pear: 25, peach: 25, pine: 15, mango: 9, melon: 4, grape: 2 } }
+      { id: 'c1', n: 'Корзинка', w: { sorrel: 30, cherry: 35, straw: 22, lemon: 11, orange: 5, apple: 1 } },
+      { id: 'c2', n: 'Ящик', w: { sorrel: 5, cherry: 15, straw: 15, lemon: 20, orange: 20, apple: 15, pear: 7, peach: 3 } },
+      { id: 'c3', n: 'Золотой ящик', w: { apple: 20, pear: 25, peach: 25, pine: 15, mango: 9, melon: 4, grape: 2, plum: 0.004 } }
     ];
     CRATES.forEach(c => { let tw = 0, ev = 0; for (const k in c.w) { tw += c.w[k]; ev += c.w[k] * FB[k].v; } c.price = Math.max(5, Math.ceil(ev / tw / 0.93 / 5) * 5); });   // в среднем возвращается ~93% цены
     const EDGE = 0.95, HARVEST_EVERY = 45, HARVEST = 15;
@@ -71,6 +73,8 @@ Sims.register({
       const stem = (x1, y1, x2, y2) => { x.strokeStyle = '#6b4226'; x.lineWidth = 5; x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2); x.stroke(); };
       const out = (col) => { x.strokeStyle = col || 'rgba(0,0,0,.28)'; x.lineWidth = 3; x.stroke(); };
       if (id === 'cherry') { stem(32, 66, 52, 18); stem(70, 68, 52, 18); ell(32, 70, 19, 19, '#d4203a'); ell(70, 72, 19, 19, '#b5162e'); shine(26, 63, 6); shine(64, 65, 6); leaf(62, 18, -0.3); }
+      else if (id === 'sorrel') { x.strokeStyle = '#2f7a38'; x.lineWidth = 4; x.beginPath(); x.moveTo(50, 94); x.lineTo(50, 40); x.stroke(); [[-0.5, 30, 50], [0.5, 70, 50], [-0.25, 38, 28], [0.25, 62, 28], [0, 50, 12]].forEach(q => { x.save(); x.translate(q[1], q[2]); x.rotate(q[0]); x.fillStyle = '#4cb04f'; x.beginPath(); x.moveTo(0, 20); x.quadraticCurveTo(-18, 0, 0, -20); x.quadraticCurveTo(18, 0, 0, 20); x.fill(); x.strokeStyle = '#2f7a38'; x.lineWidth = 2; x.beginPath(); x.moveTo(0, 18); x.lineTo(0, -16); x.stroke(); x.restore(); }); x.strokeStyle = '#a02a2a'; x.lineWidth = 3; x.beginPath(); x.moveTo(50, 94); x.lineTo(50, 70); x.stroke(); }
+      else if (id === 'plum') { ell(50, 58, 38, 36, '#6a1fa8'); ell(50, 58, 38, 36, 'rgba(255,255,255,0)'); x.strokeStyle = 'rgba(20,0,40,.5)'; x.lineWidth = 3; x.beginPath(); x.moveTo(50, 24); x.quadraticCurveTo(40, 58, 50, 92); x.stroke(); ell(66, 62, 22, 28, '#4c1480'); ell(36, 44, 18, 14, 'rgba(200,160,255,.35)', -0.5); shine(32, 42, 7); stem(50, 26, 52, 10); leaf(66, 16, -0.4); x.fillStyle = '#fff'; x.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? 3 : 9; x.lineTo(80 + Math.cos(a) * r, 22 + Math.sin(a) * r); } x.fill(); x.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? 2 : 6; x.lineTo(16 + Math.cos(a) * r, 76 + Math.sin(a) * r); } x.fill(); }
       else if (id === 'straw') { x.fillStyle = '#e0243a'; x.beginPath(); x.moveTo(18, 34); x.quadraticCurveTo(50, 22, 82, 34); x.quadraticCurveTo(76, 70, 50, 90); x.quadraticCurveTo(24, 70, 18, 34); x.fill(); x.fillStyle = '#ffe9a0'; [[36, 46], [52, 44], [66, 48], [44, 60], [58, 62], [50, 76]].forEach(q => ell(q[0], q[1], 2.6, 3.6, '#ffe9a0')); ell(50, 28, 22, 8, '#3fa84a'); ell(36, 24, 8, 5, '#3fa84a', -0.5); ell(64, 24, 8, 5, '#3fa84a', 0.5); }
       else if (id === 'lemon') { x.fillStyle = '#ffe14a'; x.beginPath(); x.moveTo(8, 52); x.quadraticCurveTo(18, 22, 50, 22); x.quadraticCurveTo(82, 22, 92, 52); x.quadraticCurveTo(82, 82, 50, 82); x.quadraticCurveTo(18, 82, 8, 52); x.fill(); out('#c9a800'); shine(38, 40, 10); leaf(66, 24, -0.4); }
       else if (id === 'orange') { ell(50, 56, 36, 36, '#ff9420'); out('#c9680a'); shine(36, 42, 10); leaf(56, 20, 0.2); x.fillStyle = '#3fa84a'; ell(50, 22, 4, 4, '#3fa84a'); }
@@ -79,7 +83,7 @@ Sims.register({
       else if (id === 'peach') { ell(50, 56, 36, 34, '#ffb48a'); ell(66, 60, 22, 28, '#ff7d8f'); x.strokeStyle = 'rgba(160,50,60,.5)'; x.lineWidth = 3; x.beginPath(); x.moveTo(50, 24); x.quadraticCurveTo(40, 56, 52, 88); x.stroke(); shine(34, 44, 8); leaf(62, 20, -0.5); stem(50, 26, 50, 16); }
       else if (id === 'pine') { ell(50, 62, 26, 32, '#f2b823'); x.strokeStyle = '#b57c10'; x.lineWidth = 2.5; for (let i = -3; i <= 3; i++) { x.beginPath(); x.moveTo(30 + i * 8, 36); x.lineTo(70 + i * 8, 90); x.moveTo(70 + i * 8, 36); x.lineTo(30 + i * 8, 90); x.stroke(); } x.fillStyle = '#3fa84a'; [[-22, -0.6], [-10, -0.25], [0, 0], [10, 0.25], [22, 0.6]].forEach(q => ell(50 + q[0] * 0.7, 18, 5, 16, '#3fa84a', q[1])); }
       else if (id === 'mango') { ell(50, 56, 38, 28, '#ffa31f', -0.5); ell(60, 62, 24, 18, '#ff5b3a', -0.5); shine(34, 46, 8); leaf(66, 22, 0.4, '#2f8f45'); }
-      else if (id === 'melon') { x.fillStyle = '#2f8f45'; x.beginPath(); x.arc(50, 30, 44, 0, Math.PI); x.fill(); x.fillStyle = '#d9f0a8'; x.beginPath(); x.arc(50, 30, 38, 0, Math.PI); x.fill(); x.fillStyle = '#ff4a5a'; x.beginPath(); x.arc(50, 30, 33, 0, Math.PI); x.fill(); x.fillStyle = '#2a1410'; [[34, 46], [50, 56], [66, 46], [42, 36], [58, 38]].forEach(q => ell(q[0], q[1], 2.4, 3.6, '#2a1410', 0.3)); }
+      else if (id === 'melon') { ell(50, 56, 40, 34, '#2f8f45'); x.strokeStyle = '#1d6a32'; x.lineWidth = 4; [-24, -8, 8, 24].forEach(o => { x.beginPath(); x.moveTo(50 + o * 0.3, 23); x.quadraticCurveTo(50 + o * 1.7, 56, 50 + o * 0.3, 89); x.stroke(); }); shine(34, 42, 9); x.fillStyle = '#ff4a5a'; x.beginPath(); x.moveTo(60, 56); x.arc(60, 56, 26, -0.2, 1.0); x.closePath(); x.fill(); x.fillStyle = '#2a1410'; ell(70, 62, 2, 3, '#2a1410', 0.5); ell(64, 68, 2, 3, '#2a1410', 0.3); }
       else if (id === 'grape') { [[36, 38], [64, 38], [50, 40], [28, 58], [50, 60], [72, 58], [40, 78], [60, 78], [50, 92]].forEach((q, i) => { ell(q[0], q[1] - 6, 13, 13, i % 2 ? '#8e3fd0' : '#7a2fc0'); ell(q[0] - 4, q[1] - 10, 3.5, 3.5, 'rgba(255,255,255,.5)'); }); stem(50, 28, 52, 10); leaf(66, 14, -0.3); }
       else if (id === 'coco') { ell(50, 54, 38, 38, '#7a4a28'); out('#4a2a12'); ell(50, 54, 28, 28, '#f6f0e4'); ell(36, 46, 4.5, 5.5, '#4a2a12'); ell(52, 42, 4.5, 5.5, '#4a2a12'); ell(46, 60, 4.5, 5.5, '#4a2a12'); }
       else if (id === 'gold') { ell(50, 56, 36, 34, '#ffd24a'); ell(66, 60, 22, 28, '#f0a21a'); out('#9a6a00'); leaf(62, 20, -0.5, '#ffe58a'); x.fillStyle = '#fff'; x.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? 4 : 11; x.lineTo(34 + Math.cos(a) * r, 40 + Math.sin(a) * r); } x.fill(); }
