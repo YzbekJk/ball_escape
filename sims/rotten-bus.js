@@ -251,13 +251,13 @@ Sims.register({
       const top = H - ctrlH, pad = 8, halfW = (W - pad * 3) / 2, rowH = (ctrlH - pad * 3) / 2;
       const bw = (halfW - pad) / 2, tw = (W - pad * 4) / 3;
       btns = [
-        { id: 'jump', label: '⤒ ПРЫЖОК', x: pad, y: top + pad, w: tw, h: rowH, tap: true },
-        { id: 'duck', label: '⤓ УКЛОН', x: pad * 2 + tw, y: top + pad, w: tw, h: rowH },
+        { id: 'jump', label: 'ПРЫЖОК', x: pad, y: top + pad, w: tw, h: rowH, tap: true },
+        { id: 'duck', label: 'УКЛОН', x: pad * 2 + tw, y: top + pad, w: tw, h: rowH },
         { id: 'left', label: '◀', x: pad, y: top + pad * 2 + rowH, w: bw, h: rowH },
         { id: 'right', label: '▶', x: pad * 2 + bw, y: top + pad * 2 + rowH, w: bw, h: rowH },
-        { id: 'block', label: '🛡 БЛОК', x: pad * 3 + tw * 2, y: top + pad, w: tw, h: rowH },
-        { id: 'punch', label: '👊', x: pad * 2 + halfW, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true },
-        { id: 'kick', label: '🦵', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
+        { id: 'block', label: 'БЛОК', x: pad * 3 + tw * 2, y: top + pad, w: tw, h: rowH },
+        { id: 'punch', label: 'УДАР', x: pad * 2 + halfW, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true },
+        { id: 'kick', label: 'НОГА', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
       ];
     }
     function hitRect(x, y, r) { return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; }

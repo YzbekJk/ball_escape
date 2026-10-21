@@ -5,19 +5,15 @@
   const menu = $('menu'), view = $('view'), canvas = $('c'), panel = $('panel'), fields = $('fields');
 
   // ---------- audio (one shared context, unlocked by a user gesture) ----------
-  let actx = null;
-  function initAudio() {
-    if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) actx = new AC();
-  }
+  const AM = window.AudioManager;
+  function initAudio() { AM.init(); }
   addEventListener('pointerdown', () => { if (current && current.cfg.sound) initAudio(); }, { passive: true });
 
   // ---------- menu ----------
   // Every simulation may set kind: 'sim' (default) or 'game' — that decides the section it appears in.
   const SECTIONS = {
-    sims:  { kind: 'sim',  title: 'Симуляции', icon: '🧪', desc: 'Смотрите, как шарик ведёт себя в разных ситуациях: настраивайте и делитесь ссылкой.', empty: 'Скоро здесь появятся новые симуляции' },
-    games: { kind: 'game', title: 'Игры', icon: '🎮', desc: 'Здесь будут игры, в которых вы управляете шариком сами.', empty: 'Скоро здесь появятся игры' }
+    sims:  { kind: 'sim',  title: 'Симуляции', icon: '◉', desc: 'Смотрите, как шарик ведёт себя в разных ситуациях: настраивайте и делитесь ссылкой.', empty: 'Скоро здесь появятся новые симуляции' },
+    games: { kind: 'game', title: 'Игры', icon: '▶', desc: 'Здесь будут игры, в которых вы управляете шариком сами.', empty: 'Скоро здесь появятся игры' }
   };
   const kindOf = sim => sim.kind === 'game' ? 'game' : 'sim';
   const sectionOfKind = k => k === 'game' ? 'games' : 'sims';
@@ -63,17 +59,17 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 85;
+  const APP_VERSION = 86;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
   // ---- common overlay (timer + text) available in every simulation, hidden by default ----
   const EXTRA = { ovTimer: false, ovTimerY: 92, ovTimerSize: 9, ovText: false, ovTextStr: 'Текст', ovTextY: 8, ovTextSize: 7 };
   const EXTRA_SCHEMA = [
-    { k: 'ovTimer', l: '⏱ Показать таймер', type: 'check', live: 1 },
+    { k: 'ovTimer', l: 'Показать таймер', type: 'check', live: 1 },
     { k: 'ovTimerY', l: 'Таймер: положение по вертикали, %', min: 3, max: 97, step: 1, live: 1 },
     { k: 'ovTimerSize', l: 'Таймер: размер', min: 3, max: 25, step: 0.5, live: 1 },
-    { k: 'ovText', l: '🅣 Показать текст', type: 'check', live: 1 },
+    { k: 'ovText', l: 'Показать текст', type: 'check', live: 1 },
     { k: 'ovTextStr', l: 'Текст', type: 'text', live: 1 },
     { k: 'ovTextY', l: 'Текст: положение по вертикали, %', min: 3, max: 97, step: 1, live: 1 },
     { k: 'ovTextSize', l: 'Текст: размер', min: 2, max: 20, step: 0.5, live: 1 }
@@ -143,8 +139,60 @@
         if (!f.live) current.inst.restart();
       });
     });
+    if (sim.schema.some(f => f.k === 'notes')) addMidi(fields);
     refresh();
   }
+
+  // ---------- MIDI: своя мелодия вместо гаммы + библиотека сообщества ----------
+  function addMidi(host) {
+    const M = Sims.midi, mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+    const box = mk('div', 'f midi'), lab = mk('label', null, 'MIDI-мелодия: каждый отскок играет следующую ноту'), cur = mk('div', 'midiCur'), row = mk('div', 'midiBtns');
+    const file = mk('input'); file.type = 'file'; file.accept = '.mid,.midi,audio/midi,audio/x-midi'; file.hidden = true;
+    const bLoad = mk('button', null, 'Загрузить .mid'), bLib = mk('button', null, 'Библиотека'), bShare = mk('button', null, 'Поделиться'), bClear = mk('button', null, 'Убрать');
+    row.append(bLoad, bLib, bShare, bClear); box.append(lab, cur, row, file); host.appendChild(box);
+    const show = () => { cur.textContent = M.cur ? 'Играет: «' + M.cur.name + '» · ' + M.cur.n.length + ' нот' : 'Не загружена — играет гамма до, ре, ми…'; bShare.disabled = bClear.disabled = !M.cur; };
+    const apply = m => { M.set(m); current.cfg.notes = true; current.cfg.sound = true; refresh(); writeURL(); show(); current.inst.restart && current.inst.restart(); };
+    bLoad.onclick = () => file.click();
+    file.onchange = async () => {
+      const f = file.files[0]; file.value = ''; if (!f) return;
+      if (f.size > 500000) { LB.toast('Файл слишком большой (больше 500 КБ)'); return; }
+      try { apply(M.parse(await f.arrayBuffer(), f.name)); LB.toast('MIDI загружен: ' + M.cur.n.length + ' нот'); initAudio(); }
+      catch (e) { LB.toast('Не получилось прочитать MIDI: ' + (e && e.message || e)); }
+    };
+    bClear.onclick = () => { M.clear(); show(); };
+    bLib.onclick = () => openMidiLib(apply);
+    bShare.onclick = async () => {
+      if (!M.cur) return;
+      if (!LB.loggedIn) { LB.toast('Войдите в аккаунт, чтобы поделиться мелодией'); LB.openAccount(); return; }
+      const title = (prompt('Название мелодии для библиотеки:', M.cur.name) || '').trim(); if (!title) return;
+      const res = await LB.rpc('midi_upload', { p_token: LB.token(), p_title: title.slice(0, 40), p_data: JSON.stringify({ n: M.cur.n, d: M.cur.d }) });
+      LB.toast(res && res.error ? 'Не загружено: ' + res.error : 'Мелодия добавлена в библиотеку');
+    };
+    show();
+  }
+  function openMidiLib(apply) {
+    if (!LB.enabled) { LB.toast('Библиотека недоступна: сервер не подключён'); return; }
+    const b = LB.modal('Библиотека MIDI'), el = LB.el, tabs = el('div', 'lbTabs'), tn = el('button', 'on', 'Новые'), tp = el('button', null, 'Популярные'), list = el('div', 'lbList');
+    tabs.append(tn, tp); b.append(tabs, list);
+    async function load(sort) {
+      tn.classList.toggle('on', sort === 'new'); tp.classList.toggle('on', sort === 'top'); list.textContent = ''; list.appendChild(el('p', 'lbMsg', 'Загрузка…'));
+      const res = await LB.rpc('midi_list', { p_sort: sort, p_limit: 40, p_token: LB.token() }); list.textContent = '';
+      if (!res || res.error) { list.appendChild(el('p', 'lbErr', /404|PGRST202|42883/.test(res && res.error || '') ? 'Библиотека ещё не настроена на сервере: владельцу нужно выполнить обновлённый supabase/schema.sql' : (res && res.error || 'Ошибка'))); return; }
+      if (!res.rows.length) list.appendChild(el('p', 'lbMsg', 'Пока пусто. Загрузите свой MIDI и нажмите «Поделиться»!'));
+      res.rows.forEach(r => {
+        const row = el('div', 'lbRow midiRow'), nm = el('span', 'nm', r.title + ' — ' + r.nick), sc = el('span', 'sc', r.notes + ' нот · ' + r.downloads + ' раз');
+        const play = el('button', 'midiPick', 'Выбрать'); play.onclick = async () => {
+          const g = await LB.rpc('midi_get', { p_id: r.id }); if (!g || g.error) { LB.toast(g && g.error || 'Ошибка'); return; }
+          try { const j = JSON.parse(g.data); apply({ name: r.title, n: j.n, d: j.d }); LB.toast('Выбрано: ' + r.title); } catch (e) { LB.toast('Мелодия повреждена'); }
+        };
+        row.append(nm, sc, play);
+        if (r.mine || LB.creator) { const del = el('button', 'midiPick del', 'Удалить'); del.onclick = async () => { if (!confirm('Удалить «' + r.title + '» из библиотеки?')) return; const d = await LB.rpc('midi_delete', { p_token: LB.token(), p_id: r.id }); LB.toast(d && d.error ? d.error : 'Удалено'); load(sort); }; row.appendChild(del); }
+        list.appendChild(row);
+      });
+    }
+    tn.onclick = () => load('new'); tp.onclick = () => load('top'); load('new');
+  }
+
   function refresh() {
     const { cfg, inputs } = current;
     for (const k in inputs) {
@@ -152,7 +200,8 @@
       if (f.type === 'check') inp.checked = !!cfg[k]; else inp.value = cfg[k];
       if (out) out.textContent = fmt(cfg[k]);
     }
-    $('btnSound').textContent = cfg.sound ? '🔊' : '🔇';
+    AM.setMuted(!cfg.sound);
+    $('btnSound').textContent = cfg.sound ? 'ЗВУК ВКЛ' : 'ЗВУК ВЫКЛ';
   }
 
   function openSim(id) {
@@ -162,11 +211,11 @@
     timerT = 0;
     menu.hidden = true; view.hidden = false; panel.hidden = true;
     view.classList.toggle('light', !!sim.light);
-    $('btnPause').textContent = '⏸ Пауза';
+    $('btnPause').textContent = 'ПАУЗА';
     document.title = sim.title;
     const cfg = readCfg(sim);
     current = { sim, cfg, paused: false };
-    current.inst = sim.create(canvas, cfg, { audio: () => actx, submitScore: v => submitScore(sim, cfg, v) });
+    current.inst = sim.create(canvas, cfg, { audio: () => AM.actx, submitScore: v => submitScore(sim, cfg, v) });
     $('btnLB').hidden = !sim.lb; $('btnLB').onclick = () => LB.openBoard(sim);
     const origRestart = current.inst.restart; current.inst.restart = function () { timerT = 0; return origRestart.apply(this, arguments); };
     buildPanel();
@@ -180,7 +229,7 @@
     LB.submit(sim.id, v, sim.lb.better);
   }
   const accBtn = $('accBtn');
-  function refreshAcc() { accBtn.textContent = LB.loggedIn ? '👤 ' + LB.nick : '👤 Войти'; if (LB.loggedIn && LB.creator) { accBtn.append(' '); accBtn.append(LB.creatorBadge()); } }
+  function refreshAcc() { accBtn.textContent = LB.loggedIn ? LB.nick : 'Войти'; if (LB.loggedIn && LB.creator) { accBtn.append(' '); accBtn.append(LB.creatorBadge()); } }
   accBtn.onclick = () => LB.openAccount(); LB.onChange(refreshAcc); refreshAcc();
 
   function closeSim() {
@@ -200,15 +249,15 @@
   $('menuBack').onclick = () => { location.hash = '#/'; };
   $('btnGear').onclick = () => { panel.hidden = !panel.hidden; initAudio(); };
   $('btnClose').onclick = () => { panel.hidden = true; };
-  $('btnSound').onclick = () => { current.cfg.sound = !current.cfg.sound; if (current.cfg.sound) initAudio(); refresh(); writeURL(); };
+  $('btnSound').onclick = () => { initAudio(); AM.toggleMute(); current.cfg.sound = !AM.muted; refresh(); writeURL(); };
   $('btnRestart').onclick = () => current.inst.restart();
   $('btnPause').onclick = e => {
     current.paused = !current.paused; current.inst.setPaused(current.paused);
-    e.target.textContent = current.paused ? '▶ Дальше' : '⏸ Пауза';
+    e.target.textContent = current.paused ? 'ПРОДОЛЖИТЬ' : 'ПАУЗА';
   };
   $('btnDefaults').onclick = () => { Object.assign(current.cfg, current.sim.defaults); refresh(); writeURL(); current.inst.restart(); };
   $('btnCopy').onclick = e => {
-    const done = () => { e.target.textContent = '✓ Скопировано'; setTimeout(() => e.target.textContent = '🔗 Копировать ссылку', 1500); };
+    const done = () => { e.target.textContent = 'Скопировано'; setTimeout(() => e.target.textContent = 'Копировать ссылку', 1500); };
     if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, () => prompt('Ссылка:', location.href));
     else prompt('Ссылка:', location.href);
   };

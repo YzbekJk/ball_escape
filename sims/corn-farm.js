@@ -3,7 +3,7 @@
 Sims.register({
   id: 'corn-farm',
   kind: 'game',
-  lb: { label: 'Всего заработано монет за всё время', better: 'high', fair: ['baseTime', 'speed'], fmt: v => v.toLocaleString('ru') + ' 🪙' },
+  lb: { label: 'Всего заработано монет за всё время', better: 'high', fair: ['baseTime', 'speed'], fmt: v => v.toLocaleString('ru') + ' мон.' },
   title: 'Кукурузная ферма',
   desc: 'Пиксельная ферма: на крошечном поле растёт большая кукуруза. Собирайте урожай серпом (тап или проведите пальцем), копите монеты и прокачивайте размер поля или рост кукурузы.',
 

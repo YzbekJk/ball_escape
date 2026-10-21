@@ -42,6 +42,7 @@ insert into public.games (game, better, min_v, max_v) values
   ('rotten-bus', 'low',  30,  36000),
   ('svetofor',   'high', 0,   5000),
   ('trampolines','high', 0,   100000),
+  ('peach-drop', 'high', 0,   1000000000),
   ('bank',       'high', 0,   5000)
 on conflict (game) do update set better = excluded.better, min_v = excluded.min_v, max_v = excluded.max_v;
 
@@ -82,6 +83,7 @@ begin
   if pid is null then return json_build_object('error', 'Нужно войти в аккаунт'); end if;
   select * into g from games where game = p_game;
   if not found then return json_build_object('error', 'Неизвестная игра'); end if;
+  if exists (select 1 from scores where player_id = pid and updated_at > now() - interval '2 seconds') then return json_build_object('error', 'Слишком часто, подождите пару секунд'); end if;
   if p_value is null or p_value < g.min_v or p_value > g.max_v then return json_build_object('error', 'Результат вне допустимых пределов'); end if;
   select best into old from scores where player_id = pid and game = p_game;
   if old is null then
@@ -164,3 +166,93 @@ grant execute on function public.lb_progress_set(text, text, numeric), public.lb
 
 -- обновить кэш API, чтобы новые функции сразу стали видны сайту
 notify pgrst, 'reload schema';
+
+
+-- ---------- библиотека MIDI-мелодий сообщества ----------
+-- Хранится только компактная мелодия (JSON: ноты и паузы), не сам файл: обычно 1–10 КБ.
+-- Лимиты, чтобы не переполнить базу: до 40 КБ на мелодию, до 15 мелодий на игрока, до 3000 мелодий всего.
+create table if not exists public.midis (
+  id         bigint generated always as identity primary key,
+  player_id  bigint not null references public.players(id) on delete cascade,
+  title      text not null,
+  data       text not null,
+  notes      int  not null,
+  downloads  int  not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists midis_created on public.midis (created_at desc);
+create index if not exists midis_downloads on public.midis (downloads desc);
+alter table public.midis enable row level security;
+
+create or replace function public.midi_upload(p_token text, p_title text, p_data text) returns json
+language plpgsql security definer set search_path = public, extensions as $fn$
+declare pid bigint; v jsonb; cnt int; t text := btrim(coalesce(p_title, '')); new_id bigint;
+begin
+  select id into pid from players where token = p_token;
+  if pid is null then return json_build_object('error', 'Нужно войти в аккаунт'); end if;
+  if char_length(t) < 1 or char_length(t) > 40 then return json_build_object('error', 'Название: от 1 до 40 символов'); end if;
+  if p_data is null or char_length(p_data) > 40000 then return json_build_object('error', 'Мелодия слишком большая'); end if;
+  begin v := p_data::jsonb; exception when others then return json_build_object('error', 'Неверный формат мелодии'); end;
+  if jsonb_typeof(v) <> 'object' or jsonb_typeof(v->'n') <> 'array' or jsonb_typeof(v->'d') <> 'array' then return json_build_object('error', 'Неверный формат мелодии'); end if;
+  cnt := jsonb_array_length(v->'n');
+  if cnt < 2 or cnt > 3000 or cnt <> jsonb_array_length(v->'d') then return json_build_object('error', 'Нот должно быть от 2 до 3000'); end if;
+  if exists (select 1 from jsonb_array_elements(v->'n') e where jsonb_typeof(e) <> 'number' or (e #>> '{}')::numeric not between 0 and 127)
+     or exists (select 1 from jsonb_array_elements(v->'d') e where jsonb_typeof(e) <> 'number' or (e #>> '{}')::numeric not between 0 and 1000) then
+    return json_build_object('error', 'Неверные значения нот');
+  end if;
+  if (select count(*) from midis where player_id = pid) >= 15 then return json_build_object('error', 'У вас уже 15 мелодий — удалите старую'); end if;
+  if (select count(*) from midis) >= 3000 then return json_build_object('error', 'Библиотека заполнена'); end if;
+  if exists (select 1 from midis where player_id = pid and created_at > now() - interval '10 seconds') then return json_build_object('error', 'Слишком часто, подождите немного'); end if;
+  insert into midis (player_id, title, data, notes) values (pid, t, jsonb_build_object('n', v->'n', 'd', v->'d')::text, cnt) returning id into new_id;
+  return json_build_object('ok', true, 'id', new_id);
+end $fn$;
+
+create or replace function public.midi_list(p_sort text default 'new', p_limit int default 40, p_token text default null) returns json
+language plpgsql security definer set search_path = public, extensions as $fn$
+declare pid bigint; rows json;
+begin
+  select id into pid from players where token = p_token;
+  p_limit := least(greatest(coalesce(p_limit, 40), 1), 100);
+  select coalesce(json_agg(json_build_object('id', id, 'title', title, 'nick', nick, 'creator', is_creator, 'notes', notes, 'downloads', downloads, 'mine', (player_id = pid)) order by ord), '[]'::json) into rows
+  from (
+    select m.id, m.title, p.nick, p.is_creator, m.notes, m.downloads, m.player_id,
+           row_number() over (order by case when p_sort = 'top' then m.downloads end desc nulls last, m.created_at desc) as ord
+    from midis m join players p on p.id = m.player_id
+    order by ord limit p_limit
+  ) t;
+  return json_build_object('rows', rows);
+end $fn$;
+
+create or replace function public.midi_get(p_id bigint) returns json
+language plpgsql security definer set search_path = public, extensions as $fn$
+declare d text; t text;
+begin
+  update midis set downloads = downloads + 1 where id = p_id returning data, title into d, t;
+  if d is null then return json_build_object('error', 'Мелодия не найдена'); end if;
+  return json_build_object('title', t, 'data', d);
+end $fn$;
+
+create or replace function public.midi_delete(p_token text, p_id bigint) returns json
+language plpgsql security definer set search_path = public, extensions as $fn$
+declare pid bigint; creator boolean;
+begin
+  select id, is_creator into pid, creator from players where token = p_token;
+  if pid is null then return json_build_object('error', 'Нужно войти в аккаунт'); end if;
+  delete from midis where id = p_id and (player_id = pid or creator);
+  if not found then return json_build_object('error', 'Нельзя удалить эту мелодию'); end if;
+  return json_build_object('ok', true);
+end $fn$;
+
+revoke all on function public.midi_upload(text, text, text), public.midi_list(text, int, text), public.midi_get(bigint), public.midi_delete(text, bigint) from public;
+grant execute on function public.midi_upload(text, text, text), public.midi_list(text, int, text), public.midi_get(bigint), public.midi_delete(text, bigint) to anon, authenticated;
+
+-- ---------- защита таблиц ----------
+-- Таблицы закрыты полностью: RLS включён, политик нет, прямые права у anon/authenticated отняты.
+-- С сайта можно работать только через функции lb_* и midi_* (security definer), которые проверяют токен и пределы значений.
+-- НЕ добавляйте политику «SELECT для всех» на players: там хэши паролей и токены входа.
+alter table public.players  force row level security;
+alter table public.games    force row level security;
+alter table public.scores   force row level security;
+alter table public.progress force row level security;
+alter table public.midis    force row level security;
+revoke all on public.players, public.games, public.scores, public.progress, public.midis from anon, authenticated;

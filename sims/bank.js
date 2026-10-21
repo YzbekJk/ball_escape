@@ -49,7 +49,7 @@ Sims.register({
     ];
     const DEFS = {
       guard:     { name: 'Охранник', hp: 42, spd: 20, reach: 17, wind: 0.55, act: 0.15, dmg: 10, pts: 10, col: { skin: '#e0b494', cloth: '#22304f', pants: '#161d30', hair: '#222' }, cap: '#22304f', baton: true },
-      manager:   { name: 'Менеджер', hp: 26, spd: 17, ranged: true, wind: 0.5, dmg: 7, pts: 12, col: { skin: '#f0c9a0', cloth: '#eeeeee', pants: '#444', hair: '#6a4a2a' }, tie: '#c01820', glasses: true },
+      manager:   { name: 'Менеджер', hp: 20, spd: 15, ranged: true, wind: 0.85, dmg: 4, pts: 12, col: { skin: '#f0c9a0', cloth: '#eeeeee', pants: '#444', hair: '#6a4a2a' }, tie: '#c01820', glasses: true },
       collector: { name: 'Коллектор', hp: 24, spd: 44, reach: 14, wind: 0.32, act: 0.14, dmg: 8, pts: 12, col: { skin: '#d8a880', cloth: '#151515', pants: '#222', hair: '#111' }, shades: true, lunge: true },
       director:  { name: 'ДИРЕКТОР БАНКА', hp: 430, spd: 18, reach: 24, wind: 0.6, act: 0.2, dmg: 17, pts: 400, boss: true, scale: 2, col: { skin: '#e8b898', cloth: '#1c1c28', pants: '#14141c', hair: '#b8b8b8' }, tie: '#d8b020', hat: true }
     };
@@ -185,7 +185,7 @@ Sims.register({
         }
       } else if (e.st === 'wind') {
         if (e.t >= D.wind) {
-          if (D.ranged) { projs.push({ x: e.x + e.face * 6, h: 8, vx: e.face * 72, kind: 'doc', life: 3 }); events.push('throw'); e.cd = rnd(1.5, 2.4); e.st = 'rec'; e.t = 0; }
+          if (D.ranged) { projs.push({ x: e.x + e.face * 6, h: 8, vx: e.face * 46, kind: 'doc', life: 3.5 }); events.push('throw'); e.cd = rnd(3.2, 4.8); e.st = 'rec'; e.t = 0; }
           else { e.st = 'act'; e.t = 0; e.hitDone = false; if (D.lunge) e.vx = e.face * 130; events.push('swing'); }
         }
       } else if (e.st === 'throw') {
@@ -207,7 +207,7 @@ Sims.register({
       es = es.filter(e => !(e.st === 'dead' && e.t > 0.9));
       projs.forEach(p => {
         p.x += p.vx * dt; p.life -= dt;
-        if (!p.dead && pl.st !== 'dead' && Math.abs(p.x - pl.x) < 5 && p.h > pl.h - 3 && p.h < pl.h + 22) { if (hurtPlayer(p.kind === 'coin' ? 9 : 7, Math.sign(p.vx) || 1)) p.dead = true; }
+        if (!p.dead && pl.st !== 'dead' && Math.abs(p.x - pl.x) < (p.kind === 'coin' ? 3.5 : 2.6) && p.h > pl.h - 2 && p.h < pl.h + 19) { if (hurtPlayer(p.kind === 'coin' ? 9 : 4, Math.sign(p.vx) || 1)) p.dead = true; }
         if (p.x < -10 || p.x > LW + 10 || p.life <= 0) p.dead = true;
       });
       projs = projs.filter(p => !p.dead);
@@ -239,9 +239,9 @@ Sims.register({
       if (mode !== 'play') return;
       projs = []; es = []; pl.st = 'walk'; pl.atk = null; pl.vx = 0;
       mode = 'vault'; banner = 'ТЯЖЁЛЫЙ СЕЙФ С ДВУМЯ ЗАМКАМИ!'; bannerT = 2.6; events.push('bell');
-      vt = { phase: 'walk', t: 0, lock: 0, pin: 0, between: 0, ang: -Math.PI / 2, dir: 1, zone: newZone(), done: [], miss: 0, shake: 0, open: 0, loot: 0, bundles: 0, tx: vaultL() - 14, flash: 0 };
+      vt = { phase: 'walk', t: 0, tl: LOCKS[0].time, lock: 0, pin: 0, between: 0, ang: -Math.PI / 2, dir: 1, zone: newZone(), done: [], miss: 0, shake: 0, open: 0, loot: 0, bundles: 0, tx: vaultL() - 14, flash: 0 };
     }
-    const LOCKS = [{ pins: 3, w: [0.62, 0.5, 0.4], v0: 2.1, dv: 0.75, name: 'ЗАМОК 1 / 2', ring: '#aab2bf' }, { pins: 4, w: [0.46, 0.38, 0.32, 0.27], v0: 2.7, dv: 0.6, name: 'ЗАМОК 2 / 2 — ЗАЩИТА КРЕПЧЕ', ring: '#c9a0a0' }];
+    const LOCKS = [{ time: 15, pins: 3, w: [0.62, 0.5, 0.4], v0: 2.1, dv: 0.75, name: 'ЗАМОК 1 / 2', ring: '#aab2bf' }, { time: 12, pins: 4, w: [0.46, 0.38, 0.32, 0.27], v0: 2.7, dv: 0.6, name: 'ЗАМОК 2 / 2 — ЗАЩИТА КРЕПЧЕ', ring: '#c9a0a0' }];
     const zoneW = () => LOCKS[vt.lock].w[vt.pin] || 0.27;
     const vSpeed = () => LOCKS[vt.lock].v0 + vt.pin * LOCKS[vt.lock].dv;
     function crack() {
@@ -262,12 +262,14 @@ Sims.register({
       const ph = vt.phase;
       if (ph === 'walk') {
         pl.face = 1; pl.st = 'walk'; pl.ph += dt * 13; pl.x += Math.min(60 * dt, Math.max(0, vt.tx - pl.x));
-        if (pl.x >= vt.tx - 0.5) { pl.st = 'idle'; vt.phase = 'crack'; vt.t = 0; banner = 'ЗАМОК 1/2 · ЖМИ В ЗЕЛЁНОЙ ЗОНЕ!'; bannerT = 3; }
+        if (pl.x >= vt.tx - 0.5) { pl.st = 'idle'; vt.phase = 'crack'; vt.t = 0; vt.tl = LOCKS[0].time; banner = 'ЗАМОК 1/2 · ' + LOCKS[0].time + ' СЕКУНД!'; bannerT = 3; }
       } else if (ph === 'between') {
         pl.st = 'idle'; vt.ang = normA(vt.ang + 7 * dt);
-        if (vt.t > 1.5) { vt.lock = 1; vt.pin = 0; vt.done = []; vt.zone = newZone(); vt.dir = 1; vt.phase = 'crack'; vt.t = 0; banner = 'ЗАМОК 2/2 · КРЕПЧЕ, ТОЧНЕЕ!'; bannerT = 3; events.push('bell'); }
+        if (vt.t > 1.5) { vt.lock = 1; vt.tl = LOCKS[1].time; vt.pin = 0; vt.done = []; vt.zone = newZone(); vt.dir = 1; vt.phase = 'crack'; vt.t = 0; banner = 'ЗАМОК 2/2 · ' + LOCKS[1].time + ' СЕКУНД!'; bannerT = 3; events.push('bell'); }
       } else if (ph === 'crack') {
         pl.st = 'idle'; vt.ang = normA(vt.ang + vt.dir * vSpeed() * dt);
+        vt.tl -= dt;
+        if (vt.tl <= 0) { vt.miss++; vt.shake = 0.5; vt.pin = 0; vt.done = []; vt.zone = newZone(); vt.tl = LOCKS[vt.lock].time; events.push('alarm'); floatText(LW / 2, dialCy() - dialR() - 10, 'ВРЕМЯ ВЫШЛО! ТРЕВОГА', '#ff6a6a'); banner = 'ВРЕМЯ ВЫШЛО! ЗАМОК СБРОСИЛСЯ'; bannerT = 1.8; }
       } else if (ph === 'open') {
         pl.st = 'idle'; vt.ang = normA(vt.ang + 9 * dt); vt.open = clamp((vt.t - 0.5) / 1.2, 0, 1);
         if (vt.t > 1.8) { vt.phase = 'loot'; vt.t = 0; banner = 'ДЕНЬГИ! ХВАТАЙ!'; bannerT = 1.6; }
@@ -336,6 +338,7 @@ Sims.register({
       // стрелка
       for (let s = 0; s <= R0 - 5; s += 0.5) { const px = Math.round(cx + Math.cos(vt.ang) * s), py = Math.round(cy + Math.sin(vt.ang) * s); g.fillStyle = s > R0 - 12 ? '#ff4a3a' : '#e0e4ea'; g.fillRect(px, py, 2, 2); }
       disc(g, cx, cy, 3, '#2b2f36'); disc(g, cx, cy, 2, '#d8b020');
+      if (vt.phase === 'crack') { const fr = clamp(vt.tl / LOCKS[vt.lock].time, 0, 1), bw = R0 * 2, bx = Math.round(cx - R0), by = cy + R0 + 5; R(g, bx - 1, by - 1, bw + 2, 5, '#000'); R(g, bx, by, Math.round(bw * fr), 3, fr > 0.5 ? '#37d65a' : fr > 0.25 ? '#ffd23a' : (Math.floor(t * 8) % 2 ? '#ff4a3a' : '#ffb0a0')); }
       // лампочки пинов
       for (let k = 0; k < LK.pins; k++) { const lx = cx - (LK.pins * 8 - 2) / 2 + k * 8, on = vt.phase === 'between' && vt.t < 0.75 ? true : k < vt.pin; R(g, lx, cy - R0 - 9, 6, 4, on ? '#37d65a' : '#7a2020'); R(g, lx, cy - R0 - 9, 6, 1, 'rgba(255,255,255,.35)'); }
       g.globalAlpha = 1;
@@ -350,7 +353,7 @@ Sims.register({
     const CARCOL = ['#c8302a', '#2a6ac8', '#3a9a4a', '#e8e8e8', '#8a4ac0', '#e07a1a', '#2ab8b8'];
     function startDrive() {
       checkScore = score; fade = 0;
-      dv = { lane: 1, x: laneX(1), hp: cfg.carLives, inv: 0, rows: [], coins: [], passed: 0, spawnT: 1.2, road: 0, over: false, endT: 0, free: [], last: -1, rep: 0, sirens: 0, goalShown: false, crashT: 0, pol: [{ x: laneX(1) }, { x: laneX(1) }], g0: 90, heliX: laneX(1), sirT: 0, sirN: 0 };
+      dv = { lane: 1, x: laneX(1), hp: cfg.carLives, inv: 0, rows: [], coins: [], passed: 0, spawnT: 1.2, road: 0, over: false, endT: 0, free: [], last: -1, rep: 0, sirens: 0, goalShown: false, crashT: 0, ram: null, ramT: 7, pol: [{ x: laneX(1) }, { x: laneX(1) }], g0: 90, heliX: laneX(1), sirT: 0, sirN: 0 };
       mode = 'drive'; banner = 'ПОГОНЯ! ← ВЛЕВО · ВПРАВО →'; bannerT = 2.4; events.push('engine');
     }
     const dvSpeed = () => Math.min(125, 64 + dv.passed * 4.2) * cfg.carSpeed;
@@ -364,7 +367,7 @@ Sims.register({
       if (f === dv.last) dv.rep++; else dv.rep = 0; dv.last = f;
       free = [f]; if (easy) free.push((f + 1 + Math.floor(Math.random() * 2)) % 3);
       const row = { y: -30, free, cars: [], hit: false, counted: false };
-      for (let l = 0; l < 3; l++) if (!free.includes(l)) { const pol = dv.passed >= 3 && Math.random() < 0.28; row.cars.push({ lane: l, col: pol ? '#f4f4f4' : CARCOL[Math.floor(Math.random() * CARCOL.length)], pol, truck: !pol && Math.random() < 0.25, vx: 0, ox: 0 }); }
+      for (let l = 0; l < 3; l++) if (!free.includes(l)) { const pol = dv.passed >= 3 && Math.random() < (dv.passed >= 8 ? 0.45 : 0.3); row.cars.push({ ph: Math.random() * 6.28, oy: 0, wx: 0, lane: l, col: pol ? '#f4f4f4' : CARCOL[Math.floor(Math.random() * CARCOL.length)], pol, truck: !pol && Math.random() < 0.25, vx: 0, ox: 0 }); }
       dv.rows.push(row);
       const cl = free[Math.floor(Math.random() * free.length)];
       for (let k = 0; k < 2; k++) dv.coins.push({ lane: cl, y: -30 - 14 - k * 16, got: false });
@@ -375,7 +378,7 @@ Sims.register({
       const sp = dvSpeed(); dv.road += sp * dt; dv.sirens += dt;
       { const lost = cfg.carLives - dv.hp, gT = Math.max(29, 38 - 3 * lost) + (dv.goalShown ? dv.endT * 60 : 0);
         dv.g0 += (gT - dv.g0) * Math.min(1, 2.5 * dt);
-        dv.pol[0].x += (dv.x - dv.pol[0].x) * Math.min(1, 3.2 * dt); dv.pol[1].x += (dv.pol[0].x - dv.pol[1].x) * Math.min(1, 2.2 * dt);
+        dv.wob = (dv.wob || 0) + dt; { const w0 = Math.sin(dv.wob * 1.9) * 10 + Math.sin(dv.wob * 4.7) * 4, w1 = Math.sin(dv.wob * 1.4 + 2) * 12; dv.pol[0].x += (dv.x + w0 - dv.pol[0].x) * Math.min(1, 3.6 * dt); dv.pol[1].x += (dv.pol[0].x + w1 - dv.pol[1].x) * Math.min(1, 2.6 * dt); }
         dv.heliX += (laneX(dv.lane) - dv.heliX) * Math.min(1, 1.5 * dt);
         dv.sirT -= dt; if (dv.sirT <= 0) { dv.sirT = 0.34; dv.sirN ^= 1; events.push(dv.sirN ? 'sirA' : 'sirB'); } }
       dv.x += (laneX(dv.lane) - dv.x) * Math.min(1, 15 * dt);
@@ -385,13 +388,35 @@ Sims.register({
         if (dv.passed + dv.rows.filter(r => !r.counted).length < GOAL && dv.spawnT <= 0) { spawnRow(); dv.spawnT = Math.max(0.95, 96 / sp); }
       }
       const cy = carY();
+      // полицейский-таран: предупреждает мигалкой в вашей полосе и несётся сзади
+      if (!dv.over && !dv.goalShown) {
+        if (!dv.ram && dv.passed >= 4) {
+          dv.ramT -= dt;
+          if (dv.ramT <= 0) {
+            const near = dv.rows.filter(r => !r.counted && r.y > cy - 120 && r.y < cy + 10);
+            const alt = [0, 1, 2].filter(l => l !== dv.lane && near.every(r => r.free.includes(l)));
+            if (alt.length) { dv.ram = { lane: dv.lane, y: LH + 30, st: 'warn', t: 0, hit: false }; events.push('sirA'); banner = 'ПОЛИЦЕЙСКИЙ-ТАРАН СЗАДИ! УХОДИ С ПОЛОСЫ'; bannerT = 1.4; } else dv.ramT = 0.6;
+          }
+        } else if (dv.ram) {
+          const m = dv.ram; m.t += dt;
+          if (m.st === 'warn') { m.y = LH + 30 - Math.min(1, m.t / 1.0) * 26; if (m.t >= 1.0) { m.st = 'dash'; events.push('swish'); } }
+          else {
+            m.y -= (200 + sp * 0.5) * dt;
+            if (!m.hit && dv.inv <= 0 && Math.abs(laneX(m.lane) - dv.x) < 14 && Math.abs(m.y - cy) < 22) {
+              m.hit = true; dv.hp--; dv.inv = 1.4; dv.crashT = 0.5; shake = 0.35; events.push('crash'); floatText(dv.x, cy - 18, 'ТАРАН!', '#ff6a6a'); sparks(dv.x, cy + 8, 14, ['#ffe14d', '#fff', '#ff9a3a', '#ff5a3a'], true);
+              if (dv.hp <= 0) { dv.over = true; dv.endT = 0; mode = 'over'; lock = 0.7; events.push('over'); submit(); }
+            }
+            if (m.y < -30) { if (!m.hit) { score += 40; floatText(laneX(dv.lane), cy - 34, 'ТАРАН ИЗБЕЖАН +40', '#9fe8ff'); } dv.ram = null; dv.ramT = Math.max(4.5, rnd(8, 12) - dv.passed * 0.15); }
+          }
+        }
+      }
       dv.rows.forEach(r => {
         r.y += sp * dt;
-        r.cars.forEach(c => { c.ox += c.vx * dt; c.vx *= 0.96; });
+        r.cars.forEach(c => { c.ox += c.vx * dt; c.vx *= 0.96; if (c.pol) { c.oy += 15 * dt; c.wx = Math.sin(dv.sirens * 2.1 + c.ph) * 5 + Math.sin(dv.sirens * 5.3 + c.ph * 2) * 2; } });   // полицейские едут быстрее и вихляют
         if (!dv.over) r.cars.forEach(c => {
-          const cx = laneX(c.lane) + c.ox, hh = c.truck ? 17 : 14;
-          if (dv.inv <= 0 && Math.abs(cx - dv.x) < 15 && Math.abs(r.y - cy) < hh + 11) {
-            dv.hp--; dv.inv = 1.4; dv.crashT = 0.5; r.hit = true; c.vx = (cx < dv.x ? -1 : 1) * 90; shake = 0.35; events.push('crash'); floatText(dv.x, cy - 18, 'ВРЕЗАЛИСЬ!', '#ff6a6a');
+          const cx = laneX(c.lane) + c.ox + c.wx, hh = c.truck ? 17 : 14;
+          if (dv.inv <= 0 && Math.abs(cx - dv.x) < 15 && Math.abs(r.y + c.oy - cy) < hh + 11) {
+            dv.hp -= c.pol ? 2 : 1; dv.inv = 1.4; dv.crashT = 0.5; r.hit = true; c.vx = (cx < dv.x ? -1 : 1) * 90; shake = 0.35; events.push('crash'); floatText(dv.x, cy - 18, c.pol ? 'В ПОЛИЦИЮ! −2' : 'ВРЕЗАЛИСЬ!', '#ff6a6a');
             sparks(dv.x, cy - 8, 14, ['#ffe14d', '#fff', '#ff9a3a', '#ff5a3a'], true);
             if (dv.hp <= 0) { dv.over = true; dv.endT = 0; mode = 'over'; lock = 0.7; events.push('over'); submit(); }
           }
@@ -434,15 +459,15 @@ Sims.register({
         btns = [{ id: 'dl', label: '◀', sub: 'влево', x: pad, y: top + pad, w: bw2, h: bh, tap: true }, { id: 'dr', label: '▶', sub: 'вправо', x: pad * 2 + bw2, y: top + pad, w: bw2, h: bh, tap: true }];
         return;
       }
-      if (mode === 'vault') { btns = [{ id: 'crack', label: '🔓 ВСКРЫТЬ', x: pad, y: top + pad, w: W - pad * 2, h: ctrlH - pad * 2, tap: true }]; return; }
+      if (mode === 'vault') { btns = [{ id: 'crack', label: 'ВСКРЫТЬ', x: pad, y: top + pad, w: W - pad * 2, h: ctrlH - pad * 2, tap: true }]; return; }
       const halfW = (W - pad * 3) / 2, rowH = (ctrlH - pad * 3) / 2, bw = (halfW - pad) / 2;
       btns = [
-        { id: 'jump', label: '⤒ ПРЫЖОК', x: pad, y: top + pad, w: halfW, h: rowH, tap: true },
+        { id: 'jump', label: 'ПРЫЖОК', x: pad, y: top + pad, w: halfW, h: rowH, tap: true },
         { id: 'left', label: '◀', x: pad, y: top + pad * 2 + rowH, w: bw, h: rowH },
         { id: 'right', label: '▶', x: pad * 2 + bw, y: top + pad * 2 + rowH, w: bw, h: rowH },
-        { id: 'dash', label: '💨 ПЕРЕКАТ', x: pad * 2 + halfW, y: top + pad, w: halfW, h: rowH, tap: true },
-        { id: 'hit', label: '👊', x: pad * 2 + halfW, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true },
-        { id: 'heavy', label: '🦵', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
+        { id: 'dash', label: 'ПЕРЕКАТ', x: pad * 2 + halfW, y: top + pad, w: halfW, h: rowH, tap: true },
+        { id: 'hit', label: 'УДАР', x: pad * 2 + halfW, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true },
+        { id: 'heavy', label: 'НОГА', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
       ];
     }
     const KEYLBL = { jump: 'Пробел', left: 'A', right: 'D', dash: 'Q', hit: 'J', heavy: 'K', dl: '←', dr: '→', crack: 'Пробел' };
@@ -689,7 +714,7 @@ Sims.register({
       // подсказки: свободные полосы
       dv.rows.forEach(r => {
         if (r.y < 0 && !dv.over) { const a = Math.min(1, (-r.y) / 20); if (!r.counted) for (let l = 0; l < 3; l++) { if (r.free.includes(l)) { g.globalAlpha = 0.9; R(g, laneX(l) - 1, 4, 2, 5, '#5ad06a'); R(g, laneX(l) - 3, 6, 6, 1, '#5ad06a'); R(g, laneX(l) - 2, 7, 4, 1, '#5ad06a'); R(g, laneX(l) - 1, 8, 2, 1, '#5ad06a'); g.globalAlpha = 1; } else if (Math.floor(t * 8) % 2) R(g, laneX(l) - 1, 3, 2, 5, '#ff4a3a'), R(g, laneX(l) - 1, 9, 2, 2, '#ff4a3a'); } }
-        r.cars.forEach(c => { drawCar(laneX(c.lane) + c.ox, r.y, c.col, c.truck, !!c.pol, c.vx !== 0 && Math.abs(c.vx) > 20, c.pol ? Math.floor(dv.sirens * 7 + c.lane) % 2 : 0); });
+        r.cars.forEach(c => { drawCar(laneX(c.lane) + c.ox + c.wx, r.y + c.oy, c.col, c.truck, !!c.pol, c.vx !== 0 && Math.abs(c.vx) > 20, c.pol ? Math.floor(dv.sirens * 7 + c.lane) % 2 : 0); });
       });
       // полиция сзади: две машины со светом и вертолёт с прожектором
       { const fl = Math.floor(dv.sirens * 7) % 2, pulse = 0.12 + 0.08 * fl, cy0 = carY();
@@ -699,6 +724,12 @@ Sims.register({
           const q = dv.pol[i], y = cy0 + dv.g0 + i * 31; if (y - 14 > LH) continue;
           g.fillStyle = (i ? !fl : fl) ? '#3a6aff' : '#ff3a3a'; g.globalAlpha = 0.2; g.beginPath(); g.ellipse(q.x, y - 4, 22, 24, 0, 0, 7); g.fill(); g.globalAlpha = 0.12; g.beginPath(); g.ellipse(q.x, y - 4, 32, 34, 0, 0, 7); g.fill(); g.globalAlpha = 1;
           drawCar(q.x + (dv.crashT > 0 ? Math.sin(t * 50) * 1 : 0), y, '#f4f4f4', false, true, false, i ? 1 - fl : fl);
+        }
+        if (dv.ram) {
+          const m = dv.ram, lx = laneX(m.lane), on = Math.floor(dv.sirens * 9) % 2;
+          if (m.st === 'warn') { g.globalAlpha = 0.18 + 0.14 * on; R(g, lx - LANEW / 2 + 2, 0, LANEW - 4, LH, on ? '#ff2a2a' : '#2a5aff'); g.globalAlpha = 1; if (on) { R(g, lx - 2, cy0 - 70, 4, 10, '#ff3a3a'); R(g, lx - 2, cy0 - 56, 4, 4, '#ff3a3a'); } }
+          else { g.globalAlpha = 0.25; R(g, lx - 10, m.y, 2, 40, '#fff'); R(g, lx + 8, m.y, 2, 40, '#fff'); g.globalAlpha = 1; }
+          drawCar(lx, m.y, '#f4f4f4', false, true, false, on);
         }
         if (dv.passed >= 2 && (!dv.goalShown || dv.endT < 1)) drawHeli(dv.heliX, 12, cy0 - 22);
       }
@@ -784,7 +815,7 @@ Sims.register({
           if (kbd) { ctx.fillStyle = '#9fd8ff'; ctx.fillText('нажмите ' + (i + 1), x + cw / 2, y0 + ch - 10); }
         });
         ctx.fillStyle = '#fff'; ctx.font = '600 ' + mono(fs - 1); const ly = y0 + ch + fs * 2;
-        ctx.fillText(kbd ? 'Бой: A/D ходить · Пробел прыжок · J/ЛКМ удар · K/ПКМ нога · Q перекат' : 'Бой: ◀ ▶ ходить · ⤒ прыжок · 👊 🦵 удары · 💨 перекат', W / 2, ly);
+        ctx.fillText(kbd ? 'Бой: A/D ходить · Пробел прыжок · J/ЛКМ удар · K/ПКМ нога · Q перекат' : 'Бой: ◀ ▶ ходить · ПРЫЖОК · УДАР и НОГА · ПЕРЕКАТ', W / 2, ly);
         ctx.fillText(kbd ? 'Погоня: только ← → (A/D) — сдвиг на одну полосу, из левой вправо — в центр' : 'Погоня: жмите ◀ ▶ или тапайте левую/правую половину дороги — сдвиг на одну полосу', W / 2, ly + fs * 1.6);
         ctx.fillStyle = '#ffd23a'; ctx.font = '800 ' + mono(fs + 1); ctx.fillText('Тапните по герою, чтобы начать', W / 2, ly + fs * 3.4);
       }

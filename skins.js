@@ -143,7 +143,7 @@
     const tools = document.createElement('div'); tools.className = 'edTools'; side.appendChild(tools);
     const btn = (label, fn, cls) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'edBtn' + (cls ? ' ' + cls : ''); b.textContent = label; b.onclick = fn; return b; };
     const tb = {};
-    [['pen', '✏️ Рисовать'], ['erase', '🧽 Ластик'], ['fill', '🪣 Заливка']].forEach(([k, l]) => { tb[k] = btn(l, () => { tool = k; syncTools(); }); tools.appendChild(tb[k]); });
+    [['pen', 'Рисовать'], ['erase', 'Ластик'], ['fill', 'Заливка']].forEach(([k, l]) => { tb[k] = btn(l, () => { tool = k; syncTools(); }); tools.appendChild(tb[k]); });
     function syncTools() { for (const k in tb) tb[k].classList.toggle('on', k === tool); }
     const pal = document.createElement('div'); pal.className = 'edPal'; side.appendChild(pal);
     const sw = [];
@@ -151,8 +151,8 @@
     function syncSw() { sw.forEach(([b, c]) => b.classList.toggle('on', c === color)); ci.value = /^#[0-9a-f]{6}$/i.test(color) ? color : '#000000'; }
     const ci = document.createElement('input'); ci.type = 'color'; ci.className = 'edColor'; ci.oninput = () => { color = ci.value; tool = tool === 'erase' ? 'pen' : tool; syncSw(); syncTools(); }; side.appendChild(ci);
     const more = document.createElement('div'); more.className = 'edTools'; side.appendChild(more);
-    more.appendChild(btn('📋 Взять за основу «Школьник»', () => { grid = bake(by('school')); redraw(); }));
-    more.appendChild(btn('🗑 Очистить', () => { grid = new Array(GW * GH).fill(''); redraw(); }));
+    more.appendChild(btn('Взять за основу «Школьник»', () => { grid = bake(by('school')); redraw(); }));
+    more.appendChild(btn('Очистить', () => { grid = new Array(GW * GH).fill(''); redraw(); }));
     const foot = document.createElement('div'); foot.className = 'edFoot'; box.appendChild(foot);
     foot.appendChild(btn('Отмена', () => { close(); if (cancel) cancel(); }));
     foot.appendChild(btn('Готово — играть', () => {
@@ -204,7 +204,7 @@
       const c = document.createElement('canvas'); c.width = 72; c.height = 120; cvs.push([c, sk]); preview(c, sk, 0);
       const n = document.createElement('div'); n.textContent = sk.name; b.appendChild(c); b.appendChild(n);
       if (sk.note) { const s = document.createElement('small'); s.textContent = sk.note; b.appendChild(s); }
-      if (sk.custom && sk.grid) { const ed = document.createElement('span'); ed.className = 'skinEdit'; ed.textContent = '✏️'; ed.onclick = ev => { ev.stopPropagation(); edit(); }; b.appendChild(ed); }
+      if (sk.custom && sk.grid) { const ed = document.createElement('span'); ed.className = 'skinEdit'; ed.textContent = 'ред.'; ed.onclick = ev => { ev.stopPropagation(); edit(); }; b.appendChild(ed); }
       b.onclick = () => {
         if (sk.custom && !sk.grid) { edit(); return; }
         curId = sk.id; try { localStorage.setItem(KEY, curId); } catch (e) {} close(); if (cb) cb(sk);

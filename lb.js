@@ -17,6 +17,7 @@
         method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json', apikey: CFG.key }, CFG.key.startsWith('eyJ') ? { Authorization: 'Bearer ' + CFG.key } : {}),   // sb_publishable_ keys are not JWTs: no Bearer for them
         body: JSON.stringify(args)
       });
+      if (r.status === 401 || r.status === 403) return { error: 'Сервер отклонил запрос (' + r.status + '): проверьте ключ Supabase и права функций (supabase/schema.sql)', denied: true };
       if (!r.ok) {
         let d = ''; try { const j = await r.json(); d = [j.code, j.message || j.hint].filter(Boolean).join(': '); } catch (e) {}
         return { error: 'Ошибка сервера (' + r.status + ')' + (d ? ' ' + d : '') };
@@ -82,7 +83,7 @@
   async function sendScore(game, value) {
     const res = await rpc('lb_submit', { p_token: token, p_game: game, p_value: value });
     if (res.error) { toast('Результат не сохранён: ' + res.error); return res; }
-    toast(res.improved ? '🏆 Новый личный рекорд сохранён!' : 'Результат отправлен (рекорд не побит)');
+    toast(res.improved ? 'Новый личный рекорд сохранён!' : 'Результат отправлен (рекорд не побит)');
     return res;
   }
   function flushPending() {
@@ -94,13 +95,13 @@
     if (!token) {                                                    // keep the best unsent result until the player logs in
       let keep = { game, value };
       try { const o = JSON.parse(store.get(LS.pend) || 'null'); if (o && o.game === game && (better === 'low' ? o.value <= value : o.value >= value)) keep = o; } catch (e) {}
-      store.set(LS.pend, JSON.stringify(keep)); toast('Войдите в аккаунт (кнопка 🏆 вверху), чтобы результат попал в таблицу'); return;
+      store.set(LS.pend, JSON.stringify(keep)); toast('Войдите в аккаунт (кнопка «РЕЙТИНГ» вверху), чтобы результат попал в таблицу'); return;
     }
     return sendScore(game, value);
   }
 
   async function openBoard(sim) {
-    const lb = sim.lb || {}, b = openModal('🏆 ' + sim.title), fmt = lb.fmt || (v => String(v));
+    const lb = sim.lb || {}, b = openModal('Рейтинг: ' + sim.title), fmt = lb.fmt || (v => String(v));
     b.appendChild(el('p', 'lbSub', lb.label || 'Лучшие результаты'));
     if (!enabled) { b.appendChild(el('p', 'lbMsg', 'Лидерборд ещё не подключён к серверу. Владельцу сайта нужно вписать ключи Supabase в supabase-config.js.')); return; }
     const list = el('div', 'lbList'); list.appendChild(el('p', 'lbMsg', 'Загрузка…')); b.appendChild(list);
@@ -111,7 +112,7 @@
     res.rows.forEach(r => {
       const row = el('div', 'lbRow' + (nick && r.nick.toLowerCase() === nick.toLowerCase() ? ' me' : ''));
       const nm = el('span', 'nm', r.nick); if (r.creator) nm.appendChild(creatorBadge());
-      row.append(el('span', 'rk', r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank + '.'), nm, el('span', 'sc', fmt(Number(r.best))));
+      row.append(el('span', 'rk', r.rank + '.'), nm, el('span', 'sc', fmt(Number(r.best))));
       list.appendChild(row);
     });
     if (res.me && !res.rows.some(r => nick && r.nick.toLowerCase() === nick.toLowerCase())) b.appendChild(el('p', 'lbMe', 'Ваше место: ' + res.me.rank + ' — ' + fmt(Number(res.me.best))));
@@ -120,6 +121,7 @@
 
   window.LB = {
     enabled, openAccount, openBoard, submit, toast,
+    rpc, modal: openModal, el, token: () => token,
     progressGet: game => token ? rpc('lb_progress_get', { p_token: token, p_game: game }) : Promise.resolve({ error: 'no login' }),
     progressSet: (game, value) => token ? rpc('lb_progress_set', { p_token: token, p_game: game, p_value: value }) : Promise.resolve({ error: 'no login' }),
     get nick() { return nick; }, get creator() { return creator; }, get loggedIn() { return !!token; }, creatorBadge,

@@ -233,12 +233,12 @@ Sims.register({
     function layoutBtns() {
       const top = H - ctrlH, pad = 8, halfW = (W - pad * 3) / 2, rowH = (ctrlH - pad * 3) / 2, bw = (halfW - pad) / 2;
       btns = [
-        { id: 'jump', label: '⤒ ПРЫЖОК', x: pad, y: top + pad, w: halfW, h: rowH, tap: true },
+        { id: 'jump', label: 'ПРЫЖОК', x: pad, y: top + pad, w: halfW, h: rowH, tap: true },
         { id: 'left', label: '◀', x: pad, y: top + pad * 2 + rowH, w: bw, h: rowH },
         { id: 'right', label: '▶', x: pad * 2 + bw, y: top + pad * 2 + rowH, w: bw, h: rowH },
-        { id: 'dash', label: '💨 ПЕРЕКАТ', x: pad * 2 + halfW, y: top + pad, w: halfW, h: rowH, tap: true },
-        { id: 'hit', label: '🏏', x: pad * 2 + halfW, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true },
-        { id: 'heavy', label: '🦵', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
+        { id: 'dash', label: 'ПЕРЕКАТ', x: pad * 2 + halfW, y: top + pad, w: halfW, h: rowH, tap: true },
+        { id: 'hit', label: 'БИТА', x: pad * 2 + halfW, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true },
+        { id: 'heavy', label: 'НОГА', x: pad * 3 + halfW + bw, y: top + pad * 2 + rowH, w: bw, h: rowH, tap: true }
       ];
     }
     const hitRect = (x, y, r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
@@ -463,7 +463,7 @@ Sims.register({
       if (mode === 'title') {
         shade(0.62); ctx.fillStyle = '#ff4a3a'; ctx.font = '900 ' + mono(Math.min(46, u * 11)); ctx.fillText('СВЕТОФОР', W / 2, H * 0.28);
         ctx.fillStyle = '#f2c21a'; ctx.font = '800 ' + mono(fs + 3); ctx.fillText('кровавый магазин', W / 2, H * 0.28 + fs * 2.2);
-        ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs); const L = kbd ? ['A / D — ходить · Пробел — прыжок', 'ЛКМ — удар битой · ПКМ — удар ногой', 'Q — перекат · розовых ползунов бьёт только нога'] : ['◀ ▶ — ходить · ⤒ — прыжок', '🏏 — удар битой · 🦵 — удар ногой', '💨 — перекат · розовых ползунов бьёт только нога'];
+        ctx.fillStyle = '#fff'; ctx.font = '700 ' + mono(fs); const L = kbd ? ['A / D — ходить · Пробел — прыжок', 'ЛКМ — удар битой · ПКМ — удар ногой', 'Q — перекат · розовых ползунов бьёт только нога'] : ['◀ ▶ — ходить · ПРЫЖОК', 'БИТА — удар битой · НОГА — удар ногой', 'ПЕРЕКАТ · розовых ползунов бьёт только нога'];
         L.forEach((s, i) => ctx.fillText(s, W / 2, H * 0.28 + fs * 5 + i * fs * 1.7));
         ctx.fillStyle = '#9fd8ff'; ctx.font = '800 ' + mono(fs + 2); ctx.fillText('нажмите, чтобы начать', W / 2, H * 0.28 + fs * 11);
       }

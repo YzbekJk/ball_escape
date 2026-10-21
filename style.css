@@ -25,7 +25,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;
 button{font:inherit;color:#fff;background:#14171f;border:1px solid #2a3040;border-radius:10px;
   padding:9px 12px;cursor:pointer}
 button:hover{background:#1d2230}button:active{transform:translateY(1px)}
-#bar button{width:42px;height:42px;padding:0;font-size:20px;border-radius:50%;opacity:.4}
+#bar button{width:auto;min-width:42px;height:38px;padding:0 12px;font-size:12px;font-weight:700;letter-spacing:.04em;border-radius:19px;opacity:.55;white-space:nowrap}
 #bar button:hover{opacity:1}
 
 #panel{position:fixed;top:0;right:0;bottom:0;width:min(360px,100vw);background:rgba(10,12,18,.97);
@@ -74,9 +74,6 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 .hitbadge{position:absolute;top:10px;right:-34px;transform:rotate(35deg);width:130px;text-align:center;background:linear-gradient(#ff4b2b,#ff9a1f);color:#fff;font-weight:900;font-size:15px;letter-spacing:1px;padding:5px 0;box-shadow:0 2px 8px rgba(0,0,0,.5);text-shadow:0 1px 2px rgba(0,0,0,.5);pointer-events:none;animation:hitpulse 1.4s ease-in-out infinite}
 @keyframes hitpulse{50%{filter:brightness(1.25)}}
 
-.credit{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0 28px;color:#9a9aa6;font-size:14px}
-.credit img{width:32px;height:32px;object-fit:contain;border-radius:50%}
-.credit img[src$=png]{border-radius:0}
 
 .online{display:flex;align-items:center;justify-content:center;gap:8px;width:max-content;margin:24px auto 0;padding:8px 16px;border:1px solid #1f3a2a;border-radius:999px;background:#0d1a13;color:#bfe9cd;font-size:14px}
 .online[hidden]{display:none}
@@ -109,3 +106,12 @@ input.txt{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;bo
 .plumBtn{width:40px;height:40px;padding:0;border-radius:50%;font-size:22px;line-height:1;flex:none}
 .plumBtn span{display:inline-block;filter:hue-rotate(250deg) saturate(1.4)}
 .plumBtn[hidden]{display:none}
+
+.midi .midiCur{font-size:12px;color:#9aa3b8;margin:4px 0 6px;word-break:break-word}
+.midi .midiBtns{display:flex;flex-wrap:wrap;gap:6px}
+.midi .midiBtns button{font-size:12px;padding:7px 10px;border-radius:8px}
+.midi .midiBtns button:disabled{opacity:.4}
+.midiRow{flex-wrap:wrap;gap:6px}
+.midiRow .nm{flex:1 1 100%}
+.midiPick{font-size:12px;padding:6px 10px;border-radius:8px}
+.midiPick.del{opacity:.7}
