@@ -28,23 +28,44 @@ Sims.register({
       { id: 'comp', ic: '🥤', n: 'Компотная', cps: 120, base: 5000 },
       { id: 'jam', ic: '🍯', n: 'Джемовая фабрика', cps: 700, base: 40000 },
       { id: 'port', ic: '🌀', n: 'Сливовый портал', cps: 4000, base: 300000 },
-      { id: 'gal', ic: '🌌', n: 'Сливовая галактика', cps: 25000, base: 2500000 }
+      { id: 'gal', ic: '🌌', n: 'Сливовая галактика', cps: 25000, base: 2500000 },
+      { id: 'mine', ic: '⛏️', n: 'Сливовая шахта', cps: 150000, base: 2e7, reb: 1 },
+      { id: 'rock', ic: '🚀', n: 'Сливовая ракета', cps: 900000, base: 2e8, reb: 2 },
+      { id: 'time', ic: '⏳', n: 'Машина времени', cps: 6e6, base: 2e9, reb: 3 },
+      { id: 'multi', ic: '🪐', n: 'Сливовая мультивселенная', cps: 4e7, base: 3e10, reb: 5 },
+      { id: 'god', ic: '👑', n: 'Сливовый бог', cps: 3e8, base: 5e11, reb: 8 }
     ];
     const CLICKUP = [
       { id: 'finger', ic: '👆', n: 'Крепкий палец', add: 1, base: 20, gr: 1.4 },
-      { id: 'glove', ic: '🧤', n: 'Золотые перчатки', add: 15, base: 3000, gr: 1.5 }
+      { id: 'glove', ic: '🧤', n: 'Золотые перчатки', add: 15, base: 3000, gr: 1.5 },
+      { id: 'fist', ic: '✊', n: 'Железный кулак', add: 150, base: 5e5, gr: 1.5, reb: 1 },
+      { id: 'slay', ic: '⚔️', n: 'Сливобой', add: 2000, base: 1e7, gr: 1.5, reb: 2 },
+      { id: 'titan', ic: '🦾', n: 'Рука Титана', add: 30000, base: 3e8, gr: 1.5, reb: 4 },
+      { id: 'divine', ic: '☄️', n: 'Божественный клик', add: 5e5, base: 1e10, gr: 1.5, reb: 7 }
     ];
     const MULT = [
       { id: 'm1', ic: '💩', n: 'Удобрение', x: 2, cost: 1000, d: 'всё ×2' },
       { id: 'm2', ic: '💧', n: 'Золотая лейка', x: 2, cost: 25000, d: 'всё ×2' },
       { id: 'm3', ic: '🪱', n: 'Волшебный компост', x: 3, cost: 500000, d: 'всё ×3' },
-      { id: 'm4', ic: '✨', n: 'Сливовая магия', x: 5, cost: 10000000, d: 'всё ×5' }
+      { id: 'm4', ic: '✨', n: 'Сливовая магия', x: 5, cost: 10000000, d: 'всё ×5' },
+      { id: 'm5', ic: '🍵', n: 'Сливовый чай', x: 2, cost: 5e7, d: 'всё ×2', reb: 1 },
+      { id: 'm6', ic: '🏡', n: 'Теплица', x: 3, cost: 2e8, d: 'всё ×3', reb: 2 },
+      { id: 'm7', ic: '☄️', n: 'Космическое удобрение', x: 4, cost: 1e9, d: 'всё ×4', reb: 3 },
+      { id: 'm8', ic: '🧬', n: 'Гибридные сливы', x: 5, cost: 1e10, d: 'всё ×5', reb: 4 },
+      { id: 'm9', ic: '🔮', n: 'Сливовое пророчество', x: 8, cost: 1e11, d: 'всё ×8', reb: 6 },
+      { id: 'm10', ic: '🌠', n: 'Сливовая сингулярность', x: 10, cost: 1e12, d: 'всё ×10', reb: 9 }
+    ];
+    const PERM = [
+      { id: 'pgold', ic: '🌟', n: 'Золотой нюх', d: 'золотые сливы летят на 15% чаще за уровень', cost: 4, max: 4 },
+      { id: 'pfren', ic: '🔥', n: 'Долгий угар', d: '+5 секунд золотого угара за уровень', cost: 6, max: 4 },
+      { id: 'pstart', ic: '💰', n: 'Стартовый капитал', d: 'после перерождения начинаешь с 10 тыс. слив за уровень', cost: 3, max: 5 },
+      { id: 'ptrain', ic: '🏋️', n: 'Сливовый тренинг', d: 'клик даёт +2% от слив в секунду за уровень', cost: 10, max: 5 }
     ];
     const RANKS = [[0, 'Сливовый новичок'], [100, 'Садовод'], [1e3, 'Фермер'], [1e4, 'Сливовый барон'], [1e5, 'Король компота'], [1e6, 'Император слив'], [1e7, 'Повелитель косточек'], [1e8, 'Сливовая вселенная']];
 
-    const fresh = () => ({ plums: 0, total: 0, run: 0, clicks: 0, lv: {}, up: {}, ach: {}, pits: 0, golds: 0, rebirths: 0, ts: Date.now() });
+    const fresh = () => ({ plums: 0, total: 0, run: 0, clicks: 0, lv: {}, up: {}, ach: {}, pits: 0, golds: 0, rebirths: 0, perm: {}, ts: Date.now() });
     let S = fresh();
-    function load() { try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && typeof j.plums === 'number') S = Object.assign(S, j); } catch (e) { } S.run = S.run || S.total; S.ach = S.ach || {}; S.lv = S.lv || {}; S.up = S.up || {}; }
+    function load() { try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && typeof j.plums === 'number') S = Object.assign(S, j); } catch (e) { } S.run = S.run || S.total; S.ach = S.ach || {}; S.lv = S.lv || {}; S.up = S.up || {}; S.perm = S.perm || {}; }
     function save() { S.ts = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
     load();
 
@@ -64,15 +85,25 @@ Sims.register({
       { id: 'cps1m', ic: '🚀', n: 'Миллион в секунду', d: '1 млн слив в секунду', t: () => cps() >= 1e6 },
       { id: 'g1', ic: '🌟', n: 'Золотой улов', d: 'Поймать золотую сливу', t: () => S.golds >= 1 },
       { id: 'g10', ic: '🏆', n: 'Охотник за золотом', d: 'Поймать 10 золотых слив', t: () => S.golds >= 10 },
-      { id: 'rb1', ic: '♻️', n: 'Новая жизнь', d: 'Первое перерождение', t: () => S.rebirths >= 1 }
+      { id: 'rb1', ic: '♻️', n: 'Новая жизнь', d: 'Первое перерождение', t: () => S.rebirths >= 1 },
+      { id: 'rb3', ic: '🔁', n: 'Круговорот', d: '3 перерождения', t: () => S.rebirths >= 3 },
+      { id: 'rb5', ic: '🌀', n: 'Вечное возвращение', d: '5 перерождений', t: () => S.rebirths >= 5 },
+      { id: 'rb10', ic: '🪦', n: 'Десять жизней', d: '10 перерождений', t: () => S.rebirths >= 10 },
+      { id: 'p1t', ic: '🌌', n: 'Сливовая эра', d: 'Собрать 1 трлн слив', t: () => S.total >= 1e12 },
+      { id: 'cps1b', ic: '💥', n: 'Миллиард в секунду', d: '1 млрд слив в секунду', t: () => cps() >= 1e9 },
+      { id: 'god', ic: '👑', n: 'Сливовый бог', d: 'Построить Сливового бога', t: () => lvl('god') >= 1 },
+      { id: 'perm', ic: '🌰', n: 'Коллекционер косточек', d: 'Купить 5 улучшений за косточки', t: () => PERM.reduce((a, d) => a + plv(d.id), 0) >= 5 }
     ];
     const achCount = () => ACH.filter(a => S.ach[a.id]).length;
+    const pitsFree = () => S.pits - PERM.reduce((a, d) => { let c = 0; for (let i = 0; i < plv(d.id); i++) c += d.cost * (i + 1); return a + c; }, 0);
     const pitGain = () => Math.floor(Math.sqrt((S.run || 0) / 5e5));
     const lvl = id => S.lv[id] || 0;
+    const plv = id => S.perm[id] || 0;
+    const locked = d => (d.reb || 0) > S.rebirths;
     const costOf = (d, n) => Math.ceil(d.base * Math.pow(d.gr || 1.15, n));
     let frenzy = 0;
     const globalMult = () => MULT.reduce((m, u) => m * (S.up[u.id] ? u.x : 1), 1) * (frenzy > 0 ? 7 : 1) * (1 + 0.1 * S.pits) * (1 + 0.02 * achCount());
-    const clickPower = () => (1 + CLICKUP.reduce((a, u) => a + lvl(u.id) * u.add, 0)) * globalMult();
+    const clickPower = () => (1 + CLICKUP.reduce((a, u) => a + lvl(u.id) * u.add, 0)) * globalMult() + baseCps() * globalMult() * 0.02 * plv('ptrain');
     const baseCps = () => BUILD.reduce((a, b) => a + lvl(b.id) * b.cps, 0);
     const cps = () => baseCps() * globalMult();
     function fmt(n) {
@@ -143,6 +174,7 @@ Sims.register({
     addHead('Перерождение');
     const rbRow = document.createElement('button'); rbRow.className = 'pc-row'; rbRow.innerHTML = '<span class="ic">♻️</span><span class="tx"><div class="nm"></div><div class="ds"></div></span><span class="pr"></span>'; panel.appendChild(rbRow);
     rbRow.onclick = () => rebirth();
+    addHead('Косточки: постоянные улучшения'); PERM.forEach(d => addRow(d, 'perm'));
     addHead('Достижения'); const achBox = document.createElement('div'); achBox.className = 'pc-ach'; panel.appendChild(achBox);
     const achEls = ACH.map(a => { const e = document.createElement('button'); e.className = 'pc-at'; e.textContent = a.ic; e.onclick = () => say((S.ach[a.id] ? '✓ ' : '🔒 ') + a.n + ' — ' + a.d); achBox.appendChild(e); return e; });
     const achCnt = document.createElement('div'); achCnt.className = 'ds'; achCnt.style.cssText = 'margin:6px 2px;color:#c7a8ea;font-size:12px'; panel.appendChild(achCnt);
@@ -150,8 +182,8 @@ Sims.register({
     function rebirth() {
       const g = pitGain(); if (g < 1) return;
       if (!confirm('Перерождение: вы потеряете сливы, постройки и улучшения, но получите ' + g + ' косточек (+' + (g * 10) + '% ко всему навсегда). Продолжить?')) return;
-      const keep = { total: S.total, clicks: S.clicks, ach: S.ach, golds: S.golds, pits: S.pits + g, rebirths: S.rebirths + 1 };
-      S = Object.assign(fresh(), keep); frenzy = 0; save(); say('Перерождение! +' + g + ' косточек'); blip(330, 0.5, 'sine', 0.07, 990); checkAch(); refreshRows();
+      const keep = { total: S.total, clicks: S.clicks, ach: S.ach, golds: S.golds, pits: S.pits + g, rebirths: S.rebirths + 1, perm: S.perm };
+      S = Object.assign(fresh(), keep); S.plums = 1e4 * plv('pstart');  frenzy = 0; save(); say('Перерождение! +' + g + ' косточек'); blip(330, 0.5, 'sine', 0.07, 990); checkAch(); refreshRows();
     }
     const rs = document.createElement('button'); rs.className = 'pc-reset'; rs.textContent = 'Сбросить весь прогресс'; panel.appendChild(rs);
     rs.onclick = () => { if (confirm('Сбросить ВЕСЬ прогресс сливового кликера, включая косточки и достижения?')) { S = fresh(); frenzy = 0; save(); refreshRows(); } };
@@ -163,16 +195,20 @@ Sims.register({
       for (; k < n; k++) sum += costOf(def, have + k); return { n, cost: sum };
     }
     function buy(kind, id) {
-      const def = (kind === 'click' ? CLICKUP : kind === 'build' ? BUILD : MULT).find(q => q.id === id); if (!def) return false;
+      const def = (kind === 'click' ? CLICKUP : kind === 'build' ? BUILD : kind === 'perm' ? PERM : MULT).find(q => q.id === id); if (!def) return false;
+      if (locked(def)) return false;
+      if (kind === 'perm') { const n = plv(id), c = def.cost * (n + 1); if (n >= def.max || pitsFree() < c) return false; S.perm[id] = n + 1; blip(520, 0.25, 'triangle', 0.07, 1040); checkAch(); refreshRows(); save(); return true; }
       if (kind === 'mult') { if (S.up[id] || S.plums < def.cost) return false; S.plums -= def.cost; S.up[id] = 1; blip(520, 0.25, 'triangle', 0.07, 1040); refreshRows(); save(); return true; }
       const p = priceFor(def, kind); if (S.plums < p.cost) return false;
       S.plums -= p.cost; S.lv[id] = lvl(id) + p.n; blip(380, 0.12, 'square', 0.04, 760); refreshRows(); return true;
     }
     function refreshRows() {
-      { const g = pitGain(); rbRow.querySelector('.nm').textContent = 'Перерождение' + (S.pits ? ' · косточек: ' + S.pits : ''); rbRow.querySelector('.ds').textContent = g >= 1 ? 'Сейчас дадут +' + g + ' косточек (+' + (g * 10) + '% ко всему навсегда)' : 'Собери за забег от 500 тыс. слив — получишь косточки (бонус +10% каждая)'; rbRow.querySelector('.pr').textContent = g >= 1 ? '+' + g : ''; rbRow.classList.toggle('no', g < 1); }
+      { const g = pitGain(); rbRow.querySelector('.nm').textContent = 'Перерождение №' + (S.rebirths + 1) + (S.pits ? ' · косточек: ' + pitsFree() + ' своб. из ' + S.pits : ''); rbRow.querySelector('.ds').textContent = g >= 1 ? 'Сейчас дадут +' + g + ' косточек (+' + (g * 10) + '% ко всему навсегда)' : 'Собери за забег от 500 тыс. слив — получишь косточки (+10% каждая) и откроешь новые постройки и улучшения'; rbRow.querySelector('.pr').textContent = g >= 1 ? '+' + g : ''; rbRow.classList.toggle('no', g < 1); }
       achEls.forEach((e, i) => e.classList.toggle('on', !!S.ach[ACH[i].id])); achCnt.textContent = 'Открыто ' + achCount() + ' из ' + ACH.length + ' · каждое даёт +2% ко всему';
       rows.forEach(r => {
         const d = r.def;
+        if (locked(d)) { r.nm.textContent = d.n; r.ds.textContent = 'Откроется после перерождений: ' + d.reb + ' (у вас ' + S.rebirths + ')'; r.pr.textContent = ''; r.b.classList.remove('done'); r.b.classList.add('no'); return; }
+        if (r.kind === 'perm') { const n = plv(d.id), c = d.cost * (n + 1), mx = n >= d.max; r.nm.textContent = d.n + ' · ур. ' + n + '/' + d.max; r.ds.textContent = d.d; r.pr.textContent = mx ? 'МАКС' : c + ' косточек'; r.b.classList.toggle('done', mx); r.b.classList.toggle('no', !mx && pitsFree() < c); return; }
         if (r.kind === 'mult') { const has = !!S.up[d.id]; r.nm.textContent = d.n + (has ? ' ✓' : ''); r.ds.textContent = d.d; r.pr.textContent = has ? '' : fmt(d.cost); r.b.classList.toggle('done', has); r.b.classList.toggle('no', !has && S.plums < d.cost); return; }
         const p = priceFor(d, r.kind);
         r.nm.textContent = d.n + ' · ур. ' + lvl(d.id);
@@ -203,8 +239,8 @@ Sims.register({
       blip(rnd(300, 420), 0.09, 'triangle', 0.05, rnd(500, 640));
     }
     function catchGold() {
-      gold = null; frenzy = 15; const bonus = Math.max(100, cps() * 30 / 7); S.plums += bonus; S.total += bonus; S.run += bonus; S.golds++;
-      say('Золотая слива! Всё ×7 на 15 секунд, +' + fmt(bonus)); [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => blip(f, 0.2, 'sine', 0.06), i * 70));
+      gold = null; frenzy = 15 + 5 * plv('pfren'); const bonus = Math.max(100, cps() * 30 / 7); S.plums += bonus; S.total += bonus; S.run += bonus; S.golds++;
+      say('Золотая слива! Всё ×7 на ' + frenzy + ' секунд, +' + fmt(bonus)); [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => blip(f, 0.2, 'sine', 0.06), i * 70));
       const c = plumC(); for (let i = 0; i < 30; i++) parts.push({ x: c.x, y: c.y, vx: rnd(-260, 260), vy: rnd(-300, 100), life: rnd(0.6, 1.2), col: '#ffd54a', r: rnd(2, 5) });
     }
 
@@ -216,7 +252,7 @@ Sims.register({
       parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; p.life -= dt; }); parts = parts.filter(p => p.life > 0);
       floats.forEach(f => { f.y -= 50 * dt; f.life -= dt; }); floats = floats.filter(f => f.life > 0);
       if (gold) { gold.x += gold.vx * dt; gold.life -= dt; gold.y = gold.y0 + Math.sin(t * 3) * 14; if (gold.life <= 0 || gold.x < -60 || gold.x > W + 60) gold = null; }
-      else { goldIn -= dt; if (goldIn <= 0) { goldIn = rnd(45, 90); const dir = Math.random() < 0.5 ? 1 : -1; gold = { x: dir > 0 ? -40 : area.w + 40, y0: rnd(area.h * 0.15, area.h * 0.45), y: 0, vx: dir * rnd(90, 140), life: 12 }; } }
+      else { goldIn -= dt; if (goldIn <= 0) { goldIn = rnd(45, 90) * Math.pow(0.85, plv('pgold')); const dir = Math.random() < 0.5 ? 1 : -1; gold = { x: dir > 0 ? -40 : area.w + 40, y0: rnd(area.h * 0.15, area.h * 0.45), y: 0, vx: dir * rnd(90, 140), life: 12 }; } }
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast.style.opacity = 0; }
       rowT += dt; if (rowT > 0.2) { rowT = 0; refreshRows(); }
       saveT += dt; if (saveT > 4) { saveT = 0; save(); }
