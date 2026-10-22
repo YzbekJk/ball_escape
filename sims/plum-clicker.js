@@ -35,6 +35,13 @@ Sims.register({
       { id: 'multi', ic: '🪐', n: 'Сливовая мультивселенная', cps: 4e7, base: 3e10, reb: 5 },
       { id: 'god', ic: '👑', n: 'Сливовый бог', cps: 3e8, base: 5e11, reb: 8 }
     ];
+    const BUILD_EXTRA = [
+      { id: 'bee', ic: '🐝', n: 'Пчёлы-опылители', cps: 1.5, base: 45 },
+      { id: 'tract', ic: '🚜', n: 'Трактор', cps: 9, base: 280 },
+      { id: 'bottle', ic: '🍾', n: 'Бутылочный цех', cps: 300, base: 15000 },
+      { id: 'bank', ic: '🏦', n: 'Сливовый банк', cps: 1800, base: 120000 },
+      { id: 'lab', ic: '🔬', n: 'Сливовая лаборатория', cps: 9000, base: 800000 }
+    ];
     const CLICKUP = [
       { id: 'finger', ic: '👆', n: 'Крепкий палец', add: 1, base: 20, gr: 1.4 },
       { id: 'glove', ic: '🧤', n: 'Золотые перчатки', add: 15, base: 3000, gr: 1.5 },
@@ -43,7 +50,24 @@ Sims.register({
       { id: 'titan', ic: '🦾', n: 'Рука Титана', add: 30000, base: 3e8, gr: 1.5, reb: 4 },
       { id: 'divine', ic: '☄️', n: 'Божественный клик', add: 5e5, base: 1e10, gr: 1.5, reb: 7 }
     ];
+    BUILD.push(...BUILD_EXTRA); BUILD.sort((a, b) => (a.reb || 0) - (b.reb || 0) || a.base - b.base);
+    CLICKUP.push(
+      { id: 'thumb', ic: '👍', n: 'Большой палец', add: 4, base: 300, gr: 1.45 },
+      { id: 'brace', ic: '💪', n: 'Браслет силы', add: 60, base: 60000, gr: 1.5 },
+      { id: 'claw', ic: '🦀', n: 'Сливовые клешни', add: 300, base: 4e6, gr: 1.5 }
+    );
+    CLICKUP.sort((a, b) => (a.reb || 0) - (b.reb || 0) || a.base - b.base);
     const MULT = [
+      { id: 'a1', ic: '🧤', n: 'Садовые перчатки', x: 1.5, cost: 300, d: 'всё ×1.5' },
+      { id: 'a2', ic: '🌧️', n: 'Тёплый дождь', x: 2, cost: 8000, d: 'всё ×2' },
+      { id: 'a3', ic: '🏠', n: 'Мини-теплица', x: 2.5, cost: 120000, d: 'всё ×2.5' },
+      { id: 'a4', ic: '📻', n: 'Сливовое радио', x: 3, cost: 2e6, d: 'всё ×3' },
+      { id: 'a5', ic: '🧘', n: 'Сливовая мантра', x: 4, cost: 3e7, d: 'всё ×4' },
+      { id: 'a6', ic: '🛰️', n: 'Спутниковый полив', x: 4, cost: 4e8, d: 'всё ×4', reb: 2 },
+      { id: 'a7', ic: '🧪', n: 'Эликсир роста', x: 6, cost: 5e9, d: 'всё ×6', reb: 3 },
+      { id: 'a8', ic: '🌀', n: 'Петля времени', x: 6, cost: 6e10, d: 'всё ×6', reb: 5 },
+      { id: 'a9', ic: '👁️', n: 'Всевидящая слива', x: 12, cost: 8e12, d: 'всё ×12', reb: 7 },
+      { id: 'a10', ic: '♾️', n: 'Бесконечный урожай', x: 20, cost: 5e14, d: 'всё ×20', reb: 10 },
       { id: 'm1', ic: '💩', n: 'Удобрение', x: 2, cost: 1000, d: 'всё ×2' },
       { id: 'm2', ic: '💧', n: 'Золотая лейка', x: 2, cost: 25000, d: 'всё ×2' },
       { id: 'm3', ic: '🪱', n: 'Волшебный компост', x: 3, cost: 500000, d: 'всё ×3' },
@@ -55,17 +79,33 @@ Sims.register({
       { id: 'm9', ic: '🔮', n: 'Сливовое пророчество', x: 8, cost: 1e11, d: 'всё ×8', reb: 6 },
       { id: 'm10', ic: '🌠', n: 'Сливовая сингулярность', x: 10, cost: 1e12, d: 'всё ×10', reb: 9 }
     ];
+    MULT.sort((a, b) => (a.reb || 0) - (b.reb || 0) || a.cost - b.cost);
+    const CMULT = [
+      { id: 'k1', ic: '✌️', n: 'Двойной клик', x: 2, cost: 2000, d: 'клик ×2' },
+      { id: 'k2', ic: '🖐️', n: 'Тройной клик', x: 3, cost: 2e5, d: 'клик ×3' },
+      { id: 'k3', ic: '👊', n: 'Мега-клик', x: 5, cost: 5e7, d: 'клик ×5' },
+      { id: 'k4', ic: '🌋', n: 'Сливотрясение', x: 8, cost: 1e10, d: 'клик ×8', reb: 3 },
+      { id: 'k5', ic: '☀️', n: 'Клик сверхновой', x: 15, cost: 1e13, d: 'клик ×15', reb: 6 }
+    ];
+    const GOLDUP = [
+      { id: 'g1', ic: '🧲', n: 'Золотой магнит', cost: 50000, d: 'золотые сливы летят на 30% чаще' },
+      { id: 'g2', ic: '🔥', n: 'Золотая лихорадка', cost: 1e6, d: 'золотой угар длится на 8 секунд дольше' },
+      { id: 'g3', ic: '👛', n: 'Сливовый кошелёк', cost: 5e7, d: 'бонус за золотую сливу ×3', reb: 1 }
+    ];
+    const BT = [10, 25, 50, 100];
     const PERM = [
       { id: 'pgold', ic: '🌟', n: 'Золотой нюх', d: 'золотые сливы летят на 15% чаще за уровень', cost: 4, max: 4 },
       { id: 'pfren', ic: '🔥', n: 'Долгий угар', d: '+5 секунд золотого угара за уровень', cost: 6, max: 4 },
       { id: 'pstart', ic: '💰', n: 'Стартовый капитал', d: 'после перерождения начинаешь с 10 тыс. слив за уровень', cost: 3, max: 5 },
+      { id: 'poff', ic: '🌙', n: 'Сны о сливах', d: 'пока вас нет, сады приносят на 10% больше (за уровень)', cost: 5, max: 5 },
+      { id: 'pheir', ic: '🏛️', n: 'Сливовое наследие', d: '+5% ко всему за уровень', cost: 12, max: 10 },
       { id: 'ptrain', ic: '🏋️', n: 'Сливовый тренинг', d: 'клик даёт +2% от слив в секунду за уровень', cost: 10, max: 5 }
     ];
     const RANKS = [[0, 'Сливовый новичок'], [100, 'Садовод'], [1e3, 'Фермер'], [1e4, 'Сливовый барон'], [1e5, 'Король компота'], [1e6, 'Император слив'], [1e7, 'Повелитель косточек'], [1e8, 'Сливовая вселенная'], [1e12, 'Сливовый бог'], [1e18, 'Сливовое мироздание'], [1e27, 'Сливовая бесконечность']];
 
-    const fresh = () => ({ plums: 0, total: 0, run: 0, clicks: 0, lv: {}, up: {}, ach: {}, pits: 0, golds: 0, rebirths: 0, perm: {}, ts: Date.now() });
+    const fresh = () => ({ plums: 0, total: 0, run: 0, clicks: 0, lv: {}, up: {}, ach: {}, pits: 0, golds: 0, rebirths: 0, perm: {}, bt: {}, ts: Date.now() });
     let S = fresh();
-    function load() { try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && typeof j.plums === 'number') S = Object.assign(S, j); } catch (e) { } S.run = S.run || S.total; S.ach = S.ach || {}; S.lv = S.lv || {}; S.up = S.up || {}; S.perm = S.perm || {}; }
+    function load() { try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && typeof j.plums === 'number') S = Object.assign(S, j); } catch (e) { } S.run = S.run || S.total; S.ach = S.ach || {}; S.lv = S.lv || {}; S.up = S.up || {}; S.perm = S.perm || {}; S.bt = S.bt || {}; }
     function save() { S.ts = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
     load();
 
@@ -92,7 +132,10 @@ Sims.register({
       { id: 'p1t', ic: '🌌', n: 'Сливовая эра', d: 'Собрать 1 трлн слив', t: () => S.total >= 1e12 },
       { id: 'cps1b', ic: '💥', n: 'Миллиард в секунду', d: '1 млрд слив в секунду', t: () => cps() >= 1e9 },
       { id: 'god', ic: '👑', n: 'Сливовый бог', d: 'Построить Сливового бога', t: () => lvl('god') >= 1 },
-      { id: 'perm', ic: '🌰', n: 'Коллекционер косточек', d: 'Купить 5 улучшений за косточки', t: () => PERM.reduce((a, d) => a + plv(d.id), 0) >= 5 }
+      { id: 'bt1', ic: '📈', n: 'Первый рубеж', d: 'Купить рубеж постройки', t: () => Object.keys(S.bt).some(k => S.bt[k] > 0) },
+      { id: 'bt8', ic: '🏅', n: 'Мастер рубежей', d: 'Купить 8 рубежей построек', t: () => Object.keys(S.bt).reduce((a, k) => a + S.bt[k], 0) >= 8 },
+      { id: 'up15', ic: '🛒', n: 'Шопоголик', d: 'Купить 15 улучшений за сливы', t: () => Object.keys(S.up).length >= 15 },
+      { id: 'perm', n: 'Коллекционер косточек', d: 'Купить 5 улучшений за косточки', t: () => PERM.reduce((a, d) => a + plv(d.id), 0) >= 5 }
     ];
     const achCount = () => ACH.filter(a => S.ach[a.id]).length;
     const pitsFree = () => S.pits - PERM.reduce((a, d) => { let c = 0; for (let i = 0; i < plv(d.id); i++) c += d.cost * (i + 1); return a + c; }, 0);
@@ -102,9 +145,9 @@ Sims.register({
     const locked = d => (d.reb || 0) > S.rebirths;
     const costOf = (d, n) => Math.ceil(d.base * Math.pow(d.gr || 1.15, n));
     let frenzy = 0;
-    const globalMult = () => MULT.reduce((m, u) => m * (S.up[u.id] ? u.x : 1), 1) * (frenzy > 0 ? 7 : 1) * (1 + 0.1 * S.pits) * (1 + 0.02 * achCount());
-    const clickPower = () => (1 + CLICKUP.reduce((a, u) => a + lvl(u.id) * u.add, 0)) * globalMult() + baseCps() * globalMult() * 0.02 * plv('ptrain');
-    const baseCps = () => BUILD.reduce((a, b) => a + lvl(b.id) * b.cps, 0);
+    const globalMult = () => MULT.reduce((m, u) => m * (S.up[u.id] ? u.x : 1), 1) * (1 + 0.05 * plv('pheir')) * (frenzy > 0 ? 7 : 1) * (1 + 0.1 * S.pits) * (1 + 0.02 * achCount());
+    const clickPower = () => (1 + CLICKUP.reduce((a, u) => a + lvl(u.id) * u.add, 0)) * CMULT.reduce((m, u) => m * (S.up[u.id] ? u.x : 1), 1) * globalMult() + baseCps() * globalMult() * 0.02 * plv('ptrain');
+    const baseCps = () => BUILD.reduce((a, b) => a + lvl(b.id) * b.cps * Math.pow(2, S.bt[b.id] || 0), 0);
     const cps = () => baseCps() * globalMult();
     function fmt(n) {
       if (!isFinite(n)) return '∞';
@@ -172,6 +215,9 @@ Sims.register({
     panel.appendChild(bar);
     addHead('Сила клика'); CLICKUP.forEach(d => addRow(d, 'click'));
     addHead('Постройки (сливы сами)'); BUILD.forEach(d => addRow(d, 'build'));
+    addHead('Рубежи построек (×2 постройке)'); BUILD.forEach(d => addRow({ id: d.id, ic: d.ic, n: d.n, b: d, reb: d.reb }, 'bt'));
+    addHead('Улучшения кликов'); CMULT.forEach(d => addRow(d, 'cmult'));
+    addHead('Золотые сливы'); GOLDUP.forEach(d => addRow(d, 'gup'));
     addHead('Улучшения'); MULT.forEach(d => addRow(d, 'mult'));
     addHead('Перерождение');
     const rbRow = document.createElement('button'); rbRow.className = 'pc-row'; rbRow.innerHTML = '<span class="ic">♻️</span><span class="tx"><div class="nm"></div><div class="ds"></div></span><span class="pr"></span>'; panel.appendChild(rbRow);
@@ -195,16 +241,17 @@ Sims.register({
     resetLabel(); const rsIv = setInterval(resetLabel, 1000);
 
     function priceFor(def, kind) {
-      if (kind === 'mult') return { n: S.up[def.id] ? 0 : 1, cost: def.cost };
+      if (kind === 'mult' || kind === 'cmult' || kind === 'gup') return { n: S.up[def.id] ? 0 : 1, cost: def.cost };
       const have = lvl(def.id); let n = buyMode === 0 ? 0 : buyMode, sum = 0, k = 0;
       if (buyMode === 0) { let p = S.plums; while (k < 500) { const c = costOf(def, have + k); if (p < c) break; p -= c; sum += c; k++; } if (!k) return { n: 1, cost: costOf(def, have) }; return { n: k, cost: sum }; }
       for (; k < n; k++) sum += costOf(def, have + k); return { n, cost: sum };
     }
     function buy(kind, id) {
-      const def = (kind === 'click' ? CLICKUP : kind === 'build' ? BUILD : kind === 'perm' ? PERM : MULT).find(q => q.id === id); if (!def) return false;
+      const def = (kind === 'click' ? CLICKUP : kind === 'build' ? BUILD : kind === 'perm' ? PERM : kind === 'cmult' ? CMULT : kind === 'gup' ? GOLDUP : kind === 'bt' ? BUILD : MULT).find(q => q.id === id); if (!def) return false;
       if (locked(def)) return false;
       if (kind === 'perm') { const n = plv(id), c = def.cost * (n + 1); if (n >= def.max || pitsFree() < c) return false; S.perm[id] = n + 1; blip(520, 0.25, 'triangle', 0.07, 1040); checkAch(); refreshRows(); save(); return true; }
-      if (kind === 'mult') { if (S.up[id] || S.plums < def.cost) return false; S.plums -= def.cost; S.up[id] = 1; blip(520, 0.25, 'triangle', 0.07, 1040); refreshRows(); save(); return true; }
+      if (kind === 'bt') { const t = S.bt[id] || 0; if (t >= BT.length || lvl(id) < BT[t]) return false; const c = def.base * 10 * Math.pow(10, t); if (S.plums < c) return false; S.plums -= c; S.bt[id] = t + 1; blip(520, 0.25, 'triangle', 0.07, 1040); checkAch(); refreshRows(); save(); return true; }
+      if (kind === 'mult' || kind === 'cmult' || kind === 'gup') { if (S.up[id] || S.plums < def.cost) return false; S.plums -= def.cost; S.up[id] = 1; blip(520, 0.25, 'triangle', 0.07, 1040); refreshRows(); save(); return true; }
       const p = priceFor(def, kind); if (S.plums < p.cost) return false;
       S.plums -= p.cost; S.lv[id] = lvl(id) + p.n; blip(380, 0.12, 'square', 0.04, 760); refreshRows(); return true;
     }
@@ -215,7 +262,8 @@ Sims.register({
         const d = r.def;
         if (locked(d)) { r.nm.textContent = d.n; r.ds.textContent = 'Откроется после перерождений: ' + d.reb + ' (у вас ' + S.rebirths + ')'; r.pr.textContent = ''; r.b.classList.remove('done'); r.b.classList.add('no'); return; }
         if (r.kind === 'perm') { const n = plv(d.id), c = d.cost * (n + 1), mx = n >= d.max; r.nm.textContent = d.n + ' · ур. ' + n + '/' + d.max; r.ds.textContent = d.d; r.pr.textContent = mx ? 'МАКС' : c + ' косточек'; r.b.classList.toggle('done', mx); r.b.classList.toggle('no', !mx && pitsFree() < c); return; }
-        if (r.kind === 'mult') { const has = !!S.up[d.id]; r.nm.textContent = d.n + (has ? ' ✓' : ''); r.ds.textContent = d.d; r.pr.textContent = has ? '' : fmt(d.cost); r.b.classList.toggle('done', has); r.b.classList.toggle('no', !has && S.plums < d.cost); return; }
+        if (r.kind === 'bt') { const b = d.b, t = S.bt[b.id] || 0, locked2 = locked(b); r.nm.textContent = b.n + ' · рубеж ' + t + '/' + BT.length; if (locked2) { r.ds.textContent = 'Откроется после перерождений: ' + b.reb; r.pr.textContent = ''; r.b.classList.add('no'); r.b.classList.remove('done'); return; } if (t >= BT.length) { r.ds.textContent = 'Все рубежи пройдены'; r.pr.textContent = ''; r.b.classList.add('done'); r.b.classList.remove('no'); return; } const c = b.base * 10 * Math.pow(10, t); r.ds.textContent = 'При ' + BT[t] + ' шт. (сейчас ' + lvl(b.id) + '): постройка даёт ×2'; r.pr.textContent = fmt(c); r.b.classList.remove('done'); r.b.classList.toggle('no', lvl(b.id) < BT[t] || S.plums < c); return; }
+        if (r.kind === 'mult' || r.kind === 'cmult' || r.kind === 'gup') { const has = !!S.up[d.id]; r.nm.textContent = d.n + (has ? ' ✓' : ''); r.ds.textContent = d.d; r.pr.textContent = has ? '' : fmt(d.cost); r.b.classList.toggle('done', has); r.b.classList.toggle('no', !has && S.plums < d.cost); return; }
         const p = priceFor(d, r.kind);
         r.nm.textContent = d.n + ' · ур. ' + lvl(d.id);
         r.ds.textContent = r.kind === 'click' ? '+' + fmt(d.add * globalMult()) + ' за клик' : '+' + fmt(d.cps * globalMult()) + ' сл/с каждая';
@@ -245,7 +293,7 @@ Sims.register({
       blip(rnd(300, 420), 0.09, 'triangle', 0.05, rnd(500, 640));
     }
     function catchGold() {
-      gold = null; frenzy = 15 + 5 * plv('pfren'); const bonus = Math.max(100, cps() * 30 / 7); S.plums += bonus; S.total += bonus; S.run += bonus; S.golds++;
+      gold = null; frenzy = 15 + 5 * plv('pfren') + (S.up.g2 ? 8 : 0); const bonus = Math.max(100, cps() * 30 / 7) * (S.up.g3 ? 3 : 1); S.plums += bonus; S.total += bonus; S.run += bonus; S.golds++;
       say('Золотая слива! Всё ×7 на ' + frenzy + ' секунд, +' + fmt(bonus)); [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => blip(f, 0.2, 'sine', 0.06), i * 70));
       const c = plumC(); for (let i = 0; i < 30; i++) parts.push({ x: c.x, y: c.y, vx: rnd(-260, 260), vy: rnd(-300, 100), life: rnd(0.6, 1.2), col: '#ffd54a', r: rnd(2, 5) });
     }
@@ -258,7 +306,7 @@ Sims.register({
       parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; p.life -= dt; }); parts = parts.filter(p => p.life > 0);
       floats.forEach(f => { f.y -= 50 * dt; f.life -= dt; }); floats = floats.filter(f => f.life > 0);
       if (gold) { gold.x += gold.vx * dt; gold.life -= dt; gold.y = gold.y0 + Math.sin(t * 3) * 14; if (gold.life <= 0 || gold.x < -60 || gold.x > W + 60) gold = null; }
-      else { goldIn -= dt; if (goldIn <= 0) { goldIn = rnd(45, 90) * Math.pow(0.85, plv('pgold')); const dir = Math.random() < 0.5 ? 1 : -1; gold = { x: dir > 0 ? -40 : area.w + 40, y0: rnd(area.h * 0.15, area.h * 0.45), y: 0, vx: dir * rnd(90, 140), life: 12 }; } }
+      else { goldIn -= dt; if (goldIn <= 0) { goldIn = rnd(45, 90) * Math.pow(0.85, plv('pgold')) * (S.up.g1 ? 0.7 : 1); const dir = Math.random() < 0.5 ? 1 : -1; gold = { x: dir > 0 ? -40 : area.w + 40, y0: rnd(area.h * 0.15, area.h * 0.45), y: 0, vx: dir * rnd(90, 140), life: 12 }; } }
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast.style.opacity = 0; }
       rowT += dt; if (rowT > 0.2) { rowT = 0; refreshRows(); }
       saveT += dt; if (saveT > 4) { saveT = 0; save(); }
@@ -330,7 +378,7 @@ Sims.register({
     resize();
     // пока вас не было
     const away = Math.min(7200, (Date.now() - (S.ts || Date.now())) / 1000);
-    if (away > 60 && cps() > 0) { const g = cps() * away * 0.5; S.plums += g; S.total += g; S.run += g; say('Пока вас не было, сады дали +' + fmt(g) + ' слив'); }
+    if (away > 60 && cps() > 0) { const g = cps() * away * (0.5 + 0.1 * plv('poff')); S.plums += g; S.total += g; S.run += g; say('Пока вас не было, сады дали +' + fmt(g) + ' слив'); }
     refreshRows();
     raf = requestAnimationFrame(frame);
     return {
