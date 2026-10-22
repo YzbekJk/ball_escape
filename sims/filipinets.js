@@ -103,36 +103,253 @@ Sims.register({
       const y = cam + LH * 0.62; plats.push({ x: clamp(pl.x - 12, 2, LW - 26), y, w: 24, t: 'g', safe: true }); pl.y = y; pl.vy = JUMP; pl.inv = 2.2; pl.hat = 0; pl.suck = null; blip(220, 0.25, 'triangle', 0.05, 440);
     }
 
-    /* ---------- босс ---------- */
-    function startArena(i) {
-      arena = true; pl.suck = null; boss = { i, x: LW / 2, y: cam + 46, hp: BOSSES[i].hp, max: BOSSES[i].hp, t: 0, flash: 0, ph: 'idle', pt: 5, sh: 2.2, dead: 0, inv: 0, ty: 0, tx: 0 };
-      plats = []; items = []; haz = []; shots = []; let k = 0;
-      for (let y = cam + LH - 14; y > cam + 74; y -= 30) { plats.push({ x: k % 2 ? rnd(LW * 0.55, LW - 26) : rnd(4, LW * 0.45), y, w: 24, t: 'g' }); k++; }
-      plats.push({ x: LW / 2 - 12, y: cam + LH - 14, w: 24, t: 'g' });
-      say(BOSSES[i].n); blip(120, 0.6, 'sawtooth', 0.06, 70);
+    /* ---------- босс: бой как в Undertale, а после трёх пощад — партия в шахматы ---------- */
+    const DW = 360, DH = 640, BOX0 = { x: 20, y: 372, w: 320, h: 132 }, EB = { x: 90, y: 380, w: 180, h: 120 };
+    const CE = window.ChessEngine, hk = { u: 0, d: 0, l: 0, r: 0 };
+    let F = null, C = null;
+    const FONT = '"Courier New", ui-monospace, monospace';
+    function uiT() { const s = Math.min(canvas.width / DW, canvas.height / DH); return { s, ox: (canvas.width - DW * s) / 2, oy: (canvas.height - DH * s) / 2 }; }
+    function uiXY(e) { const r = canvas.getBoundingClientRect(), T = uiT(), px = (e.clientX - r.left) * canvas.width / r.width, py = (e.clientY - r.top) * canvas.height / r.height; return { x: (px - T.ox) / T.s, y: (py - T.oy) / T.s }; }
+    const hit = (p, x, y, w, h) => p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h;
+
+    function say2(lines, then) { F.q = (Array.isArray(lines) ? lines : [lines]).slice(); F.cur = F.q.shift(); F.tx = 0; F.then = then || null; F.st = 'text'; }
+    function advanceText() { if (F.tx < F.cur.length) { F.tx = F.cur.length; return; } if (F.q.length) { F.cur = F.q.shift(); F.tx = 0; return; } const fn = F.then; F.then = null; if (fn) fn(); }
+    function toMenu() { F.st = 'menu'; F.cur = F.spare ? '* Марсик больше не хочет драться.' : '* Ваш ход.'; F.tx = 99; F.sel = 0; }
+
+    function startFight(i) {
+      mode = 'fight'; pl.suck = null; keys.l = keys.r = 0; touchDir = 0; const keep = F && F.i === i ? F.spareCount : 0;
+      const eh = i ? 90 : 60;
+      F = { i, hp: 20, maxhp: 20, eHp: eh, eMax: eh, mood: 0, spare: false, spareCount: keep, fish: 3, food: 2, st: 'text', q: [], cur: '', tx: 0, then: null, sel: 0, sub: 0, list: [], bullets: [], bt: 0, dur: 0, sp: 0, inv: 0, hx: EB.x + EB.w / 2, hy: EB.y + EB.h / 2, shake: 0, flash: 0, pop: null, popT: 0, bar: null, hpShow: 0, turn: 0, bubble: '', bubT: 0, dying: 0, pat: 0, drag: null };
+      say2(['* ' + BOSSES[i].n + ' преграждает путь!'], toMenu); blip(120, 0.6, 'sawtooth', 0.06, 70);
     }
-    function bossUpdate(dt) {
-      const b = boss; b.t += dt; b.flash = Math.max(0, b.flash - dt); b.inv = Math.max(0, b.inv - dt);
-      if (b.dead) { b.dead += dt; b.y += 90 * dt; if (b.dead > 2.2) { boss = null; arena = false; bossDone[b.i] = true; topY = plats.reduce((m, q) => q.fall ? m : Math.min(m, q.y), cam + LH * 0.6); hazY = cam - 120; lives = Math.min(9, lives + 1); say('Марсик побеждён! +1 жизнь'); if (b.i === 1) say('Вперёд, к Парижу!'); gen(); } return; }
-      const fast = b.hp <= b.max / 2 ? 1.4 : 1;
-      if (b.ph === 'idle') { b.x = LW / 2 + Math.sin(b.t * 0.9 * fast) * 40; b.y = cam + 46 + Math.sin(b.t * 1.7) * 5; b.pt -= dt; if (b.pt <= 0) { b.ph = 'tele'; b.pt = 0.9; b.tx = pl.x; blip(300, 0.5, 'square', 0.04, 600); } }
-      else if (b.ph === 'tele') { b.x += Math.sin(b.t * 60) * 0.6; b.pt -= dt; if (b.pt <= 0) { b.ph = 'dive'; b.ty = cam + LH * 0.62; } }
-      else if (b.ph === 'dive') { b.x += clamp(b.tx - b.x, -140 * dt, 140 * dt); b.y += 170 * dt; if (b.y >= b.ty) b.ph = 'back'; }
-      else { b.y -= 75 * dt; b.x += clamp(LW / 2 - b.x, -40 * dt, 40 * dt); if (b.y <= cam + 46) { b.ph = 'idle'; b.pt = rnd(5, 7) / fast; } }
-      b.sh -= dt; if (b.sh <= 0 && b.ph === 'idle') { b.sh = rnd(1.5, 2.2) / fast; const dx = pl.x - b.x, dy = (pl.y - 6) - b.y, d = Math.hypot(dx, dy) || 1; shots.push({ x: b.x, y: b.y + 8, vx: dx / d * 52, vy: dy / d * 52, l: 6 }); blip(520, 0.12, 'square', 0.035, 260); }
-      // столкновение с игроком
-      if (Math.hypot(pl.x - b.x, (pl.y - 6) - b.y) < 15 && mode === 'play') {
-        if (pl.vy > 20 && pl.y < b.y + 5) {
-          if (b.inv <= 0) { b.hp--; b.flash = 0.4; b.inv = 0.7; blip(440, 0.2, 'square', 0.06, 110); for (let i = 0; i < 14; i++) parts.push({ x: b.x, y: b.y, vx: rnd(-70, 70), vy: rnd(-90, 30), l: rnd(0.4, 0.9), c: ['#ffd24a', '#fff', '#ff5a4a'][i % 3] }); if (b.hp <= 0) { b.dead = 0.01; blip(90, 1, 'sawtooth', 0.07, 40); } }
-          pl.vy = JUMP * 1.12;
-        } else hurt('boss');
+    function fightChoose(k) {
+      if (k === 0) { F.st = 'bar'; F.bar = { p: 0, d: 1 }; F.cur = ''; }
+      else if (k === 1) { F.st = 'act'; F.list = ['Осмотреть', 'Погладить', 'Поговорить', 'Мяукнуть']; }
+      else if (k === 2) { F.st = 'item'; F.list = ['Рыбка ×' + F.fish, 'Корм ×' + F.food]; }
+      else { F.st = 'mercy'; F.list = ['Пощадить']; }
+    }
+    function moodUp(extra) {
+      F.mood = Math.min(3, F.mood + 1); if (F.mood >= 2 && !F.spare) { F.spare = true; extra.push('* Марсик больше не хочет драться.'); }
+    }
+    function doAct(k) {
+      if (k === 0) { say2(['* МАРСИК — АТК 7 ЗАЩ 3', '* Белый с пятнами, взгляд безумный. Любит рыбку и пощёчины судьбы.'], startEnemy); return; }
+      const t = ['', '* Вы погладили Марсика. Он урчит и тут же делает вид, что нет.', '* Вы поговорили с Марсиком про рыбку. Он заинтересовался.', '* Вы мяукнули. Марсик в шоке: вы говорите на его языке.'][k], ex = []; moodUp(ex); say2([t].concat(ex), startEnemy);
+    }
+    function doItem(k) {
+      if (k === 0) { if (F.fish <= 0) { say2(['* Рыбки закончились.'], toMenu); return; } F.fish--; F.hp = Math.min(F.maxhp, F.hp + 15); blip(520, 0.2, 'triangle', 0.05, 900); say2(['* Вы съели рыбку. +15 HP'], startEnemy); }
+      else { if (F.food <= 0) { say2(['* Корма больше нет.'], toMenu); return; } F.food--; F.hp = Math.min(F.maxhp, F.hp + 5); const ex = []; moodUp(ex); say2(['* Вы поделились кормом. Марсик с завистью смотрит на пустую миску. +5 HP'].concat(ex), startEnemy); }
+    }
+    function doSpare() {
+      if (!F.spare) { say2(['* Вы пытаетесь пощадить Марсика...', '* Но он ещё не готов сдаваться.'], startEnemy); return; }
+      F.spareCount++; F.mood = 0; F.spare = false; blip(660, 0.3, 'sine', 0.05, 990);
+      if (F.spareCount >= 3) say2(['* Вы пощадили Марсика в третий раз.', 'Марсик: «Мяу... Хватит драться.»', 'Марсик: «Сыграем в шахматы? Выиграешь — проходи.»'], startChess);
+      else if (F.spareCount === 1) say2(['* Вы пощадили Марсика.', 'Марсик: «Мяу? Думаешь, я так легко сдамся?»', '* Он снова нападает!'], startEnemy);
+      else say2(['* Вы пощадили Марсика во второй раз.', 'Марсик: «Опять?! Ладно... ещё один раунд.»', '* Он нападает ещё яростнее!'], startEnemy);
+    }
+    function barStop() {
+      const p = F.bar.p, dmg = Math.round(6 + 24 * (1 - Math.abs(p - 0.5) * 2)); F.bar = null; F.eHp = Math.max(0, F.eHp - dmg); F.shake = 0.5; F.hpShow = 2.2; F.pop = dmg; F.popT = 1; F.mood = Math.max(0, F.mood - 1); if (F.mood < 2) F.spare = false;
+      blip(240, 0.25, 'sawtooth', 0.06, 80);
+      if (F.eHp <= 0) { F.st = 'dying'; F.dying = 0; blip(160, 1.2, 'sawtooth', 0.05, 40); return; }
+      say2(['* Вы нанесли ' + dmg + ' урона.'], startEnemy);
+    }
+    const PAT_NAMES = ['Клубки', 'Рыбьи кости', 'Когти', 'Указка'];
+    function startEnemy() {
+      const L = [['Мяу!', 'Лови клубок!'], ['Рыбьи кости!', 'Кошка не промахнётся.'], ['Осторожно, когти!', 'Мяу-у-у!'], ['Следи за указкой.', 'Хе-хе-мяу.']];
+      F.pat = (F.turn++ + F.spareCount) % 4; F.st = 'bubble'; F.bubble = L[F.pat][Math.floor(Math.random() * 2)]; F.bubT = 1.3;
+    }
+    function beginBullets() { F.st = 'enemy'; F.bt = 0; F.sp = 0; F.bullets = []; F.dur = 5.5 + F.spareCount * 0.6 + F.i; F.hx = EB.x + EB.w / 2; F.hy = EB.y + EB.h / 2; F.drag = null; }
+    function hurtHeart(d) {
+      if (F.inv > 0) return; F.hp -= d; F.inv = 1; blip(140, 0.25, 'sawtooth', 0.06, 60); if (F.hp <= 0) { F.hp = 0; F.st = 'text'; F.bullets = []; blip(100, 0.8, 'sawtooth', 0.06, 30); say2(['* Вы пали...', '* Но решимость не даёт сдаться!'], () => startFight(F.i)); }
+    }
+    function spawnBullets(dt) {
+      const L = F.spareCount + F.i * 1.2, B = EB; F.sp -= dt;
+      if (F.pat === 0) { if (F.sp <= 0) { F.sp = Math.max(0.2, 0.42 - L * 0.04); F.bullets.push({ k: 'c', x: B.x + 8 + Math.random() * (B.w - 16), y: B.y - 8, vx: rnd(-15, 15), vy: 85 + L * 14, r: 8 }); } }
+      else if (F.pat === 1) { if (F.sp <= 0) { F.sp = Math.max(0.75, 1.15 - L * 0.1); const gx = B.x + 20 + Math.random() * (B.w - 70), gw = 46 - L * 3, vy = 62 + L * 8; F.bullets.push({ k: 'r', x: B.x, y: B.y - 10, w: gx - B.x, h: 8, vx: 0, vy }); F.bullets.push({ k: 'r', x: gx + gw, y: B.y - 10, w: B.x + B.w - gx - gw, h: 8, vx: 0, vy }); } }
+      else if (F.pat === 2) { if (F.sp <= 0) { F.sp = Math.max(0.65, 1 - L * 0.08); const a = Math.random() * Math.PI, cx = B.x + B.w / 2 + rnd(-40, 40), cy = B.y + B.h / 2 + rnd(-25, 25); F.bullets.push({ k: 'l', x: cx, y: cy, a, tm: 0, warn: 0.6, dur: 0.18 }); } }
+      else { if (!F.bullets.some(b => b.k === 'p')) F.bullets.push({ k: 'p', x: B.x + B.w / 2, y: B.y + B.h / 2, tm: 0, r: 6 }); if (F.sp <= 0) { F.sp = Math.max(0.55, 0.9 - L * 0.07); F.bullets.push({ k: 'c', x: B.x + 8 + Math.random() * (B.w - 16), y: B.y - 8, vx: 0, vy: 60 + L * 10, r: 7 }); } }
+    }
+    function fightUpdate(dt) {
+      t += dt; F.shake = Math.max(0, F.shake - dt); F.hpShow = Math.max(0, F.hpShow - dt); F.popT = Math.max(0, F.popT - dt); F.inv = Math.max(0, F.inv - dt);
+      if (F.st === 'text' && F.tx < F.cur.length) F.tx = Math.min(F.cur.length, F.tx + dt * 38);
+      if (F.st === 'bar') { F.bar.p += F.bar.d * dt * 1.25; if (F.bar.p >= 1) { F.bar.p = 1; F.bar.d = -1; } if (F.bar.p <= 0) { F.bar.p = 0; F.bar.d = 1; } }
+      else if (F.st === 'bubble') { F.bubT -= dt; if (F.bubT <= 0) beginBullets(); }
+      else if (F.st === 'dying') { F.dying += dt; if (F.dying > 2) { fightWon('* Марсик побеждён... но мог бы быть другом.'); } }
+      else if (F.st === 'enemy') {
+        F.bt += dt; const sp = 105; F.hx += (hk.r - hk.l) * sp * dt; F.hy += (hk.d - hk.u) * sp * dt; F.hx = clamp(F.hx, EB.x + 5, EB.x + EB.w - 5); F.hy = clamp(F.hy, EB.y + 5, EB.y + EB.h - 5);
+        spawnBullets(dt);
+        const dmg = F.i ? 6 : 5;
+        F.bullets.forEach(b => {
+          if (b.k === 'c') { b.x += b.vx * dt; b.y += b.vy * dt; if (Math.hypot(F.hx - b.x, F.hy - b.y) < b.r + 3.5) hurtHeart(dmg); }
+          else if (b.k === 'r') { b.y += b.vy * dt; if (F.hx + 3.5 > b.x && F.hx - 3.5 < b.x + b.w && F.hy + 3.5 > b.y && F.hy - 3.5 < b.y + b.h) hurtHeart(dmg); }
+          else if (b.k === 'l') { b.tm += dt; if (b.tm > b.warn && b.tm < b.warn + b.dur) { const nx = -Math.sin(b.a), ny = Math.cos(b.a), d = Math.abs((F.hx - b.x) * nx + (F.hy - b.y) * ny); if (d < 7) hurtHeart(dmg); } }
+          else if (b.k === 'p') { b.tm += dt; b.x = EB.x + EB.w / 2 + Math.sin(b.tm * 2.3) * (EB.w / 2 - 12); b.y = EB.y + EB.h / 2 + Math.sin(b.tm * 3.1 + 1) * (EB.h / 2 - 12); if (Math.hypot(F.hx - b.x, F.hy - b.y) < b.r + 3) hurtHeart(dmg); }
+        });
+        F.bullets = F.bullets.filter(b => (b.k === 'c' || b.k === 'r') ? b.y < EB.y + EB.h + 20 : b.k === 'l' ? b.tm < b.warn + b.dur + 0.1 : true);
+        if (F.st === 'enemy' && F.bt >= F.dur) { F.bullets = []; toMenu(); }
       }
+    }
+    function fightWon(line) {
+      const i = F.i; bossDone[i] = true; boss = null; lives = Math.min(9, lives + 1); mode = 'play';
+      pl.y = cam + LH * 0.62; plats.push({ x: clamp(pl.x - 12, 2, LW - 26), y: pl.y, w: 24, t: 'g', safe: true }); pl.vy = JUMP; pl.inv = 2; pl.kx = 0;
+      say(line || 'Марсик побеждён! +1 жизнь'); blip(660, 0.5, 'triangle', 0.07, 1320);
+    }
+
+    /* ---------- шахматы ---------- */
+    const QUIPS = ['Мяу.', 'Хм...', 'Ага!', 'Думаю...', 'Мур.', 'Не мешай.', 'Как тебе такой ход?'];
+    function startChess() {
+      mode = 'chess'; C = { pos: CE.start(), sel: -1, targets: [], last: null, think: 0, over: null, ot: 0, msg: 'Ваш ход (белые)', talk: 'Мяу. Я чёрными.' };
+    }
+    function chessMove(m) {
+      C.pos = CE.make(C.pos, m); C.last = m; C.sel = -1; C.targets = []; blip(m.cap ? 200 : 330, 0.08, 'square', 0.04, m.cap ? 120 : 440);
+      const s = CE.status(C.pos);
+      if (s === 'mate') { C.over = C.pos.turn === 'b' ? 'win' : 'lose'; C.msg = C.over === 'win' ? 'Мат! Вы победили!' : 'Мат. Марсик победил.'; C.talk = C.over === 'win' ? 'Мяу... Проходи.' : 'Мяу-ха-ха! Реванш?'; }
+      else if (s === 'stalemate' || s === 'draw') { C.over = 'draw'; C.msg = 'Ничья.'; C.talk = 'Ничья... Уважаю. Проходи.'; }
+      else { C.msg = CE.inCheck(C.pos) ? (C.pos.turn === 'w' ? 'Вам шах!' : 'Шах Марсику!') : (C.pos.turn === 'w' ? 'Ваш ход (белые)' : 'Марсик думает...'); if (C.pos.turn === 'b') { C.think = 0.6 + Math.random() * 0.6; if (Math.random() < 0.35) C.talk = QUIPS[Math.floor(Math.random() * QUIPS.length)]; } }
+      if (C.over === 'win' || C.over === 'draw') { blip(660, 0.4, 'triangle', 0.06, 1320); }
+    }
+    function chessUpdate(dt) {
+      t += dt;
+      if (C.over === 'win' || C.over === 'draw') { C.ot += dt; if (C.ot > 2.2) fightWon(C.over === 'win' ? '* Вы обыграли Марсика в шахматы!' : '* Ничья с Марсиком. Он вас уважает.'); return; }
+      if (C.over) return;
+      if (C.pos.turn === 'b') { C.think -= dt; if (C.think <= 0) { const m = CE.ai(C.pos); if (m) chessMove(m); } }
+    }
+    const BD = { x: 10, y: 150, s: 340 };
+    function chessDown(p) {
+      if (C.over === 'lose') { if (hit(p, 100, 540, 160, 44)) startChess(); return; }
+      if (C.over || C.pos.turn !== 'w') return;
+      const cs = BD.s / 8, c = Math.floor((p.x - BD.x) / cs), r = Math.floor((p.y - BD.y) / cs); if (c < 0 || c > 7 || r < 0 || r > 7) { C.sel = -1; C.targets = []; return; }
+      const s = r * 8 + c, pc = C.pos.b[s], all = CE.moves(C.pos);
+      if (C.sel >= 0) { const m = all.find(q => q.from === C.sel && q.to === s); if (m) { chessMove(m); return; } }
+      if (pc && CE.colorOf(pc) === 'w') { C.sel = s; C.targets = all.filter(q => q.from === s).map(q => q.to); } else { C.sel = -1; C.targets = []; }
+    }
+
+    /* ---------- ввод боя ---------- */
+    function uiDown(e) {
+      const p = uiXY(e);
+      if (mode === 'chess') { chessDown(p); return; }
+      if (!F) return;
+      if (F.st === 'text') { advanceText(); return; }
+      if (F.st === 'menu') { for (let i = 0; i < 4; i++) if (hit(p, 12 + i * 86, 565, 78, 48)) { F.sel = i; fightChoose(i); return; } return; }
+      if (F.st === 'act' || F.st === 'item' || F.st === 'mercy') {
+        if (hit(p, 262, 474, 78, 28)) { toMenu(); return; }
+        for (let i = 0; i < F.list.length; i++) if (hit(p, BOX0.x + 10, BOX0.y + 14 + i * 30, 240, 28)) { const st = F.st; if (st === 'act') doAct(i); else if (st === 'item') doItem(i); else doSpare(); return; }
+        return;
+      }
+      if (F.st === 'bar') { barStop(); return; }
+      if (F.st === 'enemy') F.drag = { x: p.x, y: p.y };
+    }
+    function uiMove(e) {
+      if (mode !== 'fight' || !F || F.st !== 'enemy' || !F.drag || e.buttons === 0) return; const p = uiXY(e);
+      F.hx = clamp(F.hx + (p.x - F.drag.x), EB.x + 5, EB.x + EB.w - 5); F.hy = clamp(F.hy + (p.y - F.drag.y), EB.y + 5, EB.y + EB.h - 5); F.drag = { x: p.x, y: p.y };
+    }
+    function uiUp() { if (F) F.drag = null; }
+    function uiKey(e) {
+      const d = e.type === 'keydown' ? 1 : 0, c = e.code;
+      if (c === 'ArrowLeft' || c === 'KeyA') hk.l = d; else if (c === 'ArrowRight' || c === 'KeyD') hk.r = d; else if (c === 'ArrowUp' || c === 'KeyW') hk.u = d; else if (c === 'ArrowDown' || c === 'KeyS') hk.d = d;
+      if (!d || mode !== 'fight' || !F || e.repeat) return;
+      const act = c === 'Enter' || c === 'Space' || c === 'KeyZ';
+      if (F.st === 'text' && act) advanceText();
+      else if (F.st === 'menu') { if (c === 'ArrowLeft' || c === 'KeyA') F.sel = (F.sel + 3) % 4; else if (c === 'ArrowRight' || c === 'KeyD') F.sel = (F.sel + 1) % 4; else if (act) fightChoose(F.sel); }
+      else if (F.st === 'act' || F.st === 'item' || F.st === 'mercy') { if (c === 'ArrowDown' || c === 'KeyS') F.sub = (F.sub + 1) % F.list.length; else if (c === 'ArrowUp' || c === 'KeyW') F.sub = (F.sub + F.list.length - 1) % F.list.length; else if (c === 'Escape' || c === 'KeyX') toMenu(); else if (act) { const st = F.st, i = F.sub; F.sub = 0; if (st === 'act') doAct(i); else if (st === 'item') doItem(i); else doSpare(); } }
+      else if (F.st === 'bar' && act) barStop();
+    }
+
+    /* ---------- отрисовка боя и шахмат ---------- */
+    function heart(x, y, r, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y + r * 0.95); ctx.bezierCurveTo(x - r * 1.7, y - r * 0.15, x - r * 0.95, y - r * 1.35, x, y - r * 0.45); ctx.bezierCurveTo(x + r * 0.95, y - r * 1.35, x + r * 1.7, y - r * 0.15, x, y + r * 0.95); ctx.fill(); }
+    function wrap(str, maxW) { const ws = String(str).split(' '), out = []; let line = ''; ws.forEach(w => { const t2 = line ? line + ' ' + w : w; if (ctx.measureText(t2).width > maxW && line) { out.push(line); line = w; } else line = t2; }); if (line) out.push(line); return out; }
+    function portrait(cx, cy, r, ring, crown) {
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.clip();
+      if (marsik.complete && marsik.naturalWidth) ctx.drawImage(marsik, cx - r, cy - r, r * 2, r * 2); else { ctx.fillStyle = '#c8a070'; ctx.fillRect(cx - r, cy - r, r * 2, r * 2); } ctx.restore();
+      ctx.strokeStyle = ring; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+      if (crown) { ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.moveTo(cx - r * 0.5, cy - r * 0.92); ctx.lineTo(cx - r * 0.55, cy - r * 1.38); ctx.lineTo(cx - r * 0.2, cy - r * 1.15); ctx.lineTo(cx, cy - r * 1.5); ctx.lineTo(cx + r * 0.2, cy - r * 1.15); ctx.lineTo(cx + r * 0.55, cy - r * 1.38); ctx.lineTo(cx + r * 0.5, cy - r * 0.92); ctx.closePath(); ctx.fill(); }
+    }
+    function drawFight() {
+      const T = uiT(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.setTransform(T.s, 0, 0, T.s, T.ox, T.oy);
+      ctx.textBaseline = 'middle';
+      const sx = F.shake > 0 ? Math.sin(t * 70) * 7 : 0, bob = Math.sin(t * 2) * 4, dying = F.st === 'dying';
+      if (!dying || Math.floor(t * 14) % 2) portrait(180 + sx, 130 + bob + (dying ? F.dying * 20 : 0), 72, F.spare ? '#ffd24a' : '#fff', F.i === 1);
+      ctx.textAlign = 'center'; ctx.font = '700 15px ' + FONT; ctx.fillStyle = F.spare ? '#ffd24a' : '#fff'; ctx.fillText('* ' + BOSSES[F.i].n.toUpperCase(), 180, 232);
+      for (let k = 0; k < 3; k++) heart(150 + k * 30, 256, 7, k < F.spareCount ? '#ffd24a' : '#333');
+      ctx.font = '700 11px ' + FONT; ctx.fillStyle = '#9aa'; ctx.fillText('пощада ' + F.spareCount + '/3', 180, 276);
+      if (F.hpShow > 0) { ctx.fillStyle = '#444'; ctx.fillRect(110, 290, 140, 10); ctx.fillStyle = '#3f3'; ctx.fillRect(110, 290, 140 * F.eHp / F.eMax, 10); }
+      if (F.popT > 0 && F.pop != null) { ctx.fillStyle = '#ff3a3a'; ctx.font = '900 30px ' + FONT; ctx.fillText('-' + F.pop, 180, 100 - (1 - F.popT) * 30); }
+      if (F.st === 'bubble') {
+        ctx.font = '700 15px ' + FONT; const lines = wrap(F.bubble, 120), bw = 150, bh = 20 + lines.length * 20, bx = 195, by = 20;
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 10) : ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.beginPath(); ctx.moveTo(bx + 8, by + bh - 6); ctx.lineTo(bx - 14, by + bh + 14); ctx.lineTo(bx + 30, by + bh - 1); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.textAlign = 'left'; lines.forEach((l, i) => ctx.fillText(l, bx + 12, by + 20 + i * 20));
+      }
+      const inBox = F.st === 'enemy', B = inBox ? EB : BOX0;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.strokeRect(B.x, B.y, B.w, B.h);
+      ctx.textAlign = 'left'; ctx.font = '700 17px ' + FONT; ctx.fillStyle = '#fff';
+      if (F.st === 'text' || F.st === 'menu') { const lines = wrap(F.cur.slice(0, Math.floor(F.tx)), BOX0.w - 28); lines.forEach((l, i) => ctx.fillText(l, BOX0.x + 14, BOX0.y + 24 + i * 24)); }
+      if (F.st === 'act' || F.st === 'item' || F.st === 'mercy') {
+        F.list.forEach((l, i) => { ctx.fillStyle = F.st === 'mercy' && F.spare ? '#ffd24a' : '#fff'; ctx.fillText('* ' + l, BOX0.x + 38, BOX0.y + 28 + i * 30); if (i === F.sub) heart(BOX0.x + 20, BOX0.y + 28 + i * 30, 6, '#f22'); });
+        ctx.fillStyle = '#9aa'; ctx.font = '700 14px ' + FONT; ctx.fillText('← назад', 266, 488);
+      }
+      if (F.st === 'bar') {
+        const bx = BOX0.x + 16, bw = BOX0.w - 32; ctx.fillStyle = '#222'; ctx.fillRect(bx, BOX0.y + 46, bw, 40); ctx.fillStyle = '#3a3'; ctx.fillRect(bx + bw * 0.4, BOX0.y + 46, bw * 0.2, 40); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(bx, BOX0.y + 46, bw, 40);
+        ctx.fillStyle = '#fff'; ctx.fillRect(bx + bw * F.bar.p - 3, BOX0.y + 40, 6, 52); ctx.font = '700 13px ' + FONT; ctx.textAlign = 'center'; ctx.fillText('Нажмите, чтобы ударить в зелёную зону', 180, BOX0.y + 112);
+      }
+      if (inBox) {
+        F.bullets.forEach(b => {
+          if (b.k === 'c') { ctx.fillStyle = '#e03a3a'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.strokeStyle = '#ff9a9a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.6, 0.3, 4); ctx.stroke(); }
+          else if (b.k === 'r') { ctx.save(); ctx.beginPath(); ctx.rect(EB.x, EB.y, EB.w, EB.h); ctx.clip(); ctx.fillStyle = '#e8e8e8'; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.restore(); }
+          else if (b.k === 'l') { const dx = Math.cos(b.a) * 200, dy = Math.sin(b.a) * 200; ctx.save(); ctx.beginPath(); ctx.rect(EB.x, EB.y, EB.w, EB.h); ctx.clip(); if (b.tm < b.warn) { ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 2; } else { ctx.strokeStyle = '#ff3a3a'; ctx.lineWidth = 9; } ctx.beginPath(); ctx.moveTo(b.x - dx, b.y - dy); ctx.lineTo(b.x + dx, b.y + dy); ctx.stroke(); ctx.restore(); ctx.setLineDash([]); }
+          else if (b.k === 'p') { ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.beginPath(); ctx.arc(b.x - 1.5, b.y - 1.5, 2, 0, 7); ctx.fill(); }
+        });
+        if (!(F.inv > 0 && Math.floor(t * 16) % 2)) heart(F.hx, F.hy, 5.5, '#f22');
+        ctx.font = '700 12px ' + FONT; ctx.fillStyle = '#9aa'; ctx.textAlign = 'center'; ctx.fillText(PAT_NAMES[F.pat], 180, EB.y + EB.h + 18);
+      }
+      ctx.textAlign = 'left'; ctx.font = '700 14px ' + FONT; ctx.fillStyle = '#fff'; ctx.fillText('ФИЛИППИНЕЦ  LV 1', 14, 536);
+      ctx.fillStyle = '#c33'; ctx.fillRect(200, 527, F.maxhp * 3, 18); ctx.fillStyle = '#ff0'; ctx.fillRect(200, 527, F.hp * 3, 18); ctx.fillStyle = '#fff'; ctx.fillText('HP', 172, 536); ctx.fillText(F.hp + ' / ' + F.maxhp, 200 + F.maxhp * 3 + 8, 536);
+      const names = ['БИТЬ', 'ДЕЙСТВ.', 'ПРЕДМЕТ', 'МИЛОСТЬ']; ctx.textAlign = 'center';
+      names.forEach((n, i) => {
+        const sel = F.st === 'menu' && F.sel === i || (F.st === 'act' && i === 1) || (F.st === 'item' && i === 2) || (F.st === 'mercy' && i === 3) || (F.st === 'bar' && i === 0);
+        ctx.strokeStyle = sel ? '#ffd24a' : '#ff7a1a'; ctx.lineWidth = 3; ctx.strokeRect(12 + i * 86, 565, 78, 48); ctx.fillStyle = sel ? '#ffd24a' : '#ff7a1a'; ctx.font = '700 12px ' + FONT; ctx.fillText(n, 12 + i * 86 + 40, 589);
+        if (F.st === 'menu' && F.sel === i) heart(12 + i * 86 + 10, 589, 4.5, '#f22');
+      });
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    function drawPiece(p, cx, cy, s) {
+      const white = p === p.toUpperCase(), t2 = p.toLowerCase(), u2 = s / 40;
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(u2, u2); ctx.lineJoin = 'round'; ctx.lineWidth = 2; ctx.fillStyle = white ? '#fbfbfb' : '#2b2b2b'; ctx.strokeStyle = white ? '#222' : '#e8e8e8';
+      const poly = pts => { ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath(); ctx.fill(); ctx.stroke(); };
+      const circ = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke(); };
+      poly([[-13, 17], [-11, 12], [11, 12], [13, 17]]);
+      if (t2 === 'p') { poly([[-7, 12], [-4, -1], [4, -1], [7, 12]]); circ(0, -7, 6.5); }
+      else if (t2 === 'r') { poly([[-8, 12], [-8, -5], [8, -5], [8, 12]]); poly([[-11, -5], [-11, -15], [-6, -15], [-6, -11], [-2.5, -11], [-2.5, -15], [2.5, -15], [2.5, -11], [6, -11], [6, -15], [11, -15], [11, -5]]); }
+      else if (t2 === 'n') { poly([[-9, 12], [-6, -2], [-11, -3], [-5, -14], [2, -17], [9, -10], [10, -2], [3, 0], [7, 12]]); ctx.fillStyle = white ? '#222' : '#eee'; circ(1, -10, 1.6); }
+      else if (t2 === 'b') { poly([[-7, 12], [-4, 0], [4, 0], [7, 12]]); ctx.beginPath(); ctx.ellipse(0, -7, 6, 9, 0, 0, 7); ctx.fill(); ctx.stroke(); circ(0, -18, 2.8); ctx.beginPath(); ctx.moveTo(-2.5, -9); ctx.lineTo(2.5, -5); ctx.stroke(); }
+      else if (t2 === 'q') { poly([[-8, 12], [-12, -8], [-8, -3], [-9, -16], [-4, -5], [0, -18], [4, -5], [9, -16], [8, -3], [12, -8], [8, 12]]); }
+      else { poly([[-9, 12], [-11, -2], [-5, -8], [5, -8], [11, -2], [9, 12]]); ctx.fillRect(-1.5, -20, 3, 12); ctx.strokeRect(-1.5, -20, 3, 12); ctx.fillRect(-5, -17, 10, 3); ctx.strokeRect(-5, -17, 10, 3); }
+      ctx.restore();
+    }
+    function drawChess() {
+      const T = uiT(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#14101e'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.setTransform(T.s, 0, 0, T.s, T.ox, T.oy);
+      portrait(60, 98, 34, '#fff', F && F.i === 1); ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '700 15px ' + FONT;
+      ctx.fillText('Марсик (чёрные) · ~1000 Эло', 108, 72); ctx.fillStyle = '#ffd24a'; wrap('«' + C.talk + '»', 240).forEach((l, i) => ctx.fillText(l, 108, 96 + i * 20));
+      const cs = BD.s / 8, pos = C.pos, ms = C.sel >= 0 ? C.targets : [];
+      const kS = CE.inCheck(pos) ? pos.b.indexOf(pos.turn === 'w' ? 'K' : 'k') : -1;
+      for (let s = 0; s < 64; s++) {
+        const r = s >> 3, c = s & 7, x = BD.x + c * cs, y = BD.y + r * cs; ctx.fillStyle = (r + c) % 2 ? '#8a5a30' : '#eed9b0'; ctx.fillRect(x, y, cs, cs);
+        if (C.last && (C.last.from === s || C.last.to === s)) { ctx.fillStyle = 'rgba(255,230,60,.45)'; ctx.fillRect(x, y, cs, cs); }
+        if (s === C.sel) { ctx.fillStyle = 'rgba(60,220,90,.5)'; ctx.fillRect(x, y, cs, cs); }
+        if (s === kS) { ctx.fillStyle = 'rgba(255,40,40,.55)'; ctx.fillRect(x, y, cs, cs); }
+        const pc = pos.b[s]; if (pc) drawPiece(pc, x + cs / 2, y + cs / 2, cs * 0.92);
+        if (ms.includes(s)) { ctx.fillStyle = 'rgba(40,160,60,.75)'; ctx.beginPath(); ctx.arc(x + cs / 2, y + cs / 2, pc ? cs * 0.42 : cs * 0.14, 0, 7); if (pc) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(40,160,60,.85)'; ctx.stroke(); } else ctx.fill(); }
+      }
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeRect(BD.x, BD.y, BD.s, BD.s);
+      ctx.textAlign = 'center'; ctx.fillStyle = C.over === 'lose' ? '#ff8a7a' : C.over ? '#7aff9a' : '#fff'; ctx.font = '700 18px ' + FONT; ctx.fillText(C.msg, 180, 512);
+      ctx.font = '600 12px ' + FONT; ctx.fillStyle = '#9aa'; ctx.fillText('Вы играете белыми: нажмите фигуру, затем клетку', 180, 538);
+      if (C.over === 'lose') { ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 3; ctx.strokeRect(100, 560, 160, 44); ctx.fillStyle = '#ffd24a'; ctx.font = '700 16px ' + FONT; ctx.fillText('Реванш', 180, 582); }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
 
     /* ---------- обновление ---------- */
     function update(dt) {
       t += dt; if (toastT > 0) toastT -= dt;
       parts.forEach(p => { p.l -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 120 * dt; }); parts = parts.filter(p => p.l > 0);
+      if (mode === 'fight') { fightUpdate(dt); return; } if (mode === 'chess') { chessUpdate(dt); return; }
       if (mode !== 'play') return;
       const sc = score(), dir = (keys.r - keys.l) || touchDir;
       // ветер
@@ -179,8 +396,7 @@ Sims.register({
       if (!arena) cam = Math.min(cam, pl.y - LH * 0.42);
       // босс
       const s2 = score();
-      if (!arena) BOSSES.forEach((b, i) => { if (!bossDone[i] && s2 >= b.s && !boss) startArena(i); });
-      if (boss) bossUpdate(dt);
+      if (!arena) BOSSES.forEach((b, i) => { if (!bossDone[i] && s2 >= b.s && mode === 'play') startFight(i); });
       // явления
       haz.forEach(h => {
         if (h.k === 'tornado') {
@@ -250,20 +466,13 @@ Sims.register({
       if (h.st === 1 && Math.floor(t * 14) % 2) R('#ffe85a', x - 1, y + 3, 2, 3);
       if (h.st === 2) { let bx = x; for (let by = y + 3; by < LH; by += 6) { const nx = x + (((by * 7) | 0) % 5) - 2; R('#fff6a0', Math.min(bx, nx) - 1, by, 3, 6); R('#fff', Math.min(bx, nx), by, 1, 6); bx = nx; } g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(0, 0, LW, LH); }
     }
-    function drawBoss() {
-      const b = boss; if (!b) return; const x = b.x, y = b.y - cam;
-      if (!(b.flash > 0 && Math.floor(t * 20) % 2)) { g.imageSmoothingEnabled = true; if (marsik.complete && marsik.naturalWidth) g.drawImage(marsik, x - 14, y - 14, 28, 28); else R('#c8a070', x - 12, y - 12, 24, 24); g.imageSmoothingEnabled = false; }
-      R('#ffd24a', x - 7, y - 19, 14, 3); R('#ffd24a', x - 7, y - 23, 2, 4); R('#ffd24a', x - 1, y - 24, 2, 5); R('#ffd24a', x + 5, y - 23, 2, 4);
-      if (b.ph === 'tele') R('#ff3a3a', x - 1, y - 32, 2, 6), R('#ff3a3a', x - 1, y - 24 - 0, 2, 1);
-      if (b.i === 1) R('#ef4135', x - 14, y + 11, 28, 2);
-    }
     function draw() {
+      if (mode === 'fight') { drawFight(); return; } if (mode === 'chess') { drawChess(); return; }
       g.imageSmoothingEnabled = false; drawSky();
       if (summitPlaced && summit) { const sx = LW / 2, sy = summit.y - cam; if (sy > -70 && sy < LH + 10) { const c = '#5a4a3a'; for (let i = 0; i < 40; i++) { const w = 3 + (i * 0.28); R(c, sx - w / 2, sy - 40 + i, w, 1); } R('#8a7a5a', sx - 9, sy - 18, 18, 1); R('#8a7a5a', sx - 6, sy - 28, 12, 1); R('#8a7a5a', sx - 2, sy - 36, 4, 1); R('#5a4a3a', sx - 1, sy - 46, 2, 8); R('#0055a4', sx + 1, sy - 48, 3, 4); R('#fff', sx + 4, sy - 48, 3, 4); R('#ef4135', sx + 7, sy - 48, 3, 4); } }
       plats.forEach(drawPlat); items.forEach(drawItem);
       haz.forEach(h => { if (h.k === 'tornado') drawTornado(h); else if (h.k === 'storm') drawStorm(h); else { const x = h.x, y = h.y - cam; R('#ff8a2a', x - 2, y - 2, 4, 4); R('#ffe28a', x - 1, y - 1, 2, 2); R('rgba(255,140,40,.6)', x - 6, y - 8, 3, 3); R('rgba(255,140,40,.4)', x - 10, y - 14, 2, 2); } });
       shots.forEach(s => { const x = s.x, y = s.y - cam; R('#e03a3a', x - 3, y - 3, 6, 6); R('#ff7a7a', x - 2, y - 2, 2, 2); R('#e8e8e8', x - 4, y + 2, 3, 1); });
-      drawBoss();
       if (mode !== 'over') drawPlayer();
       if (wind) for (let i = 0; i < 8; i++) { const y = (i * 29 + t * 40) % LH, x = ((t * 140 * wind + i * 47) % (LW + 30) + LW + 30) % (LW + 30) - 15; R('rgba(255,255,255,.7)', x, y, 10, 1); }
       parts.forEach(p => R(p.c, p.x, p.y - cam, 1, 1));
@@ -277,7 +486,6 @@ Sims.register({
       for (let i = 0; i < lives; i++) { const x = (8 + i * 8) * k * 0.6, y = 22 * k * 0.8 + 56 * dpr; ctx.fillStyle = '#ff4a6a'; ctx.fillRect(x, y, 3.2 * k * 0.6, 3.2 * k * 0.6); ctx.fillRect(x + 4 * k * 0.6, y, 3.2 * k * 0.6, 3.2 * k * 0.6); ctx.fillRect(x - k * 0.1, y + 2.4 * k * 0.6, 8 * k * 0.6, 2.2 * k * 0.6); ctx.fillRect(x + 1 * k * 0.6, y + 4.4 * k * 0.6, 6 * k * 0.6, 1.4 * k * 0.6); }
       // полоса пути
       const bx = canvas.width - 5 * k * 0.5, bt = 70 * dpr, bh = canvas.height - bt - 20 * dpr; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(bx, bt, 3 * k * 0.5, bh); ctx.fillStyle = '#ffd24a'; const f = score() / GOAL; ctx.fillRect(bx, bt + bh * (1 - f), 3 * k * 0.5, bh * f); ctx.fillStyle = '#fff'; ctx.fillRect(bx - 1.5 * k * 0.5, bt + bh * (1 - f) - 2, 6 * k * 0.5, 4);
-      if (boss && !boss.dead) { const w = canvas.width * 0.6, x = (canvas.width - w) / 2, y = Math.max(132 * dpr, canvas.height * 0.18); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(x, y, w, 8 * dpr); ctx.fillStyle = '#ff5a4a'; ctx.fillRect(x, y, w * boss.hp / boss.max, 8 * dpr); txt(BOSSES[boss.i].n, canvas.width / 2, y + 22 * dpr, fs * 0.9, '#fff', 'center'); }
       if (toastT > 0) { ctx.globalAlpha = Math.min(1, toastT); txt(toastS, canvas.width / 2, canvas.height * 0.3, fs * 1.6, '#fff', 'center'); ctx.globalAlpha = 1; }
       if (mode === 'over' || mode === 'win') {
         ctx.fillStyle = 'rgba(8,4,20,.62)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -289,14 +497,15 @@ Sims.register({
 
     /* ---------- ввод ---------- */
     function onKey(e) {
+      if (mode === 'fight' || mode === 'chess') { uiKey(e); e.preventDefault && /Arrow|Space/.test(e.code) && e.preventDefault(); return; }
       const d = e.type === 'keydown' ? 1 : 0, c = e.code;
       if (c === 'ArrowLeft' || c === 'KeyA') keys.l = d; else if (c === 'ArrowRight' || c === 'KeyD') keys.r = d;
       if (d && mode !== 'play' && (c === 'Space' || c === 'Enter')) restart();
     }
     function ptr(e) { const r = canvas.getBoundingClientRect(); return (e.clientX - r.left) < r.width / 2 ? -1 : 1; }
-    const onDown = e => { if (mode !== 'play') { restart(); return; } touchDir = ptr(e); };
-    const onMove = e => { if (touchDir && e.buttons !== 0) touchDir = ptr(e); };
-    const onUp = () => { touchDir = 0; };
+    const onDown = e => { if (mode === 'fight' || mode === 'chess') { uiDown(e); return; } if (mode !== 'play') { restart(); return; } touchDir = ptr(e); };
+    const onMove = e => { if (mode === 'fight') { uiMove(e); return; } if (touchDir && e.buttons !== 0) touchDir = ptr(e); };
+    const onUp = () => { touchDir = 0; uiUp(); };
     canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointermove', onMove); canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp);
     addEventListener('keydown', onKey); addEventListener('keyup', onKey);
 
@@ -310,7 +519,7 @@ Sims.register({
       restart, resize, setPaused(p) { paused = p; },
       destroy() { on = false; cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); },
       debug: {
-        update, restart, startArena, score, GOAL, get mode() { return mode; }, get lives() { return lives; }, get boss() { return boss; }, get pl() { return pl; }, get plats() { return plats; }, get haz() { return haz; }, get cam() { return cam; }, get arena() { return arena; },
+        update, restart, startFight, startChess, get F() { return F; }, get C() { return C; }, uiDown, uiKey, fightUpdate, chessUpdate, drawFight, drawChess, score, GOAL, get mode() { return mode; }, get lives() { return lives; }, get boss() { return boss; }, get pl() { return pl; }, get plats() { return plats; }, get haz() { return haz; }, get cam() { return cam; }, get arena() { return arena; },
         teleport(s) { const y = startY - s / SC; pl.y = y - 2; pl.vy = 0; maxH = s / SC; cam = y - LH * 0.42; plats = []; items = []; haz = []; topY = cam + LH * 0.5; plats.push({ x: 20, y: y + 10, w: 30, t: 'g' }); hazY = cam - 150; gen(); },
         set dir(v) { keys.l = v < 0 ? 1 : 0; keys.r = v > 0 ? 1 : 0; }, get bossDone() { return bossDone; }, set lives(v) { lives = v; }, hurt
       }
