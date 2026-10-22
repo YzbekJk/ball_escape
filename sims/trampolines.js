@@ -89,7 +89,7 @@ Sims.register({
       'Хаос': { blk: 1, haz: 2, mv: 1, fan: 1, portal: 1, sk: { blk: 'rock', haz: 'mine', fan: 'current' } },
       'Радужный мир': { fan: 1, portal: 1, blk: 1, e: 1.1, sk: { blk: 'cloud', fan: 'geyser' } }
     };
-    let feats = { blk: [], haz: [], fan: [], portal: [] }, portCool = 0;
+    let feats = { blk: [], haz: [], fan: [], portal: [] }, portCool = 0, needPort = false, portUsed = false;
     const hzPos = (h, T) => h.mv ? { x: h.x + Math.sin(T * h.sp + h.ph) * h.amp, y: h.y } : { x: h.x, y: h.y };
     const locIdx = lv => Math.floor((Math.max(1, lv) - 1) / PER) % LOCS.length;
     const locOf = lv => LOCS[locIdx(lv)];
@@ -158,7 +158,7 @@ Sims.register({
         const px = 0.15 + R() * 0.7, py = 0.3 + R() * (hh - 0.6);
         if (Math.hypot(px - bx, py - by) > 0.25 && Math.hypot(px - tx, py - ty) > 0.22 && pegs.every(q => Math.hypot(px - q.x, py - q.y) > 0.28) && greens.every(q => Math.hypot(px - (q.x1 + q.x2) / 2, py - (q.y1 + q.y2) / 2) > 0.22)) { pegs.push({ x: px, y: py, r: 0.045 }); k++; }
       }
-      feats = { blk: [], haz: [], fan: [], portal: [] }; portCool = 0;
+      feats = { blk: [], haz: [], fan: [], portal: [] }; portCool = 0; needPort = false; portUsed = false;
       const FD = FEAT[LC.name];
       if (FD) {
         const used = [], ok = (x, y, m) => Math.hypot(x - bx, y - by) > m + 0.12 && Math.hypot(x - tx, y - ty) > m + 0.1 && used.every(q => Math.hypot(x - q.x, y - q.y) > 0.3) && pegs.every(q => Math.hypot(x - q.x, y - q.y) > 0.2) && greens.every(q => Math.hypot(x - (q.x1 + q.x2) / 2, y - (q.y1 + q.y2) / 2) > 0.25);
@@ -166,13 +166,22 @@ Sims.register({
         for (let k = 0; k < (FD.blk || 0); k++) { const o = place(0.14, (x, y) => { const vert = R() < 0.35, w = vert ? 0.05 + R() * 0.03 : 0.12 + R() * 0.1, h = vert ? 0.14 + R() * 0.1 : 0.05 + R() * 0.03; return { x: x - w / 2, y: y - h / 2, w, h, e: FD.e || 0.85 }; }); if (o) feats.blk.push(o); }
         for (let k = 0; k < (FD.haz || 0); k++) { const o = place(0.2, (x, y) => ({ x, y, r: 0.04 + R() * 0.015, mv: !!FD.mv, amp: 0.12, sp: 0.9 + R() * 0.8, ph: R() * 6.28 })); if (o) { if (o.mv) o.x = Math.max(0.22, Math.min(ww - 0.22, o.x)); feats.haz.push(o); } }
         for (let k = 0; k < (FD.fan || 0); k++) { const geys = FD.sk.fan === 'geyser', o = place(0.15, (x, y) => geys ? { x: x - 0.09, y: y - 0.18, w: 0.18, h: 0.36, ax: 0, ay: -2.6 } : { x: 0.05, y: y - 0.1, w: 0.9, h: 0.2, ax: (R() < 0.5 ? -1 : 1) * 1.3, ay: 0 }); if (o) feats.fan.push(o); }
-        if (FD.portal) { const a = place(0.18, (x, y) => ({ x, y })), b2 = place(0.18, (x, y) => ({ x, y })); if (a && b2) feats.portal.push({ a, b: b2, r: 0.05 }); }
+        if (LC.name === 'Лаборатория' && level >= 2) {   /* first location: the portal is mandatory, the exit sits next to the target and the target is locked until you use it */
+          const gm = (x, y, m) => greens.every(q => Math.hypot(x - (q.x1 + q.x2) / 2, y - (q.y1 + q.y2) / 2) > m) && pegs.every(q => Math.hypot(x - q.x, y - q.y) > 0.15);
+          for (let t3 = 0; t3 < 900; t3++) {
+            const ang = R() * 6.28, dd = 0.2 + R() * 0.12, ex = tx + Math.cos(ang) * dd, ey = ty + Math.sin(ang) * dd * 0.8 - 0.05;
+            if (ex < 0.14 || ex > ww - 0.14 || ey < 0.3 || ey > hh - 0.25 || !gm(ex, ey, 0.2)) continue;
+            const ax = 0.14 + R() * (ww - 0.28), ay = by + 0.12 + R() * Math.max(0.1, hh - by - 0.5);
+            if (Math.hypot(ax - bx, ay - by) < 0.28 || Math.hypot(ax - tx, ay - ty) < 0.55 || Math.hypot(ax - ex, ay - ey) < 0.4 || ay > hh - 0.3 || !gm(ax, ay, 0.22)) continue;
+            feats.portal.push({ a: { x: ax, y: ay }, b: { x: ex, y: ey }, r: 0.055, one: true }); needPort = true; break;
+          }
+        } else if (FD.portal) { const a = place(0.18, (x, y) => ({ x, y })), b2 = place(0.18, (x, y) => ({ x, y })); if (a && b2) feats.portal.push({ a, b: b2, r: 0.05 }); }
       }
       decor = []; for (let i = 0; i < 34; i++) decor.push({ x: Math.random(), y: Math.random(), s: 0.5 + Math.random() * 1.6, p: Math.random() * 6.28 });
       tr = []; reset();
     }
     function reset() {
-      greens.forEach(g => { g.hit = false; }); tr.forEach(s => { s.n = 0; s.dead = false; }); ball = { x: start.x, y: start.y, vx: 0, vy: 0 }; trail = []; state = 'plan'; stateT = 0; drag = null; simT = 0;
+      portUsed = false; portCool = 0; greens.forEach(g => { g.hit = false; }); tr.forEach(s => { s.n = 0; s.dead = false; }); ball = { x: start.x, y: start.y, vx: 0, vy: 0 }; trail = []; state = 'plan'; stateT = 0; drag = null; simT = 0;
     }
     function restart() { level = Math.max(1, level) - 1; attempts = 0; parts = []; events = []; layout(); newLevel(false); }
 
@@ -213,10 +222,10 @@ Sims.register({
       for (const s of greens) segHit(b, s, r + 0.008, cfg.trampBounce * LC.bnc);
       for (const q of feats.fan) if (b.x > q.x && b.x < q.x + q.w && b.y > q.y && b.y < q.y + q.h) { b.vx += q.ax * dt; b.vy += q.ay * dt; }
       for (const q of feats.blk) { const cx = Math.max(q.x, Math.min(q.x + q.w, b.x)), cy = Math.max(q.y, Math.min(q.y + q.h, b.y)); let dx = b.x - cx, dy = b.y - cy, d = Math.hypot(dx, dy); if (d < r) { if (d < 1e-9) { dx = 0; dy = -1; d = 1; } const nx = dx / d, ny = dy / d, vn = b.vx * nx + b.vy * ny; b.x = cx + nx * r; b.y = cy + ny * r; if (vn < 0) { b.vx -= (1 + q.e) * vn * nx; b.vy -= (1 + q.e) * vn * ny; events.push({ hit: Math.min(1, -vn / 2) }); } } }
-      if (portCool > 0) portCool -= dt; else for (const q of feats.portal) for (const [u, v] of [[q.a, q.b], [q.b, q.a]]) if (Math.hypot(b.x - u.x, b.y - u.y) < q.r) { b.x = v.x; b.y = v.y; portCool = 0.5; events.push({ hit: 0.6 }); burst(u.x, u.y, 12, 200); burst(v.x, v.y, 12, 30); break; }
+      if (portCool > 0) portCool -= dt; else for (const q of feats.portal) for (const [u, v] of (q.one ? [[q.a, q.b]] : [[q.a, q.b], [q.b, q.a]])) if (Math.hypot(b.x - u.x, b.y - u.y) < q.r) { b.x = v.x; b.y = v.y; if (q.one) portUsed = true; portCool = 0.5; events.push({ hit: 0.6 }); burst(u.x, u.y, 12, 200); burst(v.x, v.y, 12, 30); break; }
       for (const h of feats.haz) { const hp = hzPos(h, simT); if (Math.hypot(b.x - hp.x, b.y - hp.y) < h.r + r * 0.75) { state = 'fail'; stateT = 0; attempts++; events.push({ fail: true }); burst(b.x, b.y, 25, 20); return; } }
       for (const q of pegs) { const dx = b.x - q.x, dy = b.y - q.y, d = Math.hypot(dx, dy), rr = r + q.r; if (d < rr && d > 1e-9) { const nx = dx / d, ny = dy / d, vn = b.vx * nx + b.vy * ny; b.x = q.x + nx * rr; b.y = q.y + ny * rr; if (vn < 0) { b.vx -= 1.92 * vn * nx; b.vy -= 1.92 * vn * ny; events.push({ hit: Math.min(1, -vn / 2) }); } } }
-      if (Math.hypot(b.x - target.x, b.y - target.y) < r + cfg.targetR && greens.every(q => q.hit)) {
+      if (Math.hypot(b.x - target.x, b.y - target.y) < r + cfg.targetR && greens.every(q => q.hit) && (!needPort || portUsed)) {
         state = 'won'; stateT = 0; events.push({ win: true }); burst(target.x, target.y, 70, 90); if (ctl.submitScore) ctl.submitScore(level);
         return;
       }
@@ -428,7 +437,7 @@ Sims.register({
         ctx.strokeStyle = up ? 'rgba(255,200,120,.7)' : 'rgba(200,245,255,.7)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
         for (let i = 0; i < 6; i++) { const ph = (now * 0.8 + i / 6) % 1; if (up) { const ax = x + w * (i + 0.5) / 6, ay = y + h * (1 - ph); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - 4, ay + 9); ctx.moveTo(ax, ay); ctx.lineTo(ax + 4, ay + 9); ctx.stroke(); } else { const dir = q.ax > 0 ? 1 : -1, ay = y + h * (i % 3 + 0.5) / 3, ax = q.ax > 0 ? x + w * ph : x + w * (1 - ph); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - dir * 16, ay); ctx.moveTo(ax, ay); ctx.lineTo(ax - dir * 6, ay - 4); ctx.moveTo(ax, ay); ctx.lineTo(ax - dir * 6, ay + 4); ctx.stroke(); } }
       });
-      feats.portal.forEach(q => [[q.a, '#3df0ff', 1], [q.b, '#ffa03d', -1]].forEach(([u, c, d]) => { const x = u.x * S, y = u.y * S, r = q.r * S; ctx.strokeStyle = c; ctx.lineWidth = 4; for (let k = 0; k < 3; k++) { ctx.globalAlpha = 0.9 - k * 0.25; ctx.beginPath(); ctx.ellipse(x, y, r * (1 - k * 0.22), r * (1 - k * 0.22) * 0.8, now * 3 * d + k, 0.5, 5.8); ctx.stroke(); } ctx.globalAlpha = 0.25; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }));
+      feats.portal.forEach(q => [[q.a, '#3df0ff', 1], [q.b, '#ffa03d', -1]].forEach(([u, c, d]) => { const x = u.x * S, y = u.y * S, r = q.r * S; ctx.strokeStyle = c; ctx.lineWidth = 4; for (let k = 0; k < 3; k++) { ctx.globalAlpha = 0.9 - k * 0.25; ctx.beginPath(); ctx.ellipse(x, y, r * (1 - k * 0.22), r * (1 - k * 0.22) * 0.8, now * 3 * d + k, 0.5, 5.8); ctx.stroke(); } ctx.globalAlpha = 0.25; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; if (q.one) { ctx.fillStyle = c; ctx.font = '700 11px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d > 0 ? 'ВХОД' : 'ВЫХОД', x, y + r + 12); } }));
       feats.blk.forEach(q => {
         const x = q.x * S, y = q.y * S, w = q.w * S, h = q.h * S, k = sk.blk; let c1 = '#556', c2 = '#889';
         if (k === 'ice') { c1 = '#6ac8ee'; c2 = '#e8fbff'; } else if (k === 'trunk') { c1 = '#5a3a1a'; c2 = '#8a5a2a'; } else if (k === 'rock') { c1 = '#8a5a2a'; c2 = '#c8924a'; } else if (k === 'candy') { c1 = '#ff4a7a'; c2 = '#ffffff'; } else if (k === 'bar') { c1 = '#c020b8'; c2 = '#ff9af8'; } else if (k === 'jelly') { c1 = '#ff4a9a'; c2 = '#ffb8dc'; } else if (k === 'wall') { c1 = '#3a3a5a'; c2 = '#6a6a9a'; } else if (k === 'gear') { c1 = '#9a7a20'; c2 = '#e8c060'; } else if (k === 'server') { c1 = '#12183a'; c2 = '#3dff8a'; } else if (k === 'cloud') { c1 = '#ffffff'; c2 = '#c8e8ff'; } else if (k === 'table') { c1 = '#2a3a5a'; c2 = '#5fe0ff'; }
@@ -479,7 +488,7 @@ Sims.register({
       ctx.save(); ctx.translate(OX, OY);
       drawFeats(LC, now);
       ctx.strokeStyle = cfg.wallDeath ? 'rgba(255,90,90,.45)' : 'rgba(255,255,255,.18)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.strokeRect(1, 1, S * ww - 2, S * hh - 2); ctx.setLineDash([]);
-      const locked = greens.some(q => !q.hit);
+      const locked = greens.some(q => !q.hit) || (needPort && !portUsed);
       // target
       const tx = target.x * S, ty = target.y * S, pulse = 1 + Math.sin(simT * 0 + performance.now() / 300) * 0.06;
       ctx.strokeStyle = locked ? 'rgba(61,255,138,.35)' : '#3dff8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(tx, ty, cfg.targetR * S * pulse * 1.5, 0, TAU); ctx.stroke();
@@ -518,7 +527,7 @@ Sims.register({
       ctx.fillText(locName(level), 14, 96);
       if (state === 'plan') {
         ctx.fillStyle = 'rgba(207,214,230,.6)'; ctx.font = '500 ' + Math.max(12, Math.min(16, W * 0.036)) + 'px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('Рисуйте батуты пальцем · осталось: ' + Math.max(0, cfg.tramps - tr.length) + (greens.length ? ' · зелёные: ' + greens.filter(q => q.hit).length + '/' + greens.length : ''), W / 2, 111);
+        ctx.fillText('Рисуйте батуты пальцем · осталось: ' + Math.max(0, cfg.tramps - tr.length) + (greens.length ? ' · зелёные: ' + greens.filter(q => q.hit).length + '/' + greens.length : '') + (needPort ? ' · портал: ' + (portUsed ? '✓' : 'нужен') : ''), W / 2, 111);
       }
       ctx.textAlign = 'center';
       if (state === 'won') { ctx.fillStyle = '#3dff8a'; ctx.font = '800 ' + Math.min(48, W * 0.11) + 'px Inter, system-ui, sans-serif'; ctx.fillText('Попал!', W / 2, OY + S * hh * 0.4); }
@@ -552,7 +561,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { on = false; closeMenu(); mstyle.remove(); song.pause(); song.removeAttribute('src'); song.load(); cancelAnimationFrame(raf); canvas.style.touchAction = ''; canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up); },
-      debug: { get feats() { return feats; }, step, next() { newLevel(false); }, get state() { return state; }, get level() { return level; }, get start() { return start; }, get target() { return target; }, get hh() { return hh; }, get ww() { return ww; }, get tr() { return tr; }, get greens() { return greens; }, reset, jumpTo, openMenu, closeMenu, get best() { return best; }, set best(v) { best = v; }, get loc() { return locOf(level).name; }, set tr(v) { tr = v; }, run() { state = 'run'; simT = 0; } }
+      debug: { get needPort() { return needPort; }, get feats() { return feats; }, step, next() { newLevel(false); }, get state() { return state; }, get level() { return level; }, get start() { return start; }, get target() { return target; }, get hh() { return hh; }, get ww() { return ww; }, get tr() { return tr; }, get greens() { return greens; }, reset, jumpTo, openMenu, closeMenu, get best() { return best; }, set best(v) { best = v; }, get loc() { return locOf(level).name; }, set tr(v) { tr = v; }, run() { state = 'run'; simT = 0; } }
     };
   }
 });
