@@ -135,7 +135,7 @@ Sims.register({
       } while ((Math.hypot(bx - tx, by - ty) < minD || (Math.abs(bx - tx) < r + tr0 + 0.14 && ty > by - 0.1)) && tries < 2000);   /* straight fall must not reach the target */
       start = { x: bx, y: by }; target = { x: tx, y: ty };
       greens = [];
-      if (level >= 10) {   /* from level 10: fixed green trampolines; the ball must bounce off every one of them before the target counts */
+      if (level >= 10 && locIdx(level) === 0) {   /* only in the first location (Laboratory), from level 10: fixed green trampolines; the ball must bounce off every one of them before the target counts */
         const seg = (cx, cy, a, len) => ({ x1: cx - Math.cos(a) * len / 2, y1: cy - Math.sin(a) * len / 2, x2: cx + Math.cos(a) * len / 2, y2: cy + Math.sin(a) * len / 2, g: true, hit: false });
         const gx = Math.max(0.2, Math.min(0.8, bx + (R() - 0.5) * 0.08)), gy = Math.min(hh - 0.5, by + 0.3 + R() * 0.3);
         const a1 = (gx < 0.5 ? 1 : -1) * (0.25 + R() * 0.3);
