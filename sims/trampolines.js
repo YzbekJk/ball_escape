@@ -50,17 +50,25 @@ Sims.register({
     const TAU = Math.PI * 2;
     let W = 0, H = 0, dpr = 1, S = 1, OX = 0, OY = 0;
     const ww = 1, hh = 1.7, TOP = 118, BOT = 92;   /* fixed play field, the same for everyone */
-    /* locations: every 50 levels a new world with its own trampolines and quirks (after the last one the list repeats) */
-    const PER = 50;
+    /* locations: every 25 levels a new world with its own trampolines and quirks (after the last one the list repeats) */
+    const PER = 25;
     const LOCS = [
       { name: 'Лаборатория', joke: 'Шарик не виноват. Он просто оказался в эксперименте.', quirk: 'обычные батуты', bg: ['#0d1020', '#141a33'], tcol: ['#2fd4ff', '#d8f6ff'], grav: 1, bnc: 1, deco: 'bubble', dc: '#5fe0ff' },
       { name: 'Ледяная пещера', joke: 'Батуты замёрзли. Прыгайте аккуратно, лёд не любит повторов.', quirk: 'ледяные батуты трескаются после 4 ударов', bg: ['#0a1c2e', '#1d4466'], tcol: ['#9fe8ff', '#ffffff'], grav: 1, bnc: 0.96, frag: 4, deco: 'snow', dc: '#e8f8ff' },
       { name: 'Джунгли', joke: 'Здесь шарик встретил обезьяну. Она отказалась комментировать.', quirk: 'порывы ветра сносят шарик', bg: ['#0b2412', '#1d5a2a'], tcol: ['#a26a2a', '#e8c27a'], grav: 1, bnc: 1, wind: { a: 0.32, w: 2.2 }, deco: 'leaf', dc: '#7be05a' },
+      { name: 'Пустыня', joke: 'Сухо, жарко, батуты — мираж. Шарик в восторге.', quirk: 'песок гасит отскок', bg: ['#2a1a06', '#8a5a1a'], tcol: ['#e8b84a', '#fff3c4'], grav: 1.05, bnc: 0.92, deco: 'sand', dc: '#ffd98a' },
+      { name: 'Подводный мир', joke: 'Рыбы смотрят на шарик как на пришельца.', quirk: 'вода тормозит шарик', bg: ['#02142a', '#0a4a7a'], tcol: ['#4fd8ff', '#e0fbff'], grav: 0.8, bnc: 1, drag: 0.7, deco: 'bubble', dc: '#9fe8ff' },
       { name: 'Космос', joke: 'На Луне шарик весит меньше, а проблем столько же.', quirk: 'низкая гравитация', bg: ['#04030f', '#1a1040'], tcol: ['#b07cff', '#f0e4ff'], grav: 0.55, bnc: 1, deco: 'star', dc: '#ffffff' },
       { name: 'Вулкан', joke: 'Пол — это лава. Серьёзно, не падайте.', quirk: 'горячие батуты бьют сильнее, но тяжелее падать', bg: ['#1c0600', '#6a1a00'], tcol: ['#ff6a1a', '#ffe0a0'], grav: 1.2, bnc: 1.2, deco: 'ember', dc: '#ffa23a' },
+      { name: 'Конфетная фабрика', joke: 'Всё липкое, всё сладкое, шарик теперь в карамели.', quirk: 'упругие леденцы-отбойники', bg: ['#2a0a22', '#8a2a6a'], tcol: ['#ff9ad8', '#fff0fa'], grav: 1, bnc: 1.1, pegs: 2, deco: 'spark', dc: '#ffe08a' },
       { name: 'Пинбол', joke: 'Это не баг, это пинбол.', quirk: 'на поле стоят отбойники', bg: ['#10002a', '#2a0a5a'], tcol: ['#ff3df0', '#ffd6fb'], grav: 1, bnc: 1, pegs: 3, deco: 'spark', dc: '#ff7af5' },
       { name: 'Желейная страна', joke: 'Батуты из желе. Вкусно, но прыгать тяжело.', quirk: 'желейные батуты гасят отскок', bg: ['#2a0a1e', '#6a1a4a'], tcol: ['#ff7ab8', '#ffd3e8'], grav: 0.9, bnc: 0.8, jelly: 1, deco: 'bubble', dc: '#ffb0d8' },
-      { name: 'Хаос', joke: 'Здесь всё сразу. Разработчик сам не уверен, что это проходимо.', quirk: 'ветер, отбойники и хрупкие батуты', bg: ['#0a0a0a', '#2a2a2a'], tcol: ['#e8e8e8', '#ffffff'], grav: 1.1, bnc: 1, wind: { a: 0.26, w: 3.1 }, pegs: 2, frag: 6, deco: 'spark', dc: '#ff5a5a' }
+      { name: 'Замок призраков', joke: 'Призраки утверждают, что батуты им мерещатся.', quirk: 'батуты мигают: то есть, то нет', bg: ['#080814', '#2a2a4a'], tcol: ['#b8c8ff', '#ffffff'], grav: 1, bnc: 1, blink: 2.4, deco: 'star', dc: '#c8d0ff' },
+      { name: 'Часовая башня', joke: 'Стрелки не успевают за шариком. Или наоборот.', quirk: 'гравитация пульсирует', bg: ['#1a1204', '#5a4210'], tcol: ['#e8c060', '#fff4d0'], grav: 1, bnc: 1, gosc: { a: 0.45, w: 1.6 }, deco: 'spark', dc: '#ffd060' },
+      { name: 'Магнитная аномалия', joke: 'Компас сдался. Шарик тоже скоро сдастся.', quirk: 'шарик притягивает к центру', bg: ['#06121a', '#123a4a'], tcol: ['#4af0c8', '#e0fff6'], grav: 1, bnc: 1, mag: 0.9, deco: 'spark', dc: '#4af0c8' },
+      { name: 'Кибер-город', joke: 'Здесь даже батуты на подписке.', quirk: 'тяжёлый шарик, мощные батуты', bg: ['#050818', '#1a0a3a'], tcol: ['#3dff8a', '#d8ffe8'], grav: 1.3, bnc: 1.25, pegs: 1, deco: 'spark', dc: '#3dff8a' },
+      { name: 'Хаос', joke: 'Здесь всё сразу. Разработчик сам не уверен, что это проходимо.', quirk: 'ветер, отбойники и хрупкие батуты', bg: ['#0a0a0a', '#2a2a2a'], tcol: ['#e8e8e8', '#ffffff'], grav: 1.1, bnc: 1, wind: { a: 0.26, w: 3.1 }, pegs: 2, frag: 6, deco: 'spark', dc: '#ff5a5a' },
+      { name: 'Радужный мир', joke: 'Финал. Дальше только повторение, зато красивое.', quirk: 'всего понемногу: ветер, отбойники, хрупкость', bg: ['#2a0a4a', '#0a5a6a'], tcol: ['#ff9a4a', '#fff0d0'], grav: 0.85, bnc: 1.05, wind: { a: 0.22, w: 2.6 }, pegs: 2, frag: 8, deco: 'spark', dc: '#ffe65a' }
     ];
     const locIdx = lv => Math.floor((Math.max(1, lv) - 1) / PER) % LOCS.length;
     const locOf = lv => LOCS[locIdx(lv)];
@@ -160,7 +168,8 @@ Sims.register({
       if (state !== 'run') return;
       const b = ball, r = cfg.ballR;
       const LC = locOf(level);
-      b.vy += cfg.gravity * LC.grav * dt; if (LC.wind) b.vx += LC.wind.a * Math.sin(simT * LC.wind.w) * dt; b.x += b.vx * dt; b.y += b.vy * dt;
+      b.vy += cfg.gravity * LC.grav * (LC.gosc ? 1 + LC.gosc.a * Math.sin(simT * LC.gosc.w) : 1) * dt; if (LC.wind) b.vx += LC.wind.a * Math.sin(simT * LC.wind.w) * dt;
+      if (LC.mag) b.vx -= LC.mag * (b.x - 0.5) * dt; if (LC.drag) { const k = 1 - LC.drag * dt; b.vx *= k; b.vy *= k; } b.x += b.vx * dt; b.y += b.vy * dt;
       if (cfg.wallDeath && (b.x <= r || b.x >= ww - r || b.y <= r)) {
         state = 'fail'; stateT = 0; attempts++; events.push({ fail: true }); burst(b.x, b.y, 25, 20); return;
       }
@@ -168,7 +177,8 @@ Sims.register({
       if (b.x > ww - r) { b.x = ww - r; if (b.vx > 0) { b.vx = -b.vx * cfg.wallBounce; events.push({ hit: 0.3 }); } }
       if (b.y < r) { b.y = r; if (b.vy < 0) { b.vy = -b.vy * cfg.wallBounce; events.push({ hit: 0.3 }); } }
       if (cfg.floor && b.y > hh - r) { b.y = hh - r; if (b.vy > 0) { b.vy = -b.vy * cfg.wallBounce; events.push({ hit: 0.3 }); } }
-      for (const s of tr) { if (s.dead) continue; segHit(b, s, r + 0.008, cfg.trampBounce * LC.bnc); if (LC.frag && s.n >= LC.frag && !s.dead) { s.dead = true; burst((s.x1 + s.x2) / 2, (s.y1 + s.y2) / 2, 18, 190); events.push({ hit: 0.2 }); } }
+      const solid = !LC.blink || (simT % LC.blink) < LC.blink * 0.7;
+      for (const s of tr) { if (s.dead || !solid) continue; segHit(b, s, r + 0.008, cfg.trampBounce * LC.bnc); if (LC.frag && s.n >= LC.frag && !s.dead) { s.dead = true; burst((s.x1 + s.x2) / 2, (s.y1 + s.y2) / 2, 18, 190); events.push({ hit: 0.2 }); } }
       for (const s of greens) segHit(b, s, r + 0.008, cfg.trampBounce * LC.bnc);
       for (const q of pegs) { const dx = b.x - q.x, dy = b.y - q.y, d = Math.hypot(dx, dy), rr = r + q.r; if (d < rr && d > 1e-9) { const nx = dx / d, ny = dy / d, vn = b.vx * nx + b.vy * ny; b.x = q.x + nx * rr; b.y = q.y + ny * rr; if (vn < 0) { b.vx -= 1.92 * vn * nx; b.vy -= 1.92 * vn * ny; events.push({ hit: Math.min(1, -vn / 2) }); } } }
       if (Math.hypot(b.x - target.x, b.y - target.y) < r + cfg.targetR && greens.every(q => q.hit)) {
@@ -314,11 +324,13 @@ Sims.register({
         if (LC.deco === 'snow') { y = ((d.y + now * 0.03 * d.s) % 1) * H; x = (d.x * W + Math.sin(now + d.p) * 14 + W) % W; }
         else if (LC.deco === 'leaf') { y = ((d.y + now * 0.04 * d.s) % 1) * H; x = (d.x * W + Math.sin(now * 0.8 + d.p) * 30 + now * 10 * d.s + W * 2) % W; }
         else if (LC.deco === 'ember') { y = (((d.y - now * 0.05 * d.s) % 1) + 1) % 1 * H; x = (d.x * W + Math.sin(now * 1.5 + d.p) * 10 + W) % W; }
+        else if (LC.deco === 'sand') { x = ((d.x + now * 0.08 * d.s) % 1) * W; y = (d.y * H + Math.sin(now * 2 + d.p) * 6 + H) % H; }
         else if (LC.deco === 'bubble') { y = (((d.y - now * 0.03 * d.s) % 1) + 1) % 1 * H; x = (d.x * W + Math.sin(now + d.p) * 8 + W) % W; }
         const tw = LC.deco === 'star' || LC.deco === 'spark' ? 0.25 + 0.6 * Math.abs(Math.sin(now * d.s + d.p)) : 0.45;
         ctx.globalAlpha = tw; ctx.fillStyle = LC.dc; ctx.beginPath(); ctx.arc(x, y, d.s * (LC.deco === 'bubble' ? 3 : 1.6), 0, TAU); ctx.fill();
       }); ctx.globalAlpha = 1;
       if (LC.deco === 'star') { ctx.fillStyle = 'rgba(176,124,255,.35)'; ctx.beginPath(); ctx.arc(W * 0.82, H * 0.2, 38, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(W * 0.8, H * 0.19, 30, 0, TAU); ctx.fill(); }
+      if (LC.name === 'Подводный мир') { ctx.fillStyle = 'rgba(80,200,255,.07)'; ctx.fillRect(0, 0, W, H); }
       if (LC.name === 'Вулкан') { const lg = ctx.createLinearGradient(0, H - 90, 0, H); lg.addColorStop(0, 'rgba(255,90,20,0)'); lg.addColorStop(1, 'rgba(255,120,20,.55)'); ctx.fillStyle = lg; ctx.fillRect(0, H - 90, W, 90); }
       ctx.save(); ctx.translate(OX, OY);
       ctx.strokeStyle = cfg.wallDeath ? 'rgba(255,90,90,.45)' : 'rgba(255,255,255,.18)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.strokeRect(1, 1, S * ww - 2, S * hh - 2); ctx.setLineDash([]);
@@ -337,8 +349,9 @@ Sims.register({
       ctx.lineCap = 'round';
       all.forEach(s => {
         if (s.dead) return;
+        const faint = LC.blink && state === 'run' && (simT % LC.blink) >= LC.blink * 0.7;
         const wob = LC.jelly ? Math.sin(now * 9 + s.x1 * 20) * 2 : 0, cr = LC.frag && s.n ? s.n / LC.frag : 0;
-        ctx.strokeStyle = LC.tcol[0]; ctx.lineWidth = 9 + wob; ctx.globalAlpha = 1 - cr * 0.45; ctx.beginPath(); ctx.moveTo(s.x1 * S, s.y1 * S); ctx.lineTo(s.x2 * S, s.y2 * S); ctx.stroke();
+        ctx.strokeStyle = LC.tcol[0]; ctx.lineWidth = 9 + wob; ctx.globalAlpha = (faint ? 0.25 : 1) - cr * 0.45; ctx.beginPath(); ctx.moveTo(s.x1 * S, s.y1 * S); ctx.lineTo(s.x2 * S, s.y2 * S); ctx.stroke();
         ctx.strokeStyle = LC.tcol[1]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s.x1 * S, s.y1 * S); ctx.lineTo(s.x2 * S, s.y2 * S); ctx.stroke(); ctx.globalAlpha = 1;
         if (cr) { ctx.strokeStyle = 'rgba(0,20,40,.8)'; ctx.lineWidth = 1.5; const mx = (s.x1 + s.x2) / 2 * S, my = (s.y1 + s.y2) / 2 * S; for (let k = 0; k < s.n * 2; k++) { const o = ((k * 37) % 11 - 5) * 3; ctx.beginPath(); ctx.moveTo(mx + o, my - 5); ctx.lineTo(mx + o + 3, my); ctx.lineTo(mx + o - 2, my + 5); ctx.stroke(); } }
       });
