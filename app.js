@@ -36,10 +36,10 @@
         cards.appendChild(b);
       });
     } else {                                          // a section: list of its items
-      const sec = SECTIONS[section];
+      const sec = section === 'ph' ? { title: 'Секретные игры', kind: 'ph', empty: 'Пока пусто' } : SECTIONS[section];
       document.title = sec.title; $('menuTitle').textContent = sec.title; $('menuSub').textContent = 'Выберите, что открыть';
       back.hidden = false;
-      const items = Sims.list.filter(s => !s.secret && kindOf(s) === sec.kind).sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0));   // hits first
+      const items = Sims.list.filter(s => section === 'ph' ? s.hub === 'ph' : (!s.secret && kindOf(s) === sec.kind)).sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0));   // hits first
       items.forEach(sim => {
         const b = document.createElement('button'); b.className = 'card' + (sim.hit ? ' hit' : '');
         const cv = document.createElement('canvas'); cv.width = 420; cv.height = 300;
@@ -59,7 +59,7 @@
   }
 
   // ---------- simulation view ----------
-  const APP_VERSION = 109;
+  const APP_VERSION = 110;
   $('ver').textContent = 'Версия ' + APP_VERSION;
   let current = null;   // { sim, cfg, inst, inputs, paused }
 
@@ -238,23 +238,24 @@
   }
   function route() {
     const m = location.hash.match(/^#\/([\w-]+)/), id = m && m[1];
-    if (id && SECTIONS[id]) showMenuPage(id);
+    if (id === 'ph') { if (!unlocked('ph') && !askPass('ph')) { location.hash = '#/'; return; } showMenuPage('ph'); }
+    else if (id && SECTIONS[id]) showMenuPage(id);
     else if (id && Sims.get(id)) { if (PASS[id] && !unlocked(id) && !askPass(id)) { location.hash = '#/'; return; } openSim(id); }
     else showMenuPage(null);
   }
 
   // ---------- buttons ----------
-  $('btnBack').onclick = () => { location.hash = current.sim.secret ? '#/' : '#/' + sectionOfKind(kindOf(current.sim)); };
+  $('btnBack').onclick = () => { location.hash = current.sim.hub ? '#/ph' : current.sim.secret ? '#/' : '#/' + sectionOfKind(kindOf(current.sim)); };
   $('plumBtn').onclick = () => { location.hash = '#/plum-clicker'; };
-  const PASS = { filipinets: '43' };
-  const unlocked = id => { try { return sessionStorage.getItem('unl_' + id) === '1'; } catch (e) { return false; } };
+  const PASS = { filipinets: '43', walrus: '43', ph: '43' };
+  const unlocked = id => { try { return sessionStorage.getItem('unl_ph') === '1'; } catch (e) { return false; } };
   function askPass(id) {
     const v = prompt('Введите пароль');
     if (v === null) return false;
-    if (v.trim() === PASS[id]) { try { sessionStorage.setItem('unl_' + id, '1'); } catch (e) { } return true; }
+    if (v.trim() === PASS[id]) { try { sessionStorage.setItem('unl_ph', '1'); } catch (e) { } return true; }
     alert('Неверный пароль'); return false;
   }
-  $('phBtn').onclick = () => { if (unlocked('filipinets') || askPass('filipinets')) location.hash = '#/filipinets'; };
+  $('phBtn').onclick = () => { if (unlocked('ph') || askPass('ph')) location.hash = '#/ph'; };
   $('menuBack').onclick = () => { location.hash = '#/'; };
   $('btnGear').onclick = () => { panel.hidden = !panel.hidden; initAudio(); };
   $('btnClose').onclick = () => { panel.hidden = true; };

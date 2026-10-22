@@ -6,6 +6,7 @@ Sims.register({
   id: 'filipinets',
   kind: 'game',
   secret: true,
+  hub: 'ph',
   ownSpace: true,
   title: 'Филлипинец',
   desc: 'Прыгайте по островкам вверх до Франции: 43 000 очков — и Париж ваш. Мешают торнадо, грозы, ветер, метеориты и босс Марсик.',
