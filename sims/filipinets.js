@@ -100,12 +100,12 @@ Sims.register({
     function finish(m) { mode = m; if (score() > best) { best = score(); try { localStorage.setItem('fil_best', String(best)); } catch (e) { } } if (m === 'win') { for (let i = 0; i < 80; i++) parts.push({ x: rnd(0, LW), y: cam + rnd(-10, 40), vx: rnd(-20, 20), vy: rnd(20, 90), l: rnd(1.5, 3.5), c: ['#0055a4', '#fff', '#ef4135', '#ffd24a'][i % 4] }); blip(660, 0.8, 'triangle', 0.07, 1320); } }
     function respawn() {
       lives--; if (lives <= 0) { finish('over'); return; }
-      const y = cam + LH * 0.62; plats.push({ x: clamp(pl.x - 12, 2, LW - 26), y, w: 24, t: 'g', safe: true }); pl.y = y; pl.vy = JUMP; pl.inv = 2.2; pl.hat = 0; blip(220, 0.25, 'triangle', 0.05, 440);
+      const y = cam + LH * 0.62; plats.push({ x: clamp(pl.x - 12, 2, LW - 26), y, w: 24, t: 'g', safe: true }); pl.y = y; pl.vy = JUMP; pl.inv = 2.2; pl.hat = 0; pl.suck = null; blip(220, 0.25, 'triangle', 0.05, 440);
     }
 
     /* ---------- босс ---------- */
     function startArena(i) {
-      arena = true; boss = { i, x: LW / 2, y: cam + 46, hp: BOSSES[i].hp, max: BOSSES[i].hp, t: 0, flash: 0, ph: 'idle', pt: 5, sh: 2.2, dead: 0, inv: 0, ty: 0, tx: 0 };
+      arena = true; pl.suck = null; boss = { i, x: LW / 2, y: cam + 46, hp: BOSSES[i].hp, max: BOSSES[i].hp, t: 0, flash: 0, ph: 'idle', pt: 5, sh: 2.2, dead: 0, inv: 0, ty: 0, tx: 0 };
       plats = []; items = []; haz = []; shots = []; let k = 0;
       for (let y = cam + LH - 14; y > cam + 74; y -= 30) { plats.push({ x: k % 2 ? rnd(LW * 0.55, LW - 26) : rnd(4, LW * 0.45), y, w: 24, t: 'g' }); k++; }
       plats.push({ x: LW / 2 - 12, y: cam + LH - 14, w: 24, t: 'g' });
@@ -113,7 +113,7 @@ Sims.register({
     }
     function bossUpdate(dt) {
       const b = boss; b.t += dt; b.flash = Math.max(0, b.flash - dt); b.inv = Math.max(0, b.inv - dt);
-      if (b.dead) { b.dead += dt; b.y += 90 * dt; if (b.dead > 2.2) { boss = null; arena = false; bossDone[b.i] = true; topY = cam + 4; hazY = cam - 120; lives = Math.min(9, lives + 1); say('Марсик побеждён! +1 жизнь'); if (b.i === 1) say('Вперёд, к Парижу!'); gen(); } return; }
+      if (b.dead) { b.dead += dt; b.y += 90 * dt; if (b.dead > 2.2) { boss = null; arena = false; bossDone[b.i] = true; topY = plats.reduce((m, q) => q.fall ? m : Math.min(m, q.y), cam + LH * 0.6); hazY = cam - 120; lives = Math.min(9, lives + 1); say('Марсик побеждён! +1 жизнь'); if (b.i === 1) say('Вперёд, к Парижу!'); gen(); } return; }
       const fast = b.hp <= b.max / 2 ? 1.4 : 1;
       if (b.ph === 'idle') { b.x = LW / 2 + Math.sin(b.t * 0.9 * fast) * 40; b.y = cam + 46 + Math.sin(b.t * 1.7) * 5; b.pt -= dt; if (b.pt <= 0) { b.ph = 'tele'; b.pt = 0.9; b.tx = pl.x; blip(300, 0.5, 'square', 0.04, 600); } }
       else if (b.ph === 'tele') { b.x += Math.sin(b.t * 60) * 0.6; b.pt -= dt; if (b.pt <= 0) { b.ph = 'dive'; b.ty = cam + LH * 0.62; } }
@@ -142,7 +142,13 @@ Sims.register({
       else meteorOn = 0;
       if (meteorOn) { nextMeteor -= dt; if (nextMeteor <= 0) { nextMeteor = rnd(0.25, 0.45); haz.push({ k: 'meteor', x: rnd(-10, LW), y: cam - 6, vx: rnd(14, 30), vy: rnd(90, 125) }); } }
       // игрок
-      pl.vx = dir * SPEED; if (dir) pl.face = dir; pl.x += (pl.vx + wind * 30) * dt; if (pl.x < -3) pl.x += LW + 6; if (pl.x > LW + 3) pl.x -= LW + 6;
+      if (pl.suck) {
+        const k = pl.suck, h = k.h; k.t -= dt; k.a += dt * 10; const rr = 2 + 6 * Math.max(0, k.t) / 3;
+        pl.x = h.x + Math.cos(k.a) * rr; pl.y = h.y - h.h * 0.55 + Math.sin(k.a * 0.6) * h.h * 0.3; pl.vy = 0; pl.face = Math.cos(k.a) > 0 ? 1 : -1; pl.inv = Math.max(pl.inv, 0.2);
+        if (Math.random() < 0.5) parts.push({ x: pl.x + rnd(-6, 6), y: pl.y + rnd(-10, 4), vx: rnd(-20, 20), vy: rnd(-20, 10), l: 0.4, c: '#d8e0ea' });
+        if (k.t <= 0) { pl.suck = null; pl.kx = (Math.random() < 0.5 ? -1 : 1) * rnd(85, 120); pl.vy = -330; pl.inv = 1.2; h.cool = 4; blip(200, 0.5, 'sawtooth', 0.05, 900); say('Торнадо выбросило!'); for (let i = 0; i < 14; i++) parts.push({ x: pl.x, y: pl.y - 6, vx: rnd(-60, 60), vy: rnd(-90, 20), l: rnd(0.4, 0.8), c: '#d8e0ea' }); }
+      } else {
+      pl.vx = dir * SPEED; if (dir) pl.face = dir; pl.x += (pl.vx + wind * 30 + (pl.kx || 0)) * dt; pl.kx = (pl.kx || 0) * Math.max(0, 1 - 1.8 * dt); if (pl.x < -3) pl.x += LW + 6; if (pl.x > LW + 3) pl.x -= LW + 6;
       pl.inv = Math.max(0, pl.inv - dt);
       const py0 = pl.y;
       if (pl.hat > 0) { pl.hat -= dt; pl.vy = -300; pl.spin += dt * 30; } else pl.vy += GRAV * dt;
@@ -165,6 +171,7 @@ Sims.register({
         for (const it of items) { if (it.dead || !it.p) continue; const ix = it.p.x + it.x; if (it.k === 'spring' && py0 <= it.p.y && pl.y >= it.p.y - 4 && pl.x + 3 > ix && pl.x - 3 < ix + it.w) { pl.vy = SPRING; blip(300, 0.25, 'triangle', 0.06, 900); } }
       }
       for (const it of items) { if (it.dead || !it.p) continue; const ix = it.p.x + it.x, iy = it.p.y - 7; if ((it.k === 'hat' || it.k === 'heart') && Math.abs(pl.x - ix - it.w / 2) < 7 && Math.abs((pl.y - 6) - iy) < 9) { it.dead = true; if (it.k === 'hat') { pl.hat = 2.3; blip(500, 0.4, 'triangle', 0.06, 1200); } else { lives = Math.min(9, lives + 1); blip(700, 0.3, 'triangle', 0.06, 1400); } } }
+      }
       // максимум высоты
       if (-pl.y > maxH - startY * 0 && !arena) maxH = Math.max(maxH, startY - pl.y);
       else if (arena) maxH = Math.max(maxH, startY - pl.y);
@@ -178,7 +185,8 @@ Sims.register({
       haz.forEach(h => {
         if (h.k === 'tornado') {
           h.x += h.vx * dt; if (h.x < 8 || h.x > LW - 8) h.vx = -h.vx;
-          if (Math.abs(pl.x - h.x) < 22 && pl.y > h.y - h.h && pl.y < h.y + 6) { pl.x += (h.x - pl.x) * Math.min(1, dt * 1.4); if (Math.abs(pl.x - h.x) < 9) hurt('tornado'); }
+          if (h.cool > 0) h.cool -= dt;
+          else if (!pl.suck && mode === 'play' && Math.abs(pl.x - h.x) < 22 && pl.y > h.y - h.h && pl.y < h.y + 6) { pl.x += (h.x - pl.x) * Math.min(1, dt * 1.4); if (Math.abs(pl.x - h.x) < 9) { pl.suck = { h, t: 3, a: 0 }; pl.kx = 0; blip(140, 0.6, 'sawtooth', 0.04, 420); say('Торнадо затягивает!'); } }
         } else if (h.k === 'storm') {
           h.tm -= dt; h.x += clamp(pl.x - h.x, -10 * dt, 10 * dt);
           if (h.st === 0 && h.tm <= 0) { h.st = 1; h.tm = 0.9; blip(260, 0.8, 'sine', 0.03, 120); }
