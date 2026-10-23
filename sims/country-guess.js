@@ -25,7 +25,7 @@ Sims.register({
     const DW = 360, DH = 640, FONT = 'system-ui, sans-serif', STAGES = [1, 4, 12, 30, 80, 200], LOOP = 3.6, HOLD = 0.4, BKEY = 'cg_best';
     const DATA = window.COUNTRY_SHAPES || {}, IDS = Object.keys(DATA);
     let W = 0, H = 0, dpr = 1, on = true, paused = false, raf = 0, last = 0, t = 0;
-    let deck = [], cur = null, st = 'play', stage = 0, st0 = 0, trace = [], terms = [], opts = [], pick = -1, score = 0, lives = 3, best = 0, round = 0, rev = 0, fb = '', cacheT = {};
+    let deck = [], cur = null, st = 'play', stage = 0, maxStage = 0, st0 = 0, trace = [], terms = [], opts = [], pick = -1, score = 0, lives = 3, best = 0, round = 0, rev = 0, fb = '', cacheT = {};
     try { best = +localStorage.getItem(BKEY) || 0; } catch (e) { }
 
     function blip(f, dur, type, vol, slide) {
@@ -40,36 +40,36 @@ Sims.register({
       out.sort((a, b) => b.r - a.r); return (cacheT[id] = out);
     }
     function pos(ts, th) { let x = 0, y = 0; for (const c of ts) { const a = c.k * th, cs = Math.cos(a), sn = Math.sin(a); x += c.re * cs - c.im * sn; y += c.re * sn + c.im * cs; } return [x, y]; }
-    function startStage(i) { stage = i; st0 = t; terms = coefs(cur).slice(0, STAGES[i]); trace = []; for (let s = 0; s <= 360; s++) trace.push(pos(terms, s / 360 * Math.PI * 2)); if (i) blip(300 + i * 70, 0.08, 'square', 0.025); }
+    function startStage(i) { stage = i; maxStage = Math.max(maxStage, i); st0 = t; terms = coefs(cur).slice(0, STAGES[i]); trace = []; for (let s = 0; s <= 360; s++) trace.push(pos(terms, s / 360 * Math.PI * 2)); if (i) blip(300 + i * 70, 0.08, 'square', 0.025); }
     function nextRound() {
       if (!deck.length) { deck = IDS.slice(); for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; } if (deck[deck.length - 1] === cur) deck.unshift(deck.pop()); }
-      cur = deck.pop(); round++; st = 'play'; pick = -1; fb = '';
+      cur = deck.pop(); round++; st = 'play'; pick = -1; fb = ''; maxStage = 0;
       const pool = IDS.filter(x => x !== cur).sort(() => Math.random() - 0.5).slice(0, 3); opts = pool.concat(cur).sort(() => Math.random() - 0.5); startStage(0);
     }
     function restart() { score = 0; lives = cfg.lives; round = 0; deck = []; cur = null; nextRound(); }
     function answer(i) {
       if (st !== 'play') return; pick = i; rev = 0;
-      if (opts[i] === cur) { const pts = STAGES.length - stage; score += pts; fb = '+' + pts; st = 'ok'; blip(660, 0.2, 'triangle', 0.06, 990); blip(990, 0.25, 'triangle', 0.05, 1320); }
+      if (opts[i] === cur) { const pts = STAGES.length - maxStage; score += pts; fb = '+' + pts; st = 'ok'; blip(660, 0.2, 'triangle', 0.06, 990); blip(990, 0.25, 'triangle', 0.05, 1320); }
       else { lives--; st = 'bad'; fb = 'Не угадали'; blip(160, 0.4, 'sawtooth', 0.06, 70); }
       if (score > best) { best = score; try { localStorage.setItem(BKEY, best); } catch (e) { } }
     }
     function update(dt) {
       t += dt;
       if (st === 'play') {
-        const el = t - st0, per = LOOP + HOLD;
-        if (stage < STAGES.length - 1) { if (el >= per) startStage(stage + 1); }
-        else if (el >= LOOP + 3) { lives--; st = 'late'; fb = 'Время вышло'; pick = -1; rev = 0; blip(160, 0.4, 'sawtooth', 0.06, 70); }
       } else if (st === 'ok' || st === 'bad' || st === 'late') { rev += dt; if (rev > 2.2) { if (lives <= 0) st = 'over'; else nextRound(); } }
     }
 
     /* ---------- ввод ---------- */
     function uiT() { const s = Math.min(canvas.width / DW, canvas.height / DH); return { s, ox: (canvas.width - DW * s) / 2, oy: (canvas.height - DH * s) / 2 }; }
     function uiXY(e) { const r = canvas.getBoundingClientRect(), T = uiT(), px = (e.clientX - r.left) * canvas.width / r.width, py = (e.clientY - r.top) * canvas.height / r.height; return { x: (px - T.ox) / T.s, y: (py - T.oy) / T.s }; }
-    const BX = i => 14 + (i % 2) * 166, BY = i => 470 + Math.floor(i / 2) * 76;
+    const BX = i => 14 + (i % 2) * 166, BY = i => 502 + Math.floor(i / 2) * 66, CH = i => 14 + i * 56;
     function onDown(e) {
       if (st === 'over') { restart(); return; }
       if (st === 'ok' || st === 'bad' || st === 'late') { if (rev > 0.6) { rev = 3; } return; }
-      const p = uiXY(e); for (let i = 0; i < 4; i++) if (p.x >= BX(i) && p.x <= BX(i) + 152 && p.y >= BY(i) && p.y <= BY(i) + 64) { answer(i); return; }
+      const p = uiXY(e);
+      for (let i = 0; i < 4; i++) if (p.x >= BX(i) && p.x <= BX(i) + 152 && p.y >= BY(i) && p.y <= BY(i) + 58) { answer(i); return; }
+      for (let i = 0; i < STAGES.length; i++) if (p.x >= CH(i) && p.x <= CH(i) + 50 && p.y >= 430 && p.y <= 458) { startStage(i); return; }
+      if (p.y >= 464 && p.y <= 494) { if (p.x >= 14 && p.x <= 176) { startStage(stage); } else if (p.x >= 184 && p.x <= 346 && stage < STAGES.length - 1) startStage(stage + 1); }
     }
     function onKey(e) { if (e.type !== 'keydown' || e.repeat) return; const k = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3 }[e.code]; if (st === 'over' && (e.code === 'Space' || e.code === 'Enter')) restart(); else if (k !== undefined) answer(k); }
     canvas.addEventListener('pointerdown', onDown); addEventListener('keydown', onKey);
@@ -96,17 +96,21 @@ Sims.register({
         ctx.stroke(); ctx.shadowBlur = 0;
       }
       const nC = st === 'play' || st === 'late' ? STAGES[stage] : STAGES[stage];
-      txt(String(nC), 180, 408, 38, '#ffd24a', 'center'); txt(nC === 1 ? 'круг' : nC < 5 ? 'круга' : 'кругов', 180, 434, 12, 'rgba(255,255,255,.75)', 'center');
-      ctx.fillStyle = 'rgba(255,255,255,.15)'; rr(120, 446, 120, 6, 3); ctx.fill(); ctx.fillStyle = '#ffd24a'; rr(120, 446, 120 * (stage + 1) / STAGES.length, 6, 3); ctx.fill();
-      if (st === 'play' && stage >= 3) txt('Узнали уже?', 180, 126, 14, '#ffd24a', 'center');
+      txt(String(nC), 150, 398, 34, '#ffd24a', 'right'); txt(nC === 1 ? 'круг' : nC < 5 ? 'круга' : 'кругов', 158, 400, 14, 'rgba(255,255,255,.8)', 'left');
+      if (st === 'play') {
+        STAGES.forEach((n, i) => { const x = CH(i), on2 = i === stage; ctx.fillStyle = on2 ? '#ffd24a' : 'rgba(255,255,255,.1)'; rr(x, 430, 50, 28, 8); ctx.fill(); ctx.strokeStyle = on2 ? '#ffd24a' : 'rgba(255,255,255,.3)'; ctx.lineWidth = 1.5; ctx.stroke(); txt(String(n), x + 25, 445, 13, on2 ? '#241800' : '#fff', 'center'); });
+        ctx.fillStyle = 'rgba(255,255,255,.12)'; rr(14, 464, 162, 30, 10); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.stroke(); txt('↻ Повторить', 95, 479, 14, '#fff', 'center');
+        const can = stage < STAGES.length - 1; ctx.fillStyle = can ? 'rgba(255,154,26,.28)' : 'rgba(255,255,255,.05)'; rr(184, 464, 162, 30, 10); ctx.fill(); ctx.strokeStyle = can ? '#ff9a1a' : 'rgba(255,255,255,.2)'; ctx.stroke(); txt('Дальше ▶', 265, 479, 14, can ? '#fff' : 'rgba(255,255,255,.35)', 'center');
+        if (stage >= 3) txt('Узнали уже?', 180, 126, 14, '#ffd24a', 'center');
+      }
       for (let i = 0; i < 4; i++) {
         const x = BX(i), y = BY(i), id = opts[i]; let bg = 'rgba(255,255,255,.1)', bd = 'rgba(255,255,255,.3)';
         if (st !== 'play') { if (id === cur) { bg = 'rgba(60,200,100,.45)'; bd = '#5aff9a'; } else if (i === pick) { bg = 'rgba(220,60,60,.45)'; bd = '#ff7a7a'; } else bg = 'rgba(255,255,255,.05)'; }
-        ctx.fillStyle = bg; rr(x, y, 152, 64, 14); ctx.fill(); ctx.strokeStyle = bd; ctx.lineWidth = 2; ctx.stroke();
-        if (id) { const nm = DATA[id].n; txt(nm, x + 76, y + 32, nm.length > 14 ? 13 : nm.length > 10 ? 15 : 18, '#fff', 'center'); }
+        ctx.fillStyle = bg; rr(x, y, 152, 58, 14); ctx.fill(); ctx.strokeStyle = bd; ctx.lineWidth = 2; ctx.stroke();
+        if (id) { const nm = DATA[id].n; txt(nm, x + 76, y + 29, nm.length > 14 ? 13 : nm.length > 10 ? 15 : 18, '#fff', 'center'); }
       }
       txt('Очки: ' + score, 14, 24, 16, '#fff'); txt('рекорд ' + best, 346, 24, 12, 'rgba(255,255,255,.55)', 'right'); for (let i = 0; i < cfg.lives; i++) txt('♥', 14 + i * 20, 50, 20, i < lives ? '#ff4a6a' : 'rgba(255,255,255,.2)');
-      if (st === 'ok' || st === 'bad' || st === 'late') { ctx.globalAlpha = Math.min(1, rev * 4); txt(st === 'ok' ? fb + ' очк.' : fb, 180, 150, 22, st === 'ok' ? '#7aff9a' : '#ff8a7a', 'center'); txt(DATA[cur].n, 180, 372, 20, '#fff', 'center'); ctx.globalAlpha = 1; }
+      if (st === 'ok' || st === 'bad' || st === 'late') { ctx.globalAlpha = Math.min(1, rev * 4); txt(st === 'ok' ? fb + ' очк.' : fb, 180, 150, 22, st === 'ok' ? '#7aff9a' : '#ff8a7a', 'center'); txt(DATA[cur].n, 180, 398, 22, '#fff', 'center'); ctx.globalAlpha = 1; }
       if (st === 'over') { ctx.fillStyle = 'rgba(8,12,30,.82)'; ctx.fillRect(0, 0, DW, DH); txt('Игра окончена', 180, 250, 30, '#ff8a7a', 'center'); txt('Очки: ' + score + ' · рекорд ' + best, 180, 296, 16, '#fff', 'center'); txt('Раундов сыграно: ' + round, 180, 326, 14, 'rgba(255,255,255,.7)', 'center'); txt('Нажмите, чтобы сыграть ещё', 180, 380, 15, '#ffd24a', 'center'); }
       ctx.restore(); ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
