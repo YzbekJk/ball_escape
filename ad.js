@@ -2,7 +2,7 @@
   const AM = window.AudioManager, PA = window.PeachArt;
   const TILES = [['cherry', '#d4506a'], ['peach', '#ff7d8f'], ['grape', '#8e5bd0'], ['apple', '#e04a4a'], ['pine', '#d9a82a'], ['plum', '#a05bd8'], ['mango', '#ff8a3a'], ['lemon', '#d9c83a'], ['coco', '#8a6a4a'], ['pear', '#7ac24a'], ['dia', '#4ad0e0'], ['straw', '#e0405a']];
   const WIN = ['gold', '#ffc83a'];
-    let showing = false, count = 0, target = 60 + Math.random() * 30;
+    let showing = false, count = 0, target = 60 + Math.random() * 30, pcount = 0, ptarget = 75 + Math.random() * 30;
 
   const css = document.createElement('style');
   css.textContent = `
@@ -140,8 +140,10 @@
 
   setInterval(() => {
     if (document.hidden || showing) return;
-    const m = /^#\/([^/?]+)/.exec(location.hash); if (!m || m[1] === 'peach-drop') return;
-    if (++count >= target) { count = 0; target = 60 + Math.random() * 30; if (m[1] === 'plum-clicker' || Math.random() < 0.5) show(); else showPlum(); }
+    const m = /^#\/([^/?]+)/.exec(location.hash); if (!m) return; const pg = m[1];
+    if (pg !== 'peach-drop') count++; if (pg !== 'plum-clicker') pcount++;
+    if (count >= target && pg !== 'peach-drop') { count = 0; target = 60 + Math.random() * 30; show(); }
+    else if (pcount >= ptarget && pg !== 'plum-clicker') { pcount = 0; ptarget = 60 + Math.random() * 30; showPlum(); }
   }, 1000);
   window.PeachAd = { show, showPlum };
 })();
