@@ -13,7 +13,7 @@ Sims.register({
     { k: 'spikes', l: 'Количество шипов', min: 6, max: 60, step: 1, live: 1 },
     { k: 'spikeH', l: 'Высота шипов', min: 0.03, max: 0.2, step: 0.005, live: 1 },
     { k: 'gap', l: 'Ширина щели, рад', min: 0.3, max: 2, step: 0.05, live: 1 },
-    { k: 'randomGap', l: 'Случайная щель в каждой игре', type: 'check', live: 1 },
+    { k: 'randomGap', l: 'Случайное место щели (выбирается один раз)', type: 'check', live: 1 },
     { k: 'randomStart', l: 'Случайная траектория шара в каждой игре', type: 'check', live: 1 },
     { k: 'gapAngle', l: 'Где щель, если не случайная, градусы', min: 0, max: 359, step: 1, live: 1 },
     { k: 'eps', l: 'Разброс старта между шариками (эффект бабочки)', min: 0, max: 0.1, step: 0.0005 },
@@ -52,7 +52,7 @@ Sims.register({
     const TAU = Math.PI * 2, WALL = 0.02;
     const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
     const hueOf = i => (i * 67 + 140) % 360;
-    let gapA = 0, startX = -0.1, startY = -0.2, startA = -0.6;
+    let gapA = Math.random() * TAU, startX = -0.1, startY = -0.2, startA = -0.6;
     const gapC = () => cfg.randomGap ? gapA : cfg.gapAngle * Math.PI / 180;
 
     let ball, idx, dead, parts, events, simT, state, stateT, shards, wins;
@@ -68,7 +68,6 @@ Sims.register({
       };
     }
     function restart() { noteN = 0;
-      gapA = Math.random() * TAU;
       if (cfg.randomStart) {
         const r = Math.random() * 0.5, q = Math.random() * TAU;
         startX = Math.cos(q) * r; startY = Math.sin(q) * r; startA = Math.random() * TAU;
@@ -247,7 +246,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { on = false; cancelAnimationFrame(raf); },
-      debug: { step, get balls() { return idx; }, get wins() { return wins; }, get t() { return simT; }, get state() { return state; } }
+      debug: { get gap() { return gapC(); }, step, get balls() { return idx; }, get wins() { return wins; }, get t() { return simT; }, get state() { return state; } }
     };
   }
 });

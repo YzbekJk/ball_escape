@@ -12,7 +12,7 @@ Sims.register({
   schema: [
     { k: 'limit', l: 'Секунд на побег у каждого шарика', min: 1, max: 20, step: 1, live: 1 },
     { k: 'gap', l: 'Ширина щели, рад', min: 0.2, max: 3, step: 0.05, live: 1 },
-    { k: 'randomGap', l: 'Случайная щель (новая для каждого шарика)', type: 'check', live: 1 },
+    { k: 'randomGap', l: 'Случайное место щели (выбирается один раз)', type: 'check', live: 1 },
     { k: 'gapAngle', l: 'Где щель, если не случайная, градусы', min: 0, max: 359, step: 1, live: 1 },
     { k: 'maxFrozen', l: 'Сколько застывших шариков держать (старые пропадают)', min: 3, max: 120, step: 1, live: 1 },
     { k: 'restartOnEscape', l: 'Если шарик вышел за круг — игра начинается заново', type: 'check', live: 1 },
@@ -49,7 +49,7 @@ Sims.register({
     const hueOf = i => i === 0 ? null : (i * 47 + 20) % 360;           // first ball is white, the rest walk round the colour wheel
     const colorOf = (i, a) => i === 0 ? 'rgba(255,255,255,' + a + ')' : 'hsla(' + hueOf(i) + ',100%,55%,' + a + ')';
 
-    let ball, idx, cycleStart, simT, dots, frozen, gapAng, stars, events, tries, wins;
+    let ball, idx, cycleStart, simT, dots, frozen, gapAng = Math.random() * TAU, stars, events, tries, wins;   /* the gap stays in the same place for all balls */
     let paused = false, acc = 0, last = 0, raf = 0, on = true, W = 0, H = 0, dpr = 1, S = 1;
 
     function spawn() {
@@ -61,10 +61,9 @@ Sims.register({
       }
       ball = { x, y, vx: Math.cos(a) * cfg.speed, vy: Math.sin(a) * cfg.speed, i: idx, out: false };
       cycleStart = simT;
-      gapAng = Math.random() * TAU;             // a new random gap for every ball
     }
     function restart() { noteN = 0;
-      simT = 0; idx = 0; dots = []; frozen = []; events = []; acc = 0; tries = 0; wins = 0; gapAng = 0;
+      simT = 0; idx = 0; dots = []; frozen = []; events = []; acc = 0; tries = 0; wins = 0;
       stars = [];
       for (let i = 0; i < 45; i++) stars.push({ x: (Math.random() - 0.5) * 3, y: (Math.random() - 0.5) * 3.4, vx: (Math.random() - 0.5) * 0.04, vy: (Math.random() - 0.5) * 0.04, a: 0.25 + Math.random() * 0.5 });
       spawn();
@@ -208,7 +207,7 @@ Sims.register({
       restart, resize,
       setPaused(p) { paused = p; },
       destroy() { on = false; cancelAnimationFrame(raf); },
-      debug: { step, get tries() { return tries; }, get wins() { return wins; }, get t() { return simT; } }
+      debug: { get gap() { return gapCenter(); }, step, get tries() { return tries; }, get wins() { return wins; }, get t() { return simT; } }
     };
   }
 });
