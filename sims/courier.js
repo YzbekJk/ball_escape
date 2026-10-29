@@ -36,7 +36,7 @@ Sims.register({
       { id: 'armor', n: 'Шлем и броня', d: 'Аварии наказывают слабее', max: 5, base: 45 },
       { id: 'tip', n: 'Вежливость', d: 'Больше чаевых', max: 5, base: 60 }
     ];
-    let W = 0, H = 0, dpr = 1, on = true, paused = false, raf = 0, last = 0, t = 0;
+    let vdrag = false, W = 0, H = 0, dpr = 1, on = true, paused = false, raf = 0, last = 0, t = 0;
     let save, mode = 'menu', bld = [], cafes = [], cars = [], me, cam = { x: 0, y: 0 }, Z = 1, order = null, shiftT = 0, earned = 0, orders = 0, late = 0, crashes = 0, toast = '', toastT = 0, floats = [], keys = { l: 0, r: 0, u: 0, d: 0 }, stick = null, shake = 0, best = 0, parts = [];
 
     function loadSave() { try { const o = JSON.parse(localStorage.getItem(SKEY)); if (o) return Object.assign({ money: 0, lv: {}, best: 0, total: 0 }, o); } catch (e) { } return { money: 0, lv: {}, best: 0, total: 0 }; }
@@ -120,15 +120,17 @@ Sims.register({
     function uiT() { const s = Math.min(canvas.width / DW, canvas.height / DH); return { s, ox: (canvas.width - DW * s) / 2, oy: (canvas.height - DH * s) / 2 }; }
     function uiXY(e) { const r = canvas.getBoundingClientRect(), T = uiT(), px = (e.clientX - r.left) * canvas.width / r.width, py = (e.clientY - r.top) * canvas.height / r.height; return { x: (px - T.ox) / T.s, y: (py - T.oy) / T.s }; }
     const hit = (p, x, y, w, h) => p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h;
+    const setVol = p => { cfg.volume = Math.round(clamp((p.x - 70) / 220, 0, 1) * 20) / 20; if (cfg.volume > 0 && !cfg.music) cfg.music = true; };
     function onDown(e) {
       const p = uiXY(e);
+      if ((mode === 'menu' || mode === 'over') && hit(p, 40, 548, 280, 40)) { vdrag = true; setVol(p); try { canvas.setPointerCapture(e.pointerId); } catch (er) { } return; }
       if (mode === 'menu') { if (hit(p, 40, 330, 280, 56)) startShift(); else if (hit(p, 40, 400, 280, 50)) mode = 'shop'; return; }
       if (mode === 'over') { if (hit(p, 40, 400, 280, 56)) startShift(); else if (hit(p, 40, 470, 280, 50)) mode = 'shop'; return; }
       if (mode === 'shop') { if (hit(p, 100, 570, 160, 44)) { mode = 'menu'; return; } UPS.forEach((u, i) => { if (hit(p, 20, 150 + i * 96, 320, 86)) { const c = cost(u); if (lv(u.id) < u.max && save.money >= c) { save.money -= c; save.lv[u.id] = lv(u.id) + 1; persist(); blip(700, 0.2, 'triangle', 0.05, 1100); } else blip(160, 0.15, 'square', 0.04, 100); } }); return; }
       if (mode === 'play') { const r = canvas.getBoundingClientRect(); stick = { ox: (e.clientX - r.left) * canvas.width / r.width, oy: (e.clientY - r.top) * canvas.height / r.height, x: 0, y: 0 }; stick.x = stick.ox; stick.y = stick.oy; try { canvas.setPointerCapture(e.pointerId); } catch (er) { } }
     }
-    function onMove(e) { if (!stick) return; const r = canvas.getBoundingClientRect(); stick.x = (e.clientX - r.left) * canvas.width / r.width; stick.y = (e.clientY - r.top) * canvas.height / r.height; const k = dpr, dx = stick.x - stick.ox, dy = stick.y - stick.oy, l = Math.hypot(dx, dy), m = 60 * k; if (l > m) { stick.ox = stick.x - dx / l * m; stick.oy = stick.y - dy / l * m; } }
-    function onUp() { stick = null; }
+    function onMove(e) { if (vdrag) { setVol(uiXY(e)); return; } if (!stick) return; const r = canvas.getBoundingClientRect(); stick.x = (e.clientX - r.left) * canvas.width / r.width; stick.y = (e.clientY - r.top) * canvas.height / r.height; const k = dpr, dx = stick.x - stick.ox, dy = stick.y - stick.oy, l = Math.hypot(dx, dy), m = 60 * k; if (l > m) { stick.ox = stick.x - dx / l * m; stick.oy = stick.y - dy / l * m; } }
+    function onUp() { stick = null; vdrag = false; }
     function onKey(e) {
       const d = e.type === 'keydown' ? 1 : 0, c = e.code;
       if (c === 'ArrowLeft' || c === 'KeyA') keys.l = d; else if (c === 'ArrowRight' || c === 'KeyD') keys.r = d; else if (c === 'ArrowUp' || c === 'KeyW') keys.u = d; else if (c === 'ArrowDown' || c === 'KeyS') keys.d = d;
@@ -199,6 +201,10 @@ Sims.register({
         txt('Магазин', 180, 60, 30, '#fff', 'center'); txt('Деньги: ' + save.money + ' ₽', 180, 104, 20, '#ffe06a', 'center');
         UPS.forEach((u, i) => { const y = 150 + i * 96, c = cost(u), maxed = lv(u.id) >= u.max, can = !maxed && save.money >= c; ctx.fillStyle = 'rgba(255,255,255,.1)'; rr(20, y, 320, 86, 14); ctx.fill(); ctx.strokeStyle = can ? '#ffd24a' : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; ctx.stroke(); txt(u.n, 34, y + 24, 18, '#fff'); txt(u.d, 34, y + 48, 12, 'rgba(255,255,255,.65)'); for (let k = 0; k < u.max; k++) { ctx.fillStyle = k < lv(u.id) ? '#ffd24a' : 'rgba(255,255,255,.2)'; ctx.fillRect(34 + k * 22, y + 62, 18, 8); } txt(maxed ? 'МАКС' : c + ' ₽', 326, y + 43, 18, maxed ? '#7aff9a' : can ? '#ffd24a' : 'rgba(255,255,255,.45)', 'right'); });
         button('НАЗАД', 100, 570, 160, 44, 'rgba(255,255,255,.15)');
+      }
+      if (mode === 'menu' || mode === 'over') {
+        txt(cfg.music && cfg.volume > 0 ? '🔊' : '🔇', 54, 568, 20, '#fff', 'center'); ctx.fillStyle = 'rgba(255,255,255,.2)'; rr(70, 564, 220, 8, 4); ctx.fill(); const v = cfg.music ? clamp(cfg.volume, 0, 1) : 0; ctx.fillStyle = '#ffd24a'; rr(70, 564, 220 * v, 8, 4); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(70 + 220 * v, 568, 10, 0, 7); ctx.fill();
+        txt(Math.round(v * 100) + '%', 332, 568, 13, 'rgba(255,255,255,.8)', 'center'); txt('Громкость саундтрека', 180, 594, 11, 'rgba(255,255,255,.5)', 'center');
       }
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
